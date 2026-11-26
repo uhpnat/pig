@@ -59,8 +59,6 @@ export default function App() {
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
     const topColor = ROUTE_TOP_COLOR[loc.pathname] || '#f5efff'
-    document.documentElement.style.backgroundColor = topColor
-    document.body.style.backgroundColor = topColor
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', topColor)
   }, [loc.pathname])
