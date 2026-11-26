@@ -326,7 +326,11 @@ export class LocalRepository implements Repository {
   }
 
   async clearDataKeepConfig() {
-    try { localStorage.removeItem('piggy_gender_configured') } catch {}
+    try {
+      localStorage.removeItem('piggy_role_confirmed_v2')
+      localStorage.removeItem('piggy_gender_configured')
+      localStorage.removeItem('piggy_my_member')
+    } catch {}
     const cur = read()
     const next = A.clearSavingsDataKeepConfig(cur)
     localStorage.setItem(KEY, JSON.stringify(next))
@@ -347,7 +351,11 @@ export class LocalRepository implements Repository {
   regenerateInvite() { return this.mutate((s) => A.regenerateInvite(s)) }
   loadDemo() { return this.mutate(() => ({ ...buildDemoState(), settings: read().settings })) }
   reset() {
-    try { localStorage.removeItem('piggy_gender_configured') } catch {}
+    try {
+      localStorage.removeItem('piggy_role_confirmed_v2')
+      localStorage.removeItem('piggy_gender_configured')
+      localStorage.removeItem('piggy_my_member')
+    } catch {}
     return this.mutate(() => ({ ...A.createInitialState(), settings: read().settings }))
   }
   async exportData() { return JSON.stringify(read(), null, 2) }

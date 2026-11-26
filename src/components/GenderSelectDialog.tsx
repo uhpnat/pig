@@ -4,7 +4,7 @@ import { Avatar, Button, Modal } from '@/components/ui'
 import type { Gender, MemberId } from '@/domain/types'
 import { useStore } from '@/hooks/useStore'
 
-const CONFIG_KEY = 'piggy_gender_configured'
+export const ROLE_CONFIG_KEY = 'piggy_role_confirmed_v2'
 
 interface Props {
   open?: boolean
@@ -15,17 +15,16 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
   const { state, repo, run, toast, myMemberId, setMyMemberId } = useStore()
   const j = state.journey
 
-  const [dismissed, setDismissed] = useState(false)
+  const [configuredInSession, setConfiguredInSession] = useState(false)
 
-  // Only auto-open if journey exists, setup is done, and user hasn't already dismissed/configured it on this device
-  const isAlreadyConfigured = typeof window !== 'undefined' && localStorage.getItem(CONFIG_KEY) === 'true'
-  const needsConfig = !!(
-    j &&
-    j.setupDone &&
-    !isAlreadyConfigured &&
-    !dismissed
-  )
+  // Always require selection on every load/reload until the user explicitly confirms & saves!
+  const isAlreadyConfigured =
+    configuredInSession ||
+    (typeof window !== 'undefined' &&
+      localStorage.getItem(ROLE_CONFIG_KEY) === 'true' &&
+      (localStorage.getItem('piggy_my_member') === 'a' || localStorage.getItem('piggy_my_member') === 'b'))
 
+  const needsConfig = !!(j && j.setupDone && !isAlreadyConfigured)
   const isOpen = manualOpen !== undefined ? manualOpen : needsConfig
 
   const [selectedUser, setSelectedUser] = useState<MemberId>(myMemberId || 'a')
@@ -52,19 +51,21 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
     setGenA(gender === 'male' ? 'female' : 'male')
   }
 
-  const handleDismiss = () => {
-    setDismissed(true)
-    try {
-      localStorage.setItem(CONFIG_KEY, 'true')
-    } catch {}
-    onClose?.()
+  const handleCloseAttempt = () => {
+    // Only allow closing without saving if already configured before (manualOpen)
+    if (isAlreadyConfigured || manualOpen) {
+      onClose?.()
+    } else {
+      toast('Hãy chọn bạn là ai (Nam hay Nữ) rồi bấm Lưu để bắt đầu nhé! 💕')
+    }
   }
 
   const save = async () => {
     try {
-      localStorage.setItem(CONFIG_KEY, 'true')
+      localStorage.setItem(ROLE_CONFIG_KEY, 'true')
+      localStorage.setItem('piggy_gender_configured', 'true')
     } catch {}
-    setDismissed(true)
+    setConfiguredInSession(true)
     setMyMemberId(selectedUser)
 
     const updated = await run(
@@ -77,7 +78,8 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
     )
     if (updated) {
       const activeName = selectedUser === 'a' ? j.members.a.name : j.members.b.name
-      toast(`Đã lưu thiết bị này là của ${activeName}! 💖`)
+      const activeGen = (selectedUser === 'a' ? genA : genB) === 'male' ? 'Nam 👦' : 'Nữ 👧'
+      toast(`Đã lưu: Máy này của ${activeName} (${activeGen})! 💖`)
     }
     onClose?.()
   }
@@ -85,12 +87,12 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
   return (
     <Modal
       open={isOpen}
-      onClose={handleDismiss}
+      onClose={handleCloseAttempt}
       title="📱 Bạn đang dùng máy này là ai?"
     >
       <div className="mt-1 text-center">
         <p className="text-xs font-semibold text-slate-500 leading-relaxed">
-          Hãy chọn bạn là ai để khi <b>mở số hôm nay, xác nhận bỏ ống</b> hay <b>nạp thêm</b>, hệ thống sẽ tự động lưu là do bạn làm nhé!
+          Hãy chọn bạn là <b>Nam 👦</b> hay <b>Nữ 👧</b> để khi mở số, xác nhận bỏ ống hay nạp tiền, app tự động lưu là do bạn làm nhé!
         </p>
 
         {/* 2 Member Identity Cards */}
@@ -115,7 +117,7 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] font-bold text-slate-400">
+                <p className="text-[11px] font-bold text-slate-500">
                   {genA === 'male' ? '👦 Nam (Chàng)' : '👧 Nữ (Nàng)'}
                 </p>
               </div>
@@ -127,7 +129,10 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
             >
               <button
                 type="button"
-                onClick={() => handleSetA('male')}
+                onClick={() => {
+                  handleSetA('male')
+                  setSelectedUser('a')
+                }}
                 className={`rounded-lg px-2.5 py-1 text-xs font-black transition-all ${
                   genA === 'male' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-600'
                 }`}
@@ -136,7 +141,10 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
               </button>
               <button
                 type="button"
-                onClick={() => handleSetA('female')}
+                onClick={() => {
+                  handleSetA('female')
+                  setSelectedUser('a')
+                }}
                 className={`rounded-lg px-2.5 py-1 text-xs font-black transition-all ${
                   genA === 'female' ? 'bg-pink-500 text-white shadow-sm' : 'text-slate-600'
                 }`}
@@ -166,7 +174,7 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] font-bold text-slate-400">
+                <p className="text-[11px] font-bold text-slate-500">
                   {genB === 'male' ? '👦 Nam (Chàng)' : '👧 Nữ (Nàng)'}
                 </p>
               </div>
@@ -178,7 +186,10 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
             >
               <button
                 type="button"
-                onClick={() => handleSetB('male')}
+                onClick={() => {
+                  handleSetB('male')
+                  setSelectedUser('b')
+                }}
                 className={`rounded-lg px-2.5 py-1 text-xs font-black transition-all ${
                   genB === 'male' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-600'
                 }`}
@@ -187,7 +198,10 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
               </button>
               <button
                 type="button"
-                onClick={() => handleSetB('female')}
+                onClick={() => {
+                  handleSetB('female')
+                  setSelectedUser('b')
+                }}
                 className={`rounded-lg px-2.5 py-1 text-xs font-black transition-all ${
                   genB === 'female' ? 'bg-pink-500 text-white shadow-sm' : 'text-slate-600'
                 }`}
@@ -201,11 +215,14 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
         {/* Action Buttons */}
         <div className="mt-5 space-y-2">
           <Button variant="violet" className="w-full !py-3.5 !text-[15px]" onClick={save}>
-            Tôi là {selectedUser === 'a' ? j.members.a.name : j.members.b.name} - Lưu & Bắt đầu 💕
+            Tôi là {selectedUser === 'a' ? j.members.a.name : j.members.b.name} (
+            {(selectedUser === 'a' ? genA : genB) === 'male' ? 'Nam 👦' : 'Nữ 👧'}) – Lưu & Bắt đầu 💕
           </Button>
-          <Button variant="ghost" size="sm" className="w-full !text-slate-400 text-xs" onClick={handleDismiss}>
-            Để sau
-          </Button>
+          {(isAlreadyConfigured || manualOpen) && (
+            <Button variant="ghost" size="sm" className="w-full !text-slate-400 text-xs" onClick={() => onClose?.()}>
+              Đóng
+            </Button>
+          )}
         </div>
       </div>
     </Modal>

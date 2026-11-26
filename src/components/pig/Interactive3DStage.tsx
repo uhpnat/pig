@@ -317,24 +317,45 @@ export function Interactive3DStage({
               className="relative select-none"
               style={{
                 height: spriteHeight,
-                filter: 'drop-shadow(0 0 32px rgba(56, 189, 248, 0.45)) drop-shadow(0 0 32px rgba(244, 63, 94, 0.45)) drop-shadow(0 14px 24px rgba(30, 27, 75, 0.22))',
+                filter:
+                  'drop-shadow(0 0 28px rgba(56, 189, 248, 0.42)) drop-shadow(0 0 28px rgba(244, 63, 94, 0.42)) drop-shadow(0 14px 22px rgba(30, 27, 75, 0.25))',
               }}
             >
-              {/* 4A. Luminous Radiant Base Piggy (Always vibrant & bright) */}
+              {/* 4A. Translucent Frosted Crystal Glass Piggy Shell (Unfilled portion stays transparent) */}
               <img
                 src={spriteSrc}
                 alt={alt}
                 style={{
                   height: spriteHeight,
                   width: 'auto',
-                  opacity: 0.95,
-                  filter: 'brightness(1.08) saturate(1.15) contrast(1.05)',
+                  opacity: 0.38,
+                  filter: 'saturate(0.15) brightness(1.25) contrast(1.12)',
                 }}
                 className="block select-none object-contain"
                 draggable={false}
               />
 
-              {/* 4B. Radiant Inner Core Light Glow */}
+              {/* 4B. Vibrant Full-Color 3D Pig Revealed from Bottom to Top by the Monthly % Water Level */}
+              <motion.div
+                className="pointer-events-none absolute inset-0 overflow-hidden"
+                initial={{ clipPath: 'inset(100% 0% 0% 0%)' }}
+                animate={{ clipPath: `inset(${100 - visualFill}% 0% 0% 0%)` }}
+                transition={{ duration: 1.1, ease: 'easeOut' }}
+              >
+                <img
+                  src={spriteSrc}
+                  alt=""
+                  style={{
+                    height: spriteHeight,
+                    width: 'auto',
+                    filter: 'brightness(1.08) saturate(1.25) contrast(1.06)',
+                  }}
+                  className="block select-none object-contain"
+                  draggable={false}
+                />
+              </motion.div>
+
+              {/* 4C. DUAL SLOSHING WATER WAVES (Vivid Sky Blue for Nam, Vibrant Rose Pink for Nữ, rising by monthly %) */}
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -349,16 +370,16 @@ export function Interactive3DStage({
                   maskPosition: 'center',
                 }}
               >
-                {/* Glowing backlight aura from inside the crystal belly */}
+                {/* Specular crystal glass reflection on top */}
                 <div
                   className="absolute inset-0"
                   style={{
                     background:
-                      'radial-gradient(circle at 50% 55%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 65%)',
+                      'linear-gradient(135deg, rgba(255,255,255,0.58) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0.24) 100%)',
                   }}
                 />
 
-                {/* 4C. DUAL SLOSHING WATER WAVES (Vivid Sky Blue for Nam, Vibrant Rose Pink for Nữ) */}
+                {/* Rising Dual-Color Liquid Column */}
                 {visualFill > 0 && (
                   <motion.div
                     className="absolute inset-x-0 bottom-0"
@@ -376,9 +397,9 @@ export function Interactive3DStage({
                     >
                       <defs>
                         <linearGradient id="wave-grad-back" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#00b4d8" stopOpacity="0.9" />
-                          <stop offset={`${Math.max(20, Math.min(80, pctMale))}%`} stopColor="#d946ef" stopOpacity="0.85" />
-                          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.9" />
+                          <stop offset="0%" stopColor="#00b4d8" stopOpacity="0.92" />
+                          <stop offset={`${Math.max(20, Math.min(80, pctMale))}%`} stopColor="#d946ef" stopOpacity="0.88" />
+                          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.92" />
                         </linearGradient>
                       </defs>
                       <path
@@ -397,7 +418,7 @@ export function Interactive3DStage({
                     >
                       <path
                         d="M0 14 Q 50 28 100 14 T 200 14 T 300 14 T 400 14 L 400 28 L 0 28 Z"
-                        fill="rgba(255, 255, 255, 0.82)"
+                        fill="rgba(255, 255, 255, 0.85)"
                       />
                     </motion.svg>
 
@@ -405,8 +426,8 @@ export function Interactive3DStage({
                     <div
                       className="relative h-full w-full overflow-hidden"
                       style={{
-                        background: `linear-gradient(90deg, rgba(14,165,233,0.78) 0%, rgba(56,189,248,0.72) ${Math.max(12, pctMale - 10)}%, rgba(244,63,94,0.72) ${Math.min(88, pctMale + 10)}%, rgba(225,29,72,0.78) 100%)`,
-                        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.4)',
+                        background: `linear-gradient(90deg, rgba(14,165,233,0.68) 0%, rgba(56,189,248,0.62) ${Math.max(12, pctMale - 10)}%, rgba(244,63,94,0.62) ${Math.min(88, pctMale + 10)}%, rgba(225,29,72,0.68) 100%)`,
+                        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.45)',
                       }}
                     >
                       {/* Dual rising neon bubbles: Sky Blue on left, Rose Pink on right */}
@@ -443,10 +464,13 @@ export function Interactive3DStage({
                 )}
               </div>
 
-              {/* Floating Dual Contribution Pill - raised up to bottom-10 with z-20 so it is NEVER clipped */}
-              <div className="absolute inset-x-0 bottom-10 z-20 flex items-center justify-center gap-1.5 px-3 pointer-events-none">
+              {/* Floating Dual Contribution & Monthly Fill Pill - raised up to bottom-10 with z-20 so it is NEVER clipped */}
+              <div className="absolute inset-x-0 bottom-10 z-20 flex flex-col items-center justify-center gap-1 px-3 pointer-events-none">
                 {membersShare ? (
-                  <div className="flex items-center gap-2 rounded-full border-2 border-white/95 bg-white/95 px-4 py-1.5 shadow-[0_6px_20px_rgba(30,27,75,0.2)] backdrop-blur-md text-[12px] font-black">
+                  <div className="flex items-center gap-2 rounded-full border-2 border-white/95 bg-white/95 px-3.5 py-1 shadow-[0_6px_20px_rgba(30,27,75,0.2)] backdrop-blur-md text-[11px] font-black">
+                    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-black text-violet-700">
+                      💧 Tháng: {clampedFill.toFixed(0)}%
+                    </span>
                     <span className={`flex items-center gap-1 ${pctMale >= pctFemale ? 'text-sky-600 font-black' : 'text-slate-600'}`}>
                       {pctMale > pctFemale && '👑'} 👦 <span className="underline decoration-sky-400 decoration-2">{nameMale}</span>: {pctMale.toFixed(0)}%
                     </span>
