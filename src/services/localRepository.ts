@@ -326,6 +326,7 @@ export class LocalRepository implements Repository {
   }
 
   async clearDataKeepConfig() {
+    try { localStorage.removeItem('piggy_gender_configured') } catch {}
     const cur = read()
     const next = A.clearSavingsDataKeepConfig(cur)
     localStorage.setItem(KEY, JSON.stringify(next))
@@ -345,6 +346,9 @@ export class LocalRepository implements Repository {
   updateSettings(p: Parameters<Repository['updateSettings']>[0]) { return this.mutate((s) => A.updateSettings(s, p)) }
   regenerateInvite() { return this.mutate((s) => A.regenerateInvite(s)) }
   loadDemo() { return this.mutate(() => ({ ...buildDemoState(), settings: read().settings })) }
-  reset() { return this.mutate(() => ({ ...A.createInitialState(), settings: read().settings })) }
+  reset() {
+    try { localStorage.removeItem('piggy_gender_configured') } catch {}
+    return this.mutate(() => ({ ...A.createInitialState(), settings: read().settings }))
+  }
   async exportData() { return JSON.stringify(read(), null, 2) }
 }

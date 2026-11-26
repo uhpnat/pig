@@ -317,44 +317,24 @@ export function Interactive3DStage({
               className="relative select-none"
               style={{
                 height: spriteHeight,
-                filter: 'drop-shadow(0 14px 22px rgba(30, 27, 75, 0.28))',
+                filter: 'drop-shadow(0 0 32px rgba(56, 189, 248, 0.45)) drop-shadow(0 0 32px rgba(244, 63, 94, 0.45)) drop-shadow(0 14px 24px rgba(30, 27, 75, 0.22))',
               }}
             >
-              {/* 4A. Translucent Crystal Glass Piggy Shell */}
+              {/* 4A. Luminous Radiant Base Piggy (Always vibrant & bright) */}
               <img
                 src={spriteSrc}
                 alt={alt}
                 style={{
                   height: spriteHeight,
                   width: 'auto',
-                  opacity: 0.38,
-                  filter: 'saturate(0.2) brightness(1.2) contrast(1.1)',
+                  opacity: 0.95,
+                  filter: 'brightness(1.08) saturate(1.15) contrast(1.05)',
                 }}
                 className="block select-none object-contain"
                 draggable={false}
               />
 
-              {/* 4B. Vibrant Full-Color 3D Pig Revealed from Bottom to Top by the Rising Water Level */}
-              <motion.div
-                className="pointer-events-none absolute inset-0 overflow-hidden"
-                initial={{ clipPath: 'inset(100% 0% 0% 0%)' }}
-                animate={{ clipPath: `inset(${100 - visualFill}% 0% 0% 0%)` }}
-                transition={{ duration: 1.1, ease: 'easeOut' }}
-              >
-                <img
-                  src={spriteSrc}
-                  alt=""
-                  style={{
-                    height: spriteHeight,
-                    width: 'auto',
-                    filter: 'saturate(1.2) contrast(1.04)',
-                  }}
-                  className="block select-none object-contain"
-                  draggable={false}
-                />
-              </motion.div>
-
-              {/* 4C. DUAL SLOSHING WATER WAVES (Blue for Member A, Pink for Member B) */}
+              {/* 4B. Radiant Inner Core Light Glow */}
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -369,16 +349,16 @@ export function Interactive3DStage({
                   maskPosition: 'center',
                 }}
               >
-                {/* Specular glass reflection on top */}
+                {/* Glowing backlight aura from inside the crystal belly */}
                 <div
                   className="absolute inset-0"
                   style={{
                     background:
-                      'linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0.22) 100%)',
+                      'radial-gradient(circle at 50% 55%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 65%)',
                   }}
                 />
 
-                {/* Rising Dual-Color Liquid Column */}
+                {/* 4C. DUAL SLOSHING WATER WAVES (Vivid Sky Blue for Nam, Vibrant Rose Pink for Nữ) */}
                 {visualFill > 0 && (
                   <motion.div
                     className="absolute inset-x-0 bottom-0"
@@ -386,19 +366,19 @@ export function Interactive3DStage({
                     animate={{ height: `${visualFill}%` }}
                     transition={{ duration: 1.1, ease: 'easeOut' }}
                   >
-                    {/* Back Wave (Dual tone: Sky Blue on left for Member A, Rose Pink on right for Member B) */}
+                    {/* Back Wave (Dual tone: Sky Blue for Nam, Rose Pink for Nữ) */}
                     <motion.svg
                       viewBox="0 0 400 28"
                       preserveAspectRatio="none"
-                      className="absolute -top-[18px] left-0 h-[20px] w-[200%]"
+                      className="absolute -top-[18px] left-0 h-[22px] w-[200%]"
                       animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                      transition={{ duration: 3.4, repeat: Infinity, ease: 'linear' }}
+                      transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
                     >
                       <defs>
                         <linearGradient id="wave-grad-back" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.65" />
-                          <stop offset={`${Math.max(25, Math.min(75, pctMale))}%`} stopColor="#a855f7" stopOpacity="0.6" />
-                          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.65" />
+                          <stop offset="0%" stopColor="#00b4d8" stopOpacity="0.9" />
+                          <stop offset={`${Math.max(20, Math.min(80, pctMale))}%`} stopColor="#d946ef" stopOpacity="0.85" />
+                          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.9" />
                         </linearGradient>
                       </defs>
                       <path
@@ -407,36 +387,37 @@ export function Interactive3DStage({
                       />
                     </motion.svg>
 
-                    {/* Front Sloshing Wave (glossy sparkling surface meniscus) */}
+                    {/* Front Sloshing Wave (glowing crest) */}
                     <motion.svg
                       viewBox="0 0 400 28"
                       preserveAspectRatio="none"
-                      className="absolute -top-[15px] left-0 h-[18px] w-[200%]"
+                      className="absolute -top-[15px] left-0 h-[19px] w-[200%]"
                       animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                      transition={{ duration: 2.3, repeat: Infinity, ease: 'linear' }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
                     >
                       <path
                         d="M0 14 Q 50 28 100 14 T 200 14 T 300 14 T 400 14 L 400 28 L 0 28 Z"
-                        fill="rgba(255, 255, 255, 0.75)"
+                        fill="rgba(255, 255, 255, 0.82)"
                       />
                     </motion.svg>
 
-                    {/* Dual Liquid Body Gradient (shows ratio of Male vs Female) */}
+                    {/* Vivid Glowing Dual Liquid Body (shows high-contrast ratio of Male vs Female) */}
                     <div
                       className="relative h-full w-full overflow-hidden"
                       style={{
-                        background: `linear-gradient(90deg, rgba(56,189,248,0.36) 0%, rgba(56,189,248,0.32) ${Math.max(15, pctMale - 8)}%, rgba(244,63,94,0.32) ${Math.min(85, pctMale + 8)}%, rgba(244,63,94,0.36) 100%)`,
+                        background: `linear-gradient(90deg, rgba(14,165,233,0.78) 0%, rgba(56,189,248,0.72) ${Math.max(12, pctMale - 10)}%, rgba(244,63,94,0.72) ${Math.min(88, pctMale + 10)}%, rgba(225,29,72,0.78) 100%)`,
+                        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.4)',
                       }}
                     >
-                      {/* Dual rising bubbles: Sky Blue on left, Rose Pink on right */}
+                      {/* Dual rising neon bubbles: Sky Blue on left, Rose Pink on right */}
                       {!reducedMotion &&
                         [16, 32, 50, 68, 84].map((leftPct, bIdx) => {
                           const isLeftA = leftPct < 50
                           return (
                             <motion.span
                               key={bIdx}
-                              className={`absolute bottom-1 rounded-full shadow-[0_0_6px_rgba(255,255,255,0.9)] ${
-                                isLeftA ? 'bg-sky-200/90' : 'bg-pink-200/90'
+                              className={`absolute bottom-1 rounded-full shadow-[0_0_8px_rgba(255,255,255,1)] ${
+                                isLeftA ? 'bg-sky-200' : 'bg-pink-200'
                               }`}
                               style={{
                                 left: `${leftPct}%`,
@@ -446,7 +427,7 @@ export function Interactive3DStage({
                               animate={{
                                 y: [0, -spriteHeight * (visualFill / 100)],
                                 x: [0, bIdx % 2 === 0 ? 5 : -5, 0],
-                                opacity: [0, 0.9, 0],
+                                opacity: [0, 1, 0],
                               }}
                               transition={{
                                 duration: 1.8 + bIdx * 0.35,
@@ -460,25 +441,25 @@ export function Interactive3DStage({
                     </div>
                   </motion.div>
                 )}
+              </div>
 
-                {/* Floating Dual Contribution Pill on the pig's belly showing who saved more */}
-                <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1.5 px-3">
-                  {membersShare ? (
-                    <div className="flex items-center gap-1.5 rounded-full border border-white/90 bg-white/90 px-3 py-1 shadow-md backdrop-blur-sm text-[11px] font-black">
-                      <span className={`flex items-center gap-0.5 ${pctMale >= pctFemale ? 'text-sky-600 font-extrabold' : 'text-slate-600'}`}>
-                        {pctMale > pctFemale && '👑'} 👦 {nameMale}: {pctMale.toFixed(0)}%
-                      </span>
-                      <span className="text-slate-400">·</span>
-                      <span className={`flex items-center gap-0.5 ${pctFemale >= pctMale ? 'text-pink-600 font-extrabold' : 'text-slate-600'}`}>
-                        {pctFemale > pctMale && '👑'} 👧 {nameFemale}: {pctFemale.toFixed(0)}%
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="rounded-full border border-white/90 bg-white/85 px-2.5 py-0.5 text-[11px] font-black text-[#e11d48] shadow-md backdrop-blur-sm">
-                      💧 {liquidLabel ?? `Tháng này: ${clampedFill.toFixed(0)}%`}
+              {/* Floating Dual Contribution Pill - raised up to bottom-10 with z-20 so it is NEVER clipped */}
+              <div className="absolute inset-x-0 bottom-10 z-20 flex items-center justify-center gap-1.5 px-3 pointer-events-none">
+                {membersShare ? (
+                  <div className="flex items-center gap-2 rounded-full border-2 border-white/95 bg-white/95 px-4 py-1.5 shadow-[0_6px_20px_rgba(30,27,75,0.2)] backdrop-blur-md text-[12px] font-black">
+                    <span className={`flex items-center gap-1 ${pctMale >= pctFemale ? 'text-sky-600 font-black' : 'text-slate-600'}`}>
+                      {pctMale > pctFemale && '👑'} 👦 <span className="underline decoration-sky-400 decoration-2">{nameMale}</span>: {pctMale.toFixed(0)}%
                     </span>
-                  )}
-                </div>
+                    <span className="text-slate-300 font-bold">|</span>
+                    <span className={`flex items-center gap-1 ${pctFemale >= pctMale ? 'text-pink-600 font-black' : 'text-slate-600'}`}>
+                      {pctFemale > pctMale && '👑'} 👧 <span className="underline decoration-pink-400 decoration-2">{nameFemale}</span>: {pctFemale.toFixed(0)}%
+                    </span>
+                  </div>
+                ) : (
+                  <span className="rounded-full border-2 border-white/95 bg-white/90 px-3 py-1 text-xs font-black text-[#e11d48] shadow-md backdrop-blur-md">
+                    💧 {liquidLabel ?? `Tháng này: ${clampedFill.toFixed(0)}%`}
+                  </span>
+                )}
               </div>
             </div>
           )}

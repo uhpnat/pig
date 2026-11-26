@@ -16,12 +16,11 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
 
   const [dismissed, setDismissed] = useState(false)
 
-  // Only auto-open if journey exists, setup is done, gender is missing, and user hasn't already dismissed/configured it
+  // Only auto-open if journey exists, setup is done, and user hasn't already dismissed/configured it on this device
   const isAlreadyConfigured = typeof window !== 'undefined' && localStorage.getItem(CONFIG_KEY) === 'true'
   const needsConfig = !!(
     j &&
     j.setupDone &&
-    (!j.members.a.gender || !j.members.b.gender) &&
     !isAlreadyConfigured &&
     !dismissed
   )

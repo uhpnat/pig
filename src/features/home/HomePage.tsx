@@ -120,7 +120,7 @@ export default function HomePage() {
           spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
           alt={`${j.pig.name} – ${pigStage(progress).label}`}
           theme="meadow"
-          spriteHeight={330}
+          spriteHeight={310}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
           membersShare={{
@@ -133,8 +133,8 @@ export default function HomePage() {
           }}
         />
 
-        {/* 4. Overlapping Glossy Green-Gold Progress & Duel Card */}
-        <div className="relative -mt-8 px-4">
+        {/* 4. Glossy Green-Gold Progress & Duel Card */}
+        <div className="relative mt-2.5 px-4">
           <div
             className="relative overflow-hidden rounded-[30px] border-[2.5px] border-white/90 px-5 pb-4 pt-3.5 text-center text-white shadow-[0_16px_32px_rgba(90,150,60,.32),inset_0_2px_6px_rgba(255,255,255,.75)] backdrop-blur-md"
             style={{
