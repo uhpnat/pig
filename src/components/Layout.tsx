@@ -20,18 +20,6 @@ export function AppFrame({ nav }: { nav: boolean }) {
         paddingBottom: nav ? 'calc(88px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)',
       }}
     >
-      {/* Soft translucent top safe-area blur (no hard solid bar or border line!) */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-30"
-        style={{
-          height: 'calc(env(safe-area-inset-top, 0px) + 18px)',
-          backdropFilter: 'blur(12px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(12px) saturate(140%)',
-          maskImage: 'linear-gradient(180deg, #000 0%, #000 45%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 45%, transparent 100%)',
-        }}
-      />
       {!online && (
         <div role="status" className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3b2a6b] px-3 py-1.5 text-xs font-extrabold text-white">
           <WifiOff size={14} /> Đang ngoại tuyến – dữ liệu vẫn được lưu trên máy này
