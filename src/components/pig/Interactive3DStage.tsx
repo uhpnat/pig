@@ -91,7 +91,6 @@ export function Interactive3DStage({
   badge,
   onPoke,
   liquidFillPct,
-  liquidLabel,
   membersShare,
 }: StageProps) {
   const [jumping, setJumping] = useState(false)
@@ -585,47 +584,6 @@ export function Interactive3DStage({
 
         {badge && <div className="absolute left-4 top-2 z-20">{badge}</div>}
       </div>
-
-      {/* Sleek Glassmorphic Dock BELOW the stage (Never covers the pig's feet!) */}
-      {hasLiquid && (
-        <div className="relative z-20 -mt-2 px-4">
-          <div className="mx-auto max-w-[400px] rounded-2xl border border-white/95 bg-white/92 px-3.5 py-2.5 shadow-[0_8px_24px_rgba(30,27,75,0.12)] backdrop-blur-md">
-            {membersShare ? (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11.5px] font-black">
-                  <span className={`flex items-center gap-1 ${pctMale >= pctFemale ? 'text-sky-600' : 'text-slate-600'}`}>
-                    {pctMale > pctFemale && '👑'} 👦 <span className="truncate max-w-[85px]">{nameMale}</span>: {pctMale.toFixed(0)}%
-                  </span>
-                  <span className="rounded-full bg-gradient-to-r from-sky-500/15 via-purple-500/15 to-pink-500/15 border border-purple-200/80 px-2.5 py-0.5 text-[10.5px] font-black text-purple-800">
-                    {liquidLabel ?? `💧 Tháng này: ${clampedFill.toFixed(0)}%`}
-                  </span>
-                  <span className={`flex items-center gap-1 ${pctFemale >= pctMale ? 'text-pink-600' : 'text-slate-600'}`}>
-                    {pctFemale > pctMale && '👑'} 👧 <span className="truncate max-w-[85px]">{nameFemale}</span>: {pctFemale.toFixed(0)}%
-                  </span>
-                </div>
-                {/* Dual-Color Water Balance Bar (Blue vs Pink) */}
-                <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100 p-0.5 shadow-inner">
-                  <div
-                    className="h-full rounded-l-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700"
-                    style={{ width: `${Math.max(8, Math.min(92, pctMale))}%` }}
-                  />
-                  <div
-                    className="h-full rounded-r-full bg-gradient-to-r from-pink-400 to-rose-500 transition-all duration-700"
-                    style={{ width: `${Math.max(8, Math.min(92, pctFemale))}%` }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between text-xs font-black text-[#1e1b4b]">
-                <span>💧 Mực nước heo đất tháng này</span>
-                <span className="rounded-full bg-pink-100 px-2.5 py-0.5 text-pink-700">
-                  {liquidLabel ?? `${clampedFill.toFixed(0)}%`}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

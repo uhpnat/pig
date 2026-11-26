@@ -8,10 +8,9 @@ import { useOnline } from '@/hooks/useStore'
 
 const TABS = [
   { to: '/', label: 'Trang chủ', Icon: Home, end: true },
-  { to: '/pig', label: 'Heo đất', emoji: '🐷' },
   { to: '/journal', label: 'Nhật ký', Icon: Clock },
   { to: '/challenges', label: 'Thử thách', Icon: Trophy },
-  { to: '/couple', label: 'Của mình', Icon: Heart },
+  { to: '/couple', label: 'Của chúng mình', Icon: Heart },
 ]
 
 export function AppFrame({ nav }: { nav: boolean }) {
@@ -68,17 +67,11 @@ export function AppFrame({ nav }: { nav: boolean }) {
           style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}
         >
           <div className="flex w-full max-w-[440px]">
-            {TABS.map(({ to, label, Icon, emoji, end }) => (
+            {TABS.map(({ to, label, Icon, end }) => (
               <NavLink key={to} to={to} end={end} className={({ isActive }) => `tab no-underline ${isActive ? 'tab-on' : ''}`}>
                 {({ isActive }) => (
                   <>
-                    {emoji ? (
-                      <span className={`text-[20px] leading-none transition-transform ${isActive ? 'scale-110 drop-shadow' : 'opacity-70'}`}>
-                        {emoji}
-                      </span>
-                    ) : Icon ? (
-                      <Icon size={21} strokeWidth={isActive ? 2.6 : 2.1} aria-hidden />
-                    ) : null}
+                    <Icon size={22} strokeWidth={isActive ? 2.6 : 2.1} aria-hidden />
                     <span className="truncate">{label}</span>
                   </>
                 )}
