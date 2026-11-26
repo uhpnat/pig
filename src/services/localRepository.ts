@@ -11,7 +11,7 @@ const CFG_KEY = 'piggy-duo:gsheets-cfg:v1'
 const CHANNEL = 'piggy-duo-sync'
 export const DEFAULT_SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s'
 export const HARDCODED_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit?gid=0#gid=0'
-export const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwLMlr3eqKCDTEPLMlXuggYuKsYk_5UBDq45KPSsO16mu-DwEQJauCSL0FXlb5vvibX/exec'
+export const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYVJASdTIlS0A6VhJbpdiEKtaraMnO0zOEF1Au0HijooN5Ykz9KtTq6Jfm2RMfipaj/exec'
 
 function extractSpreadsheetId(input: string): string {
   const trimmed = (input || '').trim()
@@ -52,12 +52,15 @@ function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'p
     const raw = localStorage.getItem(CFG_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
+      const savedGas = parsed.appsScriptUrl && !parsed.appsScriptUrl.includes('AKfycbwLMlr3eqKCDTEPLMlXuggYuKsYk_5UBDq45KPSsO16mu-DwEQJauCSL0FXlb5vvibX')
+        ? parsed.appsScriptUrl
+        : ''
       const cfg = {
         spreadsheetId: DEFAULT_SPREADSHEET_ID,
-        appsScriptUrl: urlGas || parsed.appsScriptUrl || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL,
+        appsScriptUrl: urlGas || savedGas || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL,
         passcode: urlPin || parsed.passcode || '',
       }
-      if (urlGas || urlPin) localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
+      localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
       return cfg
     }
   } catch {
