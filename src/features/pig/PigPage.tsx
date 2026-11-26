@@ -75,11 +75,11 @@ export default function PigPage() {
             <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
 
-          <div className="relative grid h-[215px] w-[230px] place-items-center overflow-visible rounded-[46px] border-[4px] border-white bg-gradient-to-b from-[#d8ebff] via-[#eef5ff] to-[#dcfce7] shadow-[0_18px_36px_rgba(110,130,220,.32)]">
+          <div className="relative grid h-[230px] w-[255px] place-items-center overflow-visible rounded-[46px] border-[4px] border-white bg-gradient-to-b from-[#d8ebff] via-[#eef5ff] to-[#dcfce7] shadow-[0_18px_36px_rgba(110,130,220,.32)]">
             {/* Dynamic 3D ground contact shadow */}
             <motion.div
               aria-hidden
-              className="pointer-events-none absolute bottom-4 h-5 w-32 rounded-[50%] bg-[#1e1b4b]/20 blur-[2px]"
+              className="pointer-events-none absolute bottom-3 h-6 w-44 rounded-[50%] bg-[#1e1b4b]/22 blur-[3px]"
               animate={{ scaleX: [1, 0.9, 1], opacity: [0.24, 0.16, 0.24] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
             />
@@ -92,7 +92,7 @@ export default function PigPage() {
               animate={{ scale: 1, y: [0, -7, 0], opacity: 1 }}
               transition={{ y: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }, duration: 0.25 }}
               style={{ filter: 'drop-shadow(0 12px 16px rgba(30,27,75,.25))' }}
-              className="relative z-10 h-[180px] w-auto select-none object-contain"
+              className="relative z-10 h-[205px] w-auto select-none object-contain"
             />
           </div>
 

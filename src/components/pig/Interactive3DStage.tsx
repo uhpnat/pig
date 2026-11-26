@@ -198,8 +198,8 @@ export function Interactive3DStage({
       {/* LAYER 3: Dynamic 3D Contact Shadow */}
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute bottom-5 left-1/2 h-6 -translate-x-1/2 rounded-[50%] bg-[#1e1b4b]/25 blur-[3px]"
-        style={{ width: spriteHeight * 0.78 }}
+        className="pointer-events-none absolute bottom-4 left-1/2 h-7 -translate-x-1/2 rounded-[50%] bg-[#1e1b4b]/26 blur-[3px]"
+        style={{ width: spriteHeight * 0.96 }}
         animate={
           reducedMotion
             ? undefined

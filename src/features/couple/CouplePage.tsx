@@ -120,7 +120,7 @@ export default function CouplePage() {
           spriteSrc={IMG.spriteDuo}
           alt="Hai chú heo đất 3D của đôi mình"
           theme="romantic"
-          spriteHeight={185}
+          spriteHeight={215}
           reducedMotion={state.settings.animations === 'off'}
         />
       </div>

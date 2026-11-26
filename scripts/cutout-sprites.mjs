@@ -133,14 +133,23 @@ async function cutoutSprite(
     }
   }
 
-  const outBuf = await sharp(data, { raw: { width: w, height: h, channels: 4 } })
+  const trimmedBuf = await sharp(data, { raw: { width: w, height: h, channels: 4 } })
     .trim({ threshold: 4 })
+    .png()
+    .toBuffer()
+
+  const tm = await sharp(trimmedBuf).metadata()
+  // Make the pig super chubby and round (widen by 28% horizontally!)
+  const chubbyW = Math.round((tm.width || 280) * 1.28)
+  const chubbyH = tm.height || 320
+  const outBuf = await sharp(trimmedBuf)
+    .resize(chubbyW, chubbyH, { fit: 'fill', kernel: sharp.kernel.lanczos3 })
     .png({ compressionLevel: 9 })
     .toBuffer()
 
   fs.writeFileSync(outputPath, outBuf)
   const m = await sharp(outBuf).metadata()
-  console.log(`Sprite ready: ${path.basename(outputPath)} -> ${m.width}x${m.height} (${(outBuf.length / 1024).toFixed(1)} KB)`)
+  console.log(`Chubby Sprite ready: ${path.basename(outputPath)} -> ${m.width}x${m.height} (${(outBuf.length / 1024).toFixed(1)} KB)`)
 }
 
 // 1. Hero winking pig with gold coin (from pure white render)
@@ -178,21 +187,21 @@ await cutoutSprite(
   { size: 480, colorTol: 52, stepTol: 20 },
 )
 
-// 6. Compose two cuddling 3D pigs sprite (`sprite_duo.png`) from our transparent hero pig + shades pig!
+// 6. Compose two cuddling 3D pigs sprite (`sprite_duo.png`) from our transparent chubby hero pig + shades pig!
 const leftPig = await sharp(path.join(imgDir, 'sprite_hero.png'))
-  .resize({ height: 340 })
+  .resize({ height: 350 })
   .toBuffer()
 const rightPig = await sharp(path.join(imgDir, 'sprite_shades.png'))
   .flop()
-  .resize({ height: 310 })
+  .resize({ height: 325 })
   .toBuffer()
 
 const duoBuf = await sharp({
-  create: { width: 520, height: 360, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  create: { width: 620, height: 370, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
 })
   .composite([
-    { input: leftPig, left: 25, top: 10 },
-    { input: rightPig, left: 235, top: 38 },
+    { input: leftPig, left: 10, top: 10 },
+    { input: rightPig, left: 265, top: 35 },
   ])
   .png({ compressionLevel: 9 })
   .toBuffer()
