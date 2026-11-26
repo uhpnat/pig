@@ -146,7 +146,11 @@ export class LocalRepository implements Repository {
         headers: { 'Content-Type': appsScriptUrl ? 'text/plain;charset=utf-8' : 'application/json' },
         body: JSON.stringify({ spreadsheetId, passcode, state }),
       })
-      const data = await res.json().catch(() => ({}))
+      const text = await res.text()
+      if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
+        throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi" hoặc "Bất kỳ ai có tài khoản Google". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
+      }
+      const data = JSON.parse(text || '{}')
       if (!res.ok || data?.ok === false) {
         if (res.status === 405) {
           throw new Error('GitHub Pages không nhận POST (405). Hãy dán link Google Apps Script Web App URL (https://script.google.com/macros/s/.../exec) vào ô cấu hình bên dưới nhé!')
@@ -178,7 +182,11 @@ export class LocalRepository implements Repository {
     this.syncStatus = { ...this.syncStatus, syncing: true, lastError: null }
     try {
       const res = await fetch(url, { method: 'GET' })
-      const data = await res.json().catch(() => ({}))
+      const text = await res.text()
+      if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
+        throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi" hoặc "Bất kỳ ai có tài khoản Google". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
+      }
+      const data = JSON.parse(text || '{}')
       if (!res.ok || data?.ok === false) {
         throw new Error(data?.error || `HTTP ${res.status}`)
       }
@@ -217,7 +225,7 @@ export class LocalRepository implements Repository {
   private commit(next: AppState): AppState {
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
-    void this.pushToSheet(next, false)
+    void this.pushToSheet(next, true)
     return next
   }
 
@@ -231,9 +239,9 @@ export class LocalRepository implements Repository {
 
   async load() {
     const local = read()
-    void this.pullFromSheet(false).then((remote) => {
+    void this.pullFromSheet(true).then((remote) => {
       if (!remote && local.journey) {
-        void this.pushToSheet(local, false)
+        void this.pushToSheet(local, true)
       }
     })
     return local
@@ -243,12 +251,17 @@ export class LocalRepository implements Repository {
     this.listeners.add(cb)
     const onMsg = () => cb(read())
     const onStorage = (e: StorageEvent) => { if (e.key === KEY || e.key === CFG_KEY) cb(read()) }
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') void this.pullFromSheet(false)
+    }
     this.bc?.addEventListener('message', onMsg)
     window.addEventListener('storage', onStorage)
+    window.addEventListener('visibilitychange', onFocus)
     return () => {
       this.listeners.delete(cb)
       this.bc?.removeEventListener('message', onMsg)
       window.removeEventListener('storage', onStorage)
+      window.removeEventListener('visibilitychange', onFocus)
     }
   }
 
