@@ -258,7 +258,7 @@ export default function RevealPage() {
             <button
               type="button"
               onClick={async () => {
-                if (confirm('Bạn muốn xoá kết quả hôm nay để quay số lại từ đầu?')) {
+                if (window.confirm('Bạn muốn xoá kết quả hôm nay để quay số lại từ đầu?')) {
                   await run(repo.resetTodayReveal())
                   toast('Đã đặt lại lượt mở số hôm nay! 🎲')
                 }
