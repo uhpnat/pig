@@ -1,5 +1,6 @@
 import { Clock, Heart, Home, Trophy, WifiOff } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { ROUTE_THEME } from '@/App'
 import { FxHost, ToastHost } from '@/components/FxHost'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { PullToRefresh } from '@/components/PullToRefresh'
@@ -15,17 +16,29 @@ const TABS = [
 
 export function AppFrame({ nav }: { nav: boolean }) {
   const online = useOnline()
+  const loc = useLocation()
+  const theme = ROUTE_THEME[loc.pathname] || { top: '#b8e1ff', bottom: '#fde8f1' }
   return (
     <div
       className="mx-auto min-h-[100dvh] w-full max-w-[440px]"
     >
-      {/* Fixed top & bottom backdrop layers so iOS notch (safe-area-inset-top) and home bar always match the active page */}
+      {/* Top foreground 4px + safe-area fixed bar (z-50) so iOS Safari WebKit ALWAYS samples the active page's top color and never gets stuck on /reveal's purple! */}
+      <div
+        key={`top-bar-${loc.pathname}`}
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 top-0 z-50"
+        style={{
+          height: 'calc(4px + env(safe-area-inset-top, 0px))',
+          backgroundColor: theme.top,
+        }}
+      />
+      {/* Fixed top & bottom backdrop layers */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-x-0 top-0 -z-10"
         style={{
           height: 'calc(88px + env(safe-area-inset-top, 0px))',
-          backgroundColor: 'var(--page-top-color, #b8e1ff)',
+          backgroundColor: theme.top,
         }}
       />
       <div
@@ -33,7 +46,7 @@ export function AppFrame({ nav }: { nav: boolean }) {
         className="pointer-events-none fixed inset-x-0 bottom-0 -z-10"
         style={{
           height: 'calc(88px + env(safe-area-inset-bottom, 0px))',
-          backgroundColor: 'var(--page-bottom-color, #fde8f1)',
+          backgroundColor: theme.bottom,
         }}
       />
       {!online && (

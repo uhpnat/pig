@@ -63,8 +63,14 @@ export default function App() {
     document.documentElement.style.setProperty('--page-bottom-color', theme.bottom)
     document.documentElement.style.backgroundColor = theme.top
     document.body.style.backgroundColor = theme.top
-    const metas = document.querySelectorAll('meta[name="theme-color"]')
-    metas.forEach((m) => m.setAttribute('content', theme.top))
+
+    // Force iOS Safari WebKit to re-evaluate theme-color by replacing the meta tags in <head>
+    const oldMetas = document.querySelectorAll('meta[name="theme-color"]')
+    oldMetas.forEach((m) => m.parentNode?.removeChild(m))
+    const meta = document.createElement('meta')
+    meta.setAttribute('name', 'theme-color')
+    meta.setAttribute('content', theme.top)
+    document.head.appendChild(meta)
   }, [loc.pathname])
   return (
     <PasscodeGate>

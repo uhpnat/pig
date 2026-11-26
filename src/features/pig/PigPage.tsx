@@ -12,7 +12,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { Badge, Button, Card, Modal } from '@/components/ui'
-import { monthlyBudget } from '@/domain/engine'
 import { diffDays, fmtDate, vnd } from '@/domain/format'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
@@ -47,17 +46,11 @@ export default function PigPage() {
   const idx = Math.max(0, PIG_AVATARS.findIndex((a) => a.id === pig.style))
   const current = PIG_AVATARS[idx] || PIG_AVATARS[0]
 
-  // Monthly water fill & member shares so the pig on Heo Đất tab also glows with translucent monthly fill!
+  // Total goal progress & member shares for the Target-Date Pig on Heo Đất tab!
   const t = confirmedTotals(state.contributions)
   const actual = actualShares(state.contributions)
   const shareA = actual.a * 100
   const shareB = actual.b * 100
-  const curMonthKey = today.slice(0, 7)
-  const monthSaved = state.contributions
-    .filter((c) => c.status === 'confirmed' && c.date.startsWith(curMonthKey))
-    .reduce((sum, c) => sum + c.amount, 0)
-  const mBudget = Math.max(1, monthlyBudget(j))
-  const monthPct = Math.min(100, (monthSaved / mBudget) * 100)
 
   // Final Target Date Countdown
   const targetDateStr = j.endDate
@@ -165,7 +158,7 @@ export default function PigPage() {
         </span>
       </header>
 
-      {/* 2. Interactive 3D Piggy Mascot with Translucent Monthly Fill */}
+      {/* 2. Interactive 3D Piggy Mascot with Goal-to-Target-Date Translucent Fill */}
       <div className="relative mt-1">
         <Interactive3DStage
           spriteSrc={current.sprite}
@@ -173,7 +166,8 @@ export default function PigPage() {
           theme="pastel"
           spriteHeight={250}
           reducedMotion={motionOff}
-          liquidFillPct={monthPct}
+          liquidFillPct={progress}
+          liquidLabel={`🎯 Mục tiêu đến ${fmtDate(targetDateStr)}: ${progress.toFixed(1)}%`}
           membersShare={{
             a: {
               name: j.members.a.name,

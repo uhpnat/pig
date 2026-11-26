@@ -57,11 +57,16 @@ export default function HomePage() {
   const anyConfirmed = cs.some((c) => c.status === 'confirmed')
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
 
-  // Monthly contribution progress (%) to pour dual-color water into the translucent 3D pig!
+  // Monthly contribution progress (%) to pour dual-color water into the translucent 3D pig on HomePage!
   const curMonthKey = today.slice(0, 7)
-  const monthSaved = state.contributions
-    .filter((c) => c.status === 'confirmed' && c.date.startsWith(curMonthKey))
-    .reduce((sum, c) => sum + c.amount, 0)
+  const monthContribs = state.contributions.filter(
+    (c) => c.status === 'confirmed' && c.date.startsWith(curMonthKey),
+  )
+  const monthSaved = monthContribs.reduce((sum, c) => sum + c.amount, 0)
+  const monthA = monthContribs.filter((c) => c.member === 'a').reduce((sum, c) => sum + c.amount, 0)
+  const monthB = monthContribs.filter((c) => c.member === 'b').reduce((sum, c) => sum + c.amount, 0)
+  const monthShareA = monthSaved > 0 ? (monthA / monthSaved) * 100 : actual.a * 100
+  const monthShareB = monthSaved > 0 ? (monthB / monthSaved) * 100 : actual.b * 100
   const mBudget = Math.max(1, monthlyBudget(j))
   const monthPct = Math.min(100, (monthSaved / mBudget) * 100)
 
@@ -152,24 +157,25 @@ export default function HomePage() {
       <div className="relative mt-1">
         <Interactive3DStage
           spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
-          alt={`${j.pig.name} – ${stage.label}`}
+          alt={`${j.pig.name} – Heo đất tháng ${curMonthKey.slice(5)}`}
           theme="meadow"
           spriteHeight={250}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
+          liquidLabel={`💧 Heo tháng ${curMonthKey.slice(5)}: ${monthPct.toFixed(0)}% (${fmtM(monthSaved)}/${fmtM(mBudget)})`}
           membersShare={{
             a: {
               name: j.members.a.name,
               avatar: j.members.a.avatar,
-              amount: t.a,
-              pct: shareA,
+              amount: monthA,
+              pct: monthShareA,
               gender: j.members.a.gender,
             },
             b: {
               name: j.members.b.name,
               avatar: j.members.b.avatar,
-              amount: t.b,
-              pct: shareB,
+              amount: monthB,
+              pct: monthShareB,
               gender: j.members.b.gender,
             },
           }}
