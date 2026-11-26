@@ -9,6 +9,14 @@ const KEY = 'piggy-duo:v1'
 const CFG_KEY = 'piggy-duo:gsheets-cfg:v1'
 const CHANNEL = 'piggy-duo-sync'
 export const DEFAULT_SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s'
+export const HARDCODED_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit?gid=0#gid=0'
+
+function extractSpreadsheetId(input: string): string {
+  const trimmed = (input || '').trim()
+  const m = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+  if (m) return m[1]
+  return trimmed || DEFAULT_SPREADSHEET_ID
+}
 
 function isLocalhost(): boolean {
   if (typeof location === 'undefined') return true
@@ -43,7 +51,7 @@ function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'p
     if (raw) {
       const parsed = JSON.parse(raw)
       const cfg = {
-        spreadsheetId: parsed.spreadsheetId || import.meta.env.VITE_GOOGLE_SHEET_ID || DEFAULT_SPREADSHEET_ID,
+        spreadsheetId: DEFAULT_SPREADSHEET_ID,
         appsScriptUrl: urlGas || parsed.appsScriptUrl || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
         passcode: urlPin || parsed.passcode || '',
       }
@@ -54,7 +62,7 @@ function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'p
     /* ignore */
   }
   const fallback = {
-    spreadsheetId: import.meta.env.VITE_GOOGLE_SHEET_ID || DEFAULT_SPREADSHEET_ID,
+    spreadsheetId: DEFAULT_SPREADSHEET_ID,
     appsScriptUrl: urlGas || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
     passcode: urlPin || '',
   }
@@ -91,7 +99,7 @@ export class LocalRepository implements Repository {
   setSheetConfig(patch: Partial<Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'>>) {
     const cur = readCfg()
     const next = {
-      spreadsheetId: patch.spreadsheetId !== undefined ? patch.spreadsheetId.trim() || DEFAULT_SPREADSHEET_ID : cur.spreadsheetId,
+      spreadsheetId: patch.spreadsheetId !== undefined ? extractSpreadsheetId(patch.spreadsheetId) : DEFAULT_SPREADSHEET_ID,
       appsScriptUrl: patch.appsScriptUrl !== undefined ? patch.appsScriptUrl.trim() : cur.appsScriptUrl,
       passcode: patch.passcode !== undefined ? patch.passcode.trim() : cur.passcode,
     }

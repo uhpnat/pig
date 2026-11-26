@@ -16,6 +16,9 @@
  * 7. Dán URL đó vào mục "Kết nối Google Sheets" trong tab "Của chúng mình" trên app!
  */
 
+// Đã gắn cứng vào Google Sheet của 2 bạn:
+// https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit?gid=0#gid=0
+var SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s';
 // Nếu bạn muốn khoá thêm ở tầng Google Sheet, điền cùng Mã khoá đôi mình vào đây (để trống = không bắt buộc):
 var SECRET_PASSCODE = '';
 
@@ -34,7 +37,7 @@ function doGet(e) {
   if (!checkPasscode(pass)) {
     return jsonOut({ ok: false, error: 'Sai mã khoá bảo mật (SECRET_PASSCODE)' });
   }
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
   var val = sheet.getRange('C2').getValue();
   var updated = sheet.getRange('B2').getValue();
@@ -56,7 +59,7 @@ function doPost(e) {
     if (!state) {
       return jsonOut({ ok: false, error: 'Missing state' });
     }
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var now = new Date().toISOString();
 
     // 1. Lưu JSON chuẩn vào AppState

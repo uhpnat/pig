@@ -4,7 +4,10 @@ import { Badge, Button, Card, Field, Modal } from '@/components/ui'
 import { fmtDateTime } from '@/domain/format'
 import { useJourney, useStore } from '@/hooks/useStore'
 
+import { HARDCODED_SHEET_URL } from '@/services/localRepository'
+
 const GAS_CODE = `// Dán vào Tiện ích mở rộng -> Apps Script trên Google Sheet của bạn
+var SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s';
 var SECRET_PASSCODE = ''; // Tuỳ chọn: điền mã khoá nếu muốn kiểm tra cả trên Sheet
 
 function jsonOut(obj) {
@@ -14,7 +17,7 @@ function checkPass(p) { return !SECRET_PASSCODE || String(p || '').trim() === SE
 
 function doGet(e) {
   if (!checkPass(e && e.parameter ? e.parameter.key : '')) return jsonOut({ ok: false, error: 'Sai mã khoá' });
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
   var val = sheet.getRange('C2').getValue();
   var updated = sheet.getRange('B2').getValue();
@@ -29,7 +32,7 @@ function doPost(e) {
     if (!checkPass(payload.passcode)) return jsonOut({ ok: false, error: 'Sai mã khoá' });
     var state = payload.state;
     if (!state) return jsonOut({ ok: false, error: 'Missing state' });
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var now = new Date().toISOString();
     var appSheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
     appSheet.clearContents();
@@ -42,16 +45,15 @@ export function GoogleSheetsCard() {
   const j = useJourney()
   const { repo, run, toast } = useStore()
   const cfg = repo.getSheetConfig()
-  const [sheetId, setSheetId] = useState(cfg.spreadsheetId)
   const [gasUrl, setGasUrl] = useState(cfg.appsScriptUrl)
   const [passcode, setPasscode] = useState(cfg.passcode)
   const [showSetup, setShowSetup] = useState(cfg.needsAppsScript)
   const [showGuide, setShowGuide] = useState(false)
 
-  const sheetUrl = `https://docs.google.com/spreadsheets/d/${cfg.spreadsheetId}/edit`
+  const sheetUrl = HARDCODED_SHEET_URL
 
   const saveConfig = () => {
-    repo.setSheetConfig({ spreadsheetId: sheetId, appsScriptUrl: gasUrl, passcode })
+    repo.setSheetConfig({ appsScriptUrl: gasUrl, passcode })
     if (passcode.trim()) {
       try {
         sessionStorage.setItem('piggy-duo:unlocked:v1', passcode.trim())
@@ -85,7 +87,7 @@ export function GoogleSheetsCard() {
       return
     }
     if (gasUrl.trim() !== cfg.appsScriptUrl || passcode.trim() !== cfg.passcode) {
-      repo.setSheetConfig({ spreadsheetId: sheetId, appsScriptUrl: gasUrl, passcode })
+      repo.setSheetConfig({ appsScriptUrl: gasUrl, passcode })
     }
     const out = await run(repo.syncWithSheet('push'))
     if (out) {
@@ -103,7 +105,7 @@ export function GoogleSheetsCard() {
       return
     }
     if (gasUrl.trim() !== cfg.appsScriptUrl || passcode.trim() !== cfg.passcode) {
-      repo.setSheetConfig({ spreadsheetId: sheetId, appsScriptUrl: gasUrl, passcode })
+      repo.setSheetConfig({ appsScriptUrl: gasUrl, passcode })
     }
     const out = await run(repo.syncWithSheet('pull'))
     if (out) {
@@ -143,7 +145,7 @@ export function GoogleSheetsCard() {
 
       <div className="mt-2.5 rounded-2xl bg-white/60 p-3 text-xs">
         <div className="flex items-center justify-between gap-2">
-          <span className="muted !text-xs">File Google Sheet (riêng tư):</span>
+          <span className="muted !text-xs">Google Sheet cố định của 2 bạn:</span>
           <a
             href={sheetUrl}
             target="_blank"
@@ -153,6 +155,7 @@ export function GoogleSheetsCard() {
             Mở bảng tính <ExternalLink size={13} />
           </a>
         </div>
+        <p className="mt-1 break-all font-mono text-[11px] font-bold text-ink">{sheetUrl}</p>
         {cfg.lastSyncedAt && (
           <p className="muted mt-1 !text-[11px]">
             ✅ Đồng bộ lần cuối: {fmtDateTime(cfg.lastSyncedAt, j.timezone)}
@@ -194,12 +197,6 @@ export function GoogleSheetsCard() {
             onChange={(e) => setPasscode(e.target.value)}
             placeholder="Ví dụ: 150102 hoặc kỷ niệm của 2 đứa"
             hint="Khi đặt mã này, ai mở link https://uhpnat.github.io/pig/ cũng phải nhập đúng mã mới vào được."
-          />
-          <Field
-            label="3. Google Spreadsheet ID"
-            value={sheetId}
-            onChange={(e) => setSheetId(e.target.value)}
-            placeholder="1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s"
           />
           <div className="mt-3 grid gap-2">
             <Button size="sm" onClick={saveConfig}>
