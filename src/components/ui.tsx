@@ -113,19 +113,43 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
     if (!open) return
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', k)
-    ref.current?.focus()
     return () => window.removeEventListener('keydown', k)
   }, [open, onClose])
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-[#1e1b4b]/45 backdrop-blur-[2px] sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-          <motion.div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}
-            initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            className="max-h-[90vh] w-full max-w-[440px] overflow-y-auto rounded-t-[34px] border-t-2 border-white p-5 text-[#1e1b4b] shadow-2xl outline-none sm:rounded-[34px]" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #fff5f9 100%)', paddingBottom: 'calc(22px + env(safe-area-inset-bottom))' }}>
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e1b4b]/50 p-4 backdrop-blur-[2px]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            ref={ref}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            onClick={(e) => e.stopPropagation()}
+            initial={{ scale: 0.94, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.94, opacity: 0 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="max-h-[85dvh] w-full max-w-[410px] overflow-y-auto rounded-[32px] border-2 border-white p-5 text-[#1e1b4b] shadow-2xl outline-none"
+            style={{
+              background: 'linear-gradient(180deg, #ffffff 0%, #fff5f9 100%)',
+            }}
+          >
             <div className="flex items-center justify-between">
               <h2 className="h2 !text-[#1e1b4b]">{title}</h2>
-              <button type="button" onClick={onClose} aria-label="Đóng" className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border-0 bg-[#f3e8ff] text-[#6d28d9]"><X size={18} /></button>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Đóng"
+                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border-0 bg-[#f3e8ff] text-[#6d28d9]"
+              >
+                <X size={18} />
+              </button>
             </div>
             {children}
           </motion.div>

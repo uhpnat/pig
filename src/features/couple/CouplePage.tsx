@@ -406,7 +406,23 @@ export default function CouplePage() {
         onClose={() => setClearKeepCfgOpen(false)}
         title="Xoá toàn bộ dữ liệu tiết kiệm?"
       >
-        <div className="mt-3 space-y-3 text-sm">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            const normalized = confirmText.trim().toLowerCase()
+            if (normalized !== 'xác nhận xoá' && normalized !== 'xac nhan xoa') {
+              setConfirmErr('Vui lòng gõ đúng chữ "xác nhận xoá"')
+              return
+            }
+            const out = await run(repo.clearDataKeepConfig())
+            if (out) {
+              setClearKeepCfgOpen(false)
+              setConfirmText('')
+              toast('Đã xoá dữ liệu tiết kiệm & giữ nguyên cấu hình ban đầu! 🌱')
+            }
+          }}
+          className="mt-3 space-y-3 text-sm"
+        >
           <div className="rounded-2xl bg-[#fff1f2] p-3.5 text-xs font-bold leading-relaxed text-[#be123c]">
             ⚠️ Hành động này sẽ xoá toàn bộ <b>lịch sử mở số tiền, các khoản đã góp, nhật ký và tiến độ thử thách</b> trên cả ứng dụng và Google Sheet để đưa số dư heo đất về <b>0đ</b>.
             <br />
@@ -423,34 +439,26 @@ export default function CouplePage() {
             }}
             placeholder="xác nhận xoá"
             error={confirmErr}
-            autoFocus
+            autoComplete="off"
           />
 
           <div className="mt-4 grid grid-cols-2 gap-3 pt-1">
-            <Button variant="ghost" size="sm" onClick={() => setClearKeepCfgOpen(false)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setClearKeepCfgOpen(false)}
+            >
               Huỷ bỏ
             </Button>
-            <Button
-              size="sm"
-              className="!bg-none !bg-[#e11d48]"
-              onClick={async () => {
-                const normalized = confirmText.trim().toLowerCase()
-                if (normalized !== 'xác nhận xoá' && normalized !== 'xac nhan xoa') {
-                  setConfirmErr('Vui lòng gõ đúng chữ "xác nhận xoá"')
-                  return
-                }
-                const out = await run(repo.clearDataKeepConfig())
-                if (out) {
-                  setClearKeepCfgOpen(false)
-                  setConfirmText('')
-                  toast('Đã xoá dữ liệu tiết kiệm & giữ nguyên cấu hình ban đầu! 🌱')
-                }
-              }}
+            <button
+              type="submit"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="btn btn-sm !bg-none !bg-[#e11d48] !shadow-[0_4px_0_#9f1239,0_8px_16px_rgba(225,29,72,.28)]"
             >
               Xác nhận xoá
-            </Button>
+            </button>
           </div>
-        </div>
+        </form>
       </Modal>
 
       <ConfirmDialog
