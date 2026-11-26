@@ -1,13 +1,11 @@
-import { Bell, Clock, PlusCircle, Sparkles } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { Bell, Calendar, ChevronLeft, ChevronRight, Clock, History, PlusCircle, Sparkles } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { Avatar, Badge, Button, Card, Modal } from '@/components/ui'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
-import { monthlyBudget } from '@/domain/engine'
-import { fmtDate, vnd } from '@/domain/format'
+import { daysInMonth, diffDays, fmtDate, vnd } from '@/domain/format'
 import type { Contribution } from '@/domain/types'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
@@ -22,6 +20,34 @@ const STYLE_SPRITE: Record<string, string> = {
   glasses: IMG.spriteGlasses,
   hat: IMG.spriteShades,
   hoodie: IMG.spriteHoodie,
+}
+
+function buildMonthList(startDate: string, today: string, contribs: Contribution[]): string[] {
+  const set = new Set<string>()
+  const startYm = startDate.slice(0, 7)
+  const endYm = today.slice(0, 7)
+  set.add(startYm)
+  set.add(endYm)
+  for (const c of contribs) {
+    if (c.date && c.date.length >= 7) set.add(c.date.slice(0, 7))
+  }
+  const [sy, sm] = startYm.split('-').map(Number)
+  const [ey, em] = endYm.split('-').map(Number)
+  if (Number.isFinite(sy) && Number.isFinite(sm) && Number.isFinite(ey) && Number.isFinite(em)) {
+    let y = sy
+    let m = sm
+    let guard = 0
+    while ((y < ey || (y === ey && m <= em)) && guard < 120) {
+      set.add(`${y}-${String(m).padStart(2, '0')}`)
+      m++
+      if (m > 12) {
+        m = 1
+        y++
+      }
+      guard++
+    }
+  }
+  return Array.from(set).sort((a, b) => b.localeCompare(a))
 }
 
 export default function HomePage() {
@@ -47,8 +73,21 @@ export default function HomePage() {
   const [topUp, setTopUp] = useState(false)
   const [genderDialogOpen, setGenderDialogOpen] = useState(false)
   const [depositAlertDismissed, setDepositAlertDismissed] = useState(false)
+  const [monthListModalOpen, setMonthListModalOpen] = useState(false)
+
   // Two Pig Modes right on HomePage: 'month' (Heo theo tháng) vs 'final' (Heo cuối kỳ)
   const [pigMode, setPigMode] = useState<'month' | 'final'>('month')
+  const curMonthKey = today.slice(0, 7)
+  const [selectedMonthKey, setSelectedMonthKey] = useState(curMonthKey)
+
+  useEffect(() => {
+    setSelectedMonthKey(curMonthKey)
+  }, [curMonthKey])
+
+  const allMonths = useMemo(
+    () => buildMonthList(j.startDate, today, state.contributions),
+    [j.startDate, today, state.contributions],
+  )
 
   const t = confirmedTotals(state.contributions)
   const actual = actualShares(state.contributions)
@@ -85,22 +124,34 @@ export default function HomePage() {
     }
   }
 
-  // 1. Monthly Pig Metrics (Heo theo tháng)
-  const curMonthKey = today.slice(0, 7)
+  // 1. Selected Monthly Pig Metrics (Heo theo tháng - NO monthly dollar budget cap shown!)
   const monthContribs = state.contributions.filter(
-    (c) => c.status === 'confirmed' && c.date.startsWith(curMonthKey),
+    (c) => c.status === 'confirmed' && c.date.startsWith(selectedMonthKey),
   )
   const monthSaved = monthContribs.reduce((sum, c) => sum + c.amount, 0)
   const monthA = monthContribs.filter((c) => c.member === 'a').reduce((sum, c) => sum + c.amount, 0)
   const monthB = monthContribs.filter((c) => c.member === 'b').reduce((sum, c) => sum + c.amount, 0)
-  const monthShareA = monthSaved > 0 ? (monthA / monthSaved) * 100 : actual.a * 100
-  const monthShareB = monthSaved > 0 ? (monthB / monthSaved) * 100 : actual.b * 100
-  const mBudget = Math.max(1, monthlyBudget(j))
-  const monthPct = Math.min(100, (monthSaved / mBudget) * 100)
+  const monthShareA = monthSaved > 0 ? (monthA / monthSaved) * 100 : 0
+  const monthShareB = monthSaved > 0 ? (monthB / monthSaved) * 100 : 0
+
+  // Monthly water fill % based on active saving days in that month (0% when 0đ saved; rises accurately with days/deposits in that month!)
+  const totalDaysInSelectedMonth = daysInMonth(selectedMonthKey)
+  const monthStartStr = `${selectedMonthKey}-01`
+  const monthEndStr = `${selectedMonthKey}-${String(totalDaysInSelectedMonth).padStart(2, '0')}`
+  const effStart = j.startDate > monthStartStr ? j.startDate : monthStartStr
+  const effEnd = j.endDate < monthEndStr ? j.endDate : monthEndStr
+  const activeDaysInMonth = Math.max(1, diffDays(effStart, effEnd) + 1)
+  // Each active day has 2 member deposits (activeDaysInMonth * 2 slots).
+  const monthDailySlots = activeDaysInMonth * 2
+  const monthConfirmedCount = monthContribs.length
+  const monthFillPct =
+    monthSaved <= 0
+      ? 0
+      : Math.min(100, Math.max((monthConfirmedCount / monthDailySlots) * 100, (monthSaved / Math.max(1, j.goal / Math.max(1, j.months))) * 100))
 
   // 2. Final-Term Pig Metrics & Live Countdown (Heo cuối kỳ)
-  const totalShareA = actual.a * 100
-  const totalShareB = actual.b * 100
+  const totalShareA = confirmed.total > 0 ? actual.a * 100 : 0
+  const totalShareB = confirmed.total > 0 ? actual.b * 100 : 0
   const targetDateStr = j.endDate
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
 
@@ -120,7 +171,7 @@ export default function HomePage() {
     return () => clearInterval(timer)
   }, [targetDateStr])
 
-  const activeFillPct = pigMode === 'month' ? monthPct : progress
+  const activeFillPct = pigMode === 'month' ? monthFillPct : progress
   const activeShareA = pigMode === 'month' ? monthShareA : totalShareA
   const activeShareB = pigMode === 'month' ? monthShareB : totalShareB
   const activeAmountA = pigMode === 'month' ? monthA : t.a
@@ -131,9 +182,12 @@ export default function HomePage() {
   const memberFemale = isBMale ? j.members.a : j.members.b
   const activePctMale = isBMale ? activeShareB : activeShareA
   const activePctFemale = isBMale ? activeShareA : activeShareB
+  const activeMoneyMale = isBMale ? activeAmountB : activeAmountA
+  const activeMoneyFemale = isBMale ? activeAmountA : activeAmountB
 
   const stage = pigStage(progress)
   const isMyMale = myMember?.gender === 'male'
+  const selectedMonthIdx = allMonths.indexOf(selectedMonthKey)
 
   return (
     <div
@@ -228,7 +282,7 @@ export default function HomePage() {
         <div className="relative mt-0.5">
           <Interactive3DStage
             spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
-            alt={`${j.pig.name} – ${pigMode === 'month' ? 'Heo theo tháng' : 'Heo cuối kỳ'}`}
+            alt={`${j.pig.name} – ${pigMode === 'month' ? `Heo tháng ${selectedMonthKey}` : 'Heo cuối kỳ'}`}
             theme="meadow"
             spriteHeight={255}
             reducedMotion={motionOff}
@@ -257,7 +311,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 4. CURVED GLASSMORPHIC BOTTOM SHEET (Overlaps smoothly over the feathered meadow with rounded-t-[36px] — NO flat horizontal cut!) */}
+      {/* 4. CURVED GLASSMORPHIC BOTTOM SHEET */}
       <div
         className="relative z-20 -mt-5 flex-1 rounded-t-[36px] border-t-2 border-white px-4 pb-5 pt-3.5 shadow-[0_-12px_32px_rgba(80,140,90,0.12)] backdrop-blur-xl"
         style={{
@@ -265,39 +319,93 @@ export default function HomePage() {
             'linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(255,248,252,0.96) 55%, rgba(253,232,241,0.98) 100%)',
         }}
       >
-        {/* Subtle iOS drag-handle pill at top of bottom sheet */}
         <div className="mx-auto mb-3 h-1 w-11 rounded-full bg-slate-200/90" />
 
         <div className="space-y-3">
           {/* 4A. Mode Summary Header inside the Curved Sheet */}
           {pigMode === 'month' ? (
             <div className="rounded-2xl border border-sky-100/90 bg-gradient-to-r from-sky-50/80 via-white to-pink-50/80 p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-black uppercase tracking-wider text-sky-700">
-                    📅 Quỹ heo tháng {curMonthKey.slice(5)}/{curMonthKey.slice(0, 4)}
-                  </span>
-                  <p className="mt-0.5 text-lg font-black text-[#1e1b4b] tabular-nums">
-                    <AnimatedNumber value={monthSaved} format={(n) => vnd(Math.round(n))} />{' '}
-                    <span className="text-xs font-bold text-slate-400">/ {vnd(mBudget)}</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-sky-700">
+                      📅 Heo tháng {selectedMonthKey.slice(5)}/{selectedMonthKey.slice(0, 4)}
+                    </span>
+                    {selectedMonthKey !== curMonthKey && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.2 text-[9.5px] font-black text-amber-800">
+                        Tháng cũ
+                      </span>
+                    )}
+                  </div>
+                  {/* Strictly show ONLY the accumulated amount in this month (NO monthly target amount!) */}
+                  <p className="mt-0.5 text-xl font-black text-[#1e1b4b] tabular-nums">
+                    <AnimatedNumber value={monthSaved} format={(n) => vnd(Math.round(n))} />
                   </p>
                 </div>
-                <div className="text-right">
-                  <span className="inline-block rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-2.5 py-1 text-xs font-black text-white shadow-sm tabular-nums">
-                    💧 {monthPct.toFixed(0)}%
-                  </span>
-                  <p className="mt-1 text-[10px] font-extrabold text-slate-500">
-                    👦 {memberMale.name} {activePctMale.toFixed(0)}% · 👧 {memberFemale.name} {activePctFemale.toFixed(0)}%
-                  </p>
+
+                {/* Month Navigation & History List Trigger */}
+                <div className="flex shrink-0 items-center gap-1">
+                  {allMonths.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={selectedMonthIdx >= allMonths.length - 1}
+                        onClick={() =>
+                          selectedMonthIdx < allMonths.length - 1 &&
+                          setSelectedMonthKey(allMonths[selectedMonthIdx + 1])
+                        }
+                        aria-label="Tháng trước"
+                        className="grid h-7 w-7 cursor-pointer place-items-center rounded-full border border-slate-200 bg-white text-slate-600 disabled:opacity-40"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={selectedMonthIdx <= 0}
+                        onClick={() =>
+                          selectedMonthIdx > 0 && setSelectedMonthKey(allMonths[selectedMonthIdx - 1])
+                        }
+                        aria-label="Tháng sau"
+                        className="grid h-7 w-7 cursor-pointer place-items-center rounded-full border border-slate-200 bg-white text-slate-600 disabled:opacity-40"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setMonthListModalOpen(true)}
+                    className="flex cursor-pointer items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[11px] font-black text-indigo-700 shadow-sm transition-transform active:scale-95"
+                  >
+                    <History size={13} /> DS tháng ({allMonths.length})
+                  </button>
                 </div>
               </div>
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100 p-0.5">
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-pink-500"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.max(5, Math.min(100, monthPct))}%` }}
-                  transition={{ duration: 0.8 }}
-                />
+
+              {/* 2-Person Contribution Breakdown in Selected Month */}
+              <div className="mt-2 flex items-center justify-between text-[11px] font-black">
+                <span className="text-sky-700">
+                  👦 {memberMale.name}: {vnd(activeMoneyMale)} ({activePctMale.toFixed(0)}%)
+                </span>
+                <span className="text-pink-700">
+                  👧 {memberFemale.name}: {vnd(activeMoneyFemale)} ({activePctFemale.toFixed(0)}%)
+                </span>
+              </div>
+              <div className="mt-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-100 p-0.5">
+                {monthSaved > 0 ? (
+                  <>
+                    <div
+                      className="h-full rounded-l-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700"
+                      style={{ width: `${activePctMale}%` }}
+                    />
+                    <div
+                      className="h-full rounded-r-full bg-gradient-to-r from-pink-400 to-rose-500 transition-all duration-700"
+                      style={{ width: `${activePctFemale}%` }}
+                    />
+                  </>
+                ) : (
+                  <div className="h-full w-full rounded-full bg-slate-200/70" />
+                )}
               </div>
             </div>
           ) : (
@@ -525,6 +633,98 @@ export default function HomePage() {
 
       <TopUpDialog open={topUp} onClose={() => setTopUp(false)} />
       <GenderSelectDialog open={genderDialogOpen} onClose={() => setGenderDialogOpen(false)} />
+
+      {/* Month History List Modal ("Danh sách các tháng của Heo") */}
+      <Modal
+        open={monthListModalOpen}
+        onClose={() => setMonthListModalOpen(false)}
+        title="📜 Danh sách các tháng của Heo"
+      >
+        <div className="mt-2 space-y-2.5">
+          <p className="text-xs font-bold text-slate-500">
+            Chọn một tháng bất kỳ để xem lại chú heo đất và số tiền 2 bạn đã góp trong tháng đó:
+          </p>
+          <div className="max-h-[55dvh] space-y-2 overflow-y-auto pr-1">
+            {allMonths.map((ym) => {
+              const mCs = state.contributions.filter(
+                (c) => c.status === 'confirmed' && c.date.startsWith(ym),
+              )
+              const mTot = mCs.reduce((s, c) => s + c.amount, 0)
+              const mA = mCs.filter((c) => c.member === 'a').reduce((s, c) => s + c.amount, 0)
+              const mB = mCs.filter((c) => c.member === 'b').reduce((s, c) => s + c.amount, 0)
+              const mMale = isBMale ? mB : mA
+              const mFemale = isBMale ? mA : mB
+              const mPctMale = mTot > 0 ? (mMale / mTot) * 100 : 0
+              const mPctFemale = mTot > 0 ? (mFemale / mTot) * 100 : 0
+              const isSelected = ym === selectedMonthKey
+              const isCurrent = ym === curMonthKey
+
+              return (
+                <button
+                  key={ym}
+                  type="button"
+                  onClick={() => {
+                    setSelectedMonthKey(ym)
+                    setPigMode('month')
+                    setMonthListModalOpen(false)
+                  }}
+                  className={`w-full cursor-pointer rounded-2xl border-2 p-3 text-left transition-all ${
+                    isSelected
+                      ? 'border-indigo-500 bg-indigo-50/70 shadow-sm'
+                      : 'border-slate-100 bg-slate-50/80 hover:bg-slate-100/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={15} className="text-indigo-600" />
+                      <span className="text-sm font-black text-[#1e1b4b]">
+                        Tháng {ym.slice(5)}/{ym.slice(0, 4)}
+                      </span>
+                      {isCurrent && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-black text-emerald-700">
+                          Hiện tại
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-black text-rose-600 tabular-nums">
+                      {vnd(mTot)}
+                    </span>
+                  </div>
+
+                  <div className="mt-1.5 flex items-center justify-between text-[11px] font-bold text-slate-600">
+                    <span className="text-sky-700">
+                      👦 {memberMale.name}: {vnd(mMale)} ({mPctMale.toFixed(0)}%)
+                    </span>
+                    <span className="text-pink-700">
+                      👧 {memberFemale.name}: {vnd(mFemale)} ({mPctFemale.toFixed(0)}%)
+                    </span>
+                  </div>
+
+                  <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-white">
+                    {mTot > 0 ? (
+                      <>
+                        <div
+                          className="h-full bg-sky-500"
+                          style={{ width: `${mPctMale}%` }}
+                        />
+                        <div
+                          className="h-full bg-pink-500"
+                          style={{ width: `${mPctFemale}%` }}
+                        />
+                      </>
+                    ) : (
+                      <div className="h-full w-full bg-slate-200" />
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setMonthListModalOpen(false)}>
+            Đóng
+          </Button>
+        </div>
+      </Modal>
 
       {/* Deposit Alert Popup for 2nd User / Unconfirmed Daily Amount */}
       <Modal

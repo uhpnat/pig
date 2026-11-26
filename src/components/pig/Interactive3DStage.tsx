@@ -155,8 +155,13 @@ export function Interactive3DStage({
 
   const hasLiquid = typeof liquidFillPct === 'number'
   const clampedFill = hasLiquid ? Math.max(0, Math.min(100, liquidFillPct)) : 100
-  // Always keep at least 12% water pool at the bottom so the dual-color rippling waves are always visible and lively!
-  const visualFill = clampedFill <= 0 ? 12 : Math.max(16, Math.min(96, clampedFill))
+  // Accurate vertical mapping: 0% = 0% (100% transparent empty pig); >0% maps linearly across the pig's body (3.6% paws to 93.6% ears), 100% = 100%
+  const visualFill =
+    clampedFill <= 0
+      ? 0
+      : clampedFill >= 100
+        ? 100
+        : Number((3.6 + (clampedFill / 100) * 90).toFixed(2))
 
   // Identify Male (Chàng / Sky Blue) vs Female (Nàng / Rose Pink)
   const isBMale = membersShare?.b?.gender === 'male' || membersShare?.a?.gender === 'female'
@@ -165,8 +170,18 @@ export function Interactive3DStage({
 
   const nameMale = memberMale?.name ?? 'Chàng'
   const nameFemale = memberFemale?.name ?? 'Nàng'
-  const pctMale = memberMale?.pct ?? 50
-  const pctFemale = memberFemale?.pct ?? 50
+  const rawPctMale = memberMale?.pct ?? 50
+  const rawPctFemale = memberFemale?.pct ?? 50
+  const totalShare = rawPctMale + rawPctFemale
+  const pctMale = totalShare > 0 ? (rawPctMale / totalShare) * 100 : 50
+  const pctFemale = totalShare > 0 ? (rawPctFemale / totalShare) * 100 : 50
+  // Horizontal split across the pig's physical body width (6% left edge to 94% right edge)
+  const splitBodyX =
+    pctMale <= 0.5
+      ? 0
+      : pctMale >= 99.5
+        ? 100
+        : Number((6 + (pctMale / 100) * 88).toFixed(2))
 
   // Dynamic Pig Quotes reflecting who is contributing more or less and monthly progress
   const quotes = [
@@ -377,7 +392,7 @@ export function Interactive3DStage({
                   draggable={false}
                 />
 
-                {/* 4B. RIPPLING DUAL-COLOR WATER WAVES (Nam Sky Blue + Nữ Rose Pink rippling & intertwining) */}
+                {/* 4B. ACCURATE % RIPPLING DUAL-COLOR WATER WAVES (Nam Sky Blue + Nữ Rose Pink proportional to their exact %) */}
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -392,153 +407,165 @@ export function Interactive3DStage({
                     maskPosition: 'center',
                   }}
                 >
-                  {/* Rising Liquid Container */}
-                  <motion.div
-                    className="absolute inset-x-0 bottom-0"
-                    initial={{ height: '12%' }}
-                    animate={{ height: `${visualFill}%` }}
-                    transition={{ duration: 1.1, ease: 'easeOut' }}
-                  >
-                    {/* 1. FIXED-HEIGHT SURFACE RIPPLE WAVE 1 (Back wave rolling Left -> Right, 4 distinct crests!) */}
-                    <motion.svg
-                      viewBox="0 0 800 36"
-                      preserveAspectRatio="none"
-                      className="absolute -top-[24px] left-0 h-[28px] w-[200%]"
-                      animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                      transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+                  {/* Rising Liquid Container: 0% when clampedFill is 0, rises accurately to visualFill% */}
+                  {visualFill > 0 && (
+                    <motion.div
+                      className="absolute inset-x-0 bottom-0 overflow-hidden"
+                      initial={{ height: '0%' }}
+                      animate={{ height: `${visualFill}%` }}
+                      transition={{ duration: 0.95, ease: 'easeOut' }}
                     >
-                      <defs>
-                        <linearGradient id="ripple-wave-back" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#0284c7" stopOpacity="0.92" />
-                          <stop offset="25%" stopColor="#38bdf8" stopOpacity="0.9" />
-                          <stop offset="50%" stopColor="#f43f5e" stopOpacity="0.92" />
-                          <stop offset="75%" stopColor="#0284c7" stopOpacity="0.92" />
-                          <stop offset="100%" stopColor="#fb7185" stopOpacity="0.9" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M 0 18 Q 50 0 100 18 T 200 18 T 300 18 T 400 18 T 500 18 T 600 18 T 700 18 T 800 18 L 800 36 L 0 36 Z"
-                        fill="url(#ripple-wave-back)"
-                      />
-                    </motion.svg>
+                      {/* LEFT ZONE: Nam's Sky-Blue Rippling Water Column (Width = splitBodyX%) */}
+                      {splitBodyX > 0 && (
+                        <div
+                          className="absolute inset-y-0 left-0 overflow-hidden transition-all duration-700"
+                          style={{ width: `${splitBodyX}%` }}
+                        >
+                          {/* Nam Back Wave */}
+                          <motion.svg
+                            viewBox="0 0 800 28"
+                            preserveAspectRatio="none"
+                            className="absolute left-0 top-0 h-[18px] w-[520px]"
+                            animate={reducedMotion ? undefined : { x: [0, -260] }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
+                          >
+                            <path
+                              d="M 0 14 Q 32.5 0 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
+                              fill="rgba(2, 132, 199, 0.85)"
+                            />
+                          </motion.svg>
 
-                    {/* 2. FIXED-HEIGHT SURFACE RIPPLE WAVE 2 (Front wave rolling Right -> Left, crossing ripples!) */}
-                    <motion.svg
-                      viewBox="0 0 800 36"
-                      preserveAspectRatio="none"
-                      className="absolute -top-[20px] left-0 h-[24px] w-[200%]"
-                      animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                      transition={{ duration: 1.9, repeat: Infinity, ease: 'linear' }}
-                    >
-                      <defs>
-                        <linearGradient id="ripple-wave-front" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.95" />
-                          <stop offset={`${Math.max(18, Math.min(82, pctMale))}%`} stopColor="#a855f7" stopOpacity="0.88" />
-                          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.95" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M 0 18 Q 50 36 100 18 T 200 18 T 300 18 T 400 18 T 500 18 T 600 18 T 700 18 T 800 18 L 800 36 L 0 36 Z"
-                        fill="url(#ripple-wave-front)"
-                      />
-                    </motion.svg>
+                          {/* Nam Front Counter-Wave */}
+                          <motion.svg
+                            viewBox="0 0 800 28"
+                            preserveAspectRatio="none"
+                            className="absolute left-0 top-[3px] h-[17px] w-[520px]"
+                            animate={reducedMotion ? undefined : { x: [-260, 0] }}
+                            transition={{ duration: 1.85, repeat: Infinity, ease: 'linear' }}
+                          >
+                            <path
+                              d="M 0 14 Q 32.5 28 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
+                              fill="rgba(56, 189, 248, 0.94)"
+                            />
+                          </motion.svg>
 
-                    {/* 3. FIXED-HEIGHT GLOSSY FOAM CREST RIPPLE (Sparkling white/cyan/pink surface meniscus) */}
-                    <motion.svg
-                      viewBox="0 0 800 28"
-                      preserveAspectRatio="none"
-                      className="absolute -top-[14px] left-0 h-[18px] w-[200%]"
-                      animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                      transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
-                    >
-                      <path
-                        d="M 0 14 Q 50 2 100 14 T 200 14 T 300 14 T 400 14 T 500 14 T 600 14 T 700 14 T 800 14 L 800 22 L 0 22 Z"
-                        fill="rgba(255, 255, 255, 0.78)"
-                      />
-                    </motion.svg>
+                          {/* Nam Solid Liquid Body below the 15px wave crest */}
+                          <div
+                            className="absolute inset-x-0 bottom-0 top-[15px]"
+                            style={{
+                              background: 'linear-gradient(180deg, rgba(56,189,248,0.92) 0%, rgba(14,165,233,0.9) 50%, rgba(2,132,199,0.94) 100%)',
+                            }}
+                          />
+                        </div>
+                      )}
 
-                    {/* 4. DUAL-COLOR LIQUID BODY with Internal Rippling Wave Currents (Left = Nam Sky Blue, Right = Nữ Rose Pink) */}
-                    <div
-                      className="relative h-full w-full overflow-hidden"
-                      style={{
-                        background: `linear-gradient(90deg, rgba(2,132,199,0.88) 0%, rgba(56,189,248,0.84) ${Math.max(10, pctMale - 12)}%, rgba(192,38,211,0.78) ${pctMale}%, rgba(244,63,94,0.84) ${Math.min(90, pctMale + 12)}%, rgba(225,29,72,0.88) 100%)`,
-                        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.45)',
-                      }}
-                    >
-                      {/* Internal Rippling Wave Ribbon A (Fixed 26px height so it never squashes!) */}
+                      {/* RIGHT ZONE: Nữ's Rose-Pink Rippling Water Column (Width = 100 - splitBodyX%) */}
+                      {splitBodyX < 100 && (
+                        <div
+                          className="absolute inset-y-0 right-0 overflow-hidden transition-all duration-700"
+                          style={{ width: `${100 - splitBodyX}%` }}
+                        >
+                          {/* Nữ Back Wave */}
+                          <motion.svg
+                            viewBox="0 0 800 28"
+                            preserveAspectRatio="none"
+                            className="absolute right-0 top-0 h-[18px] w-[520px]"
+                            animate={reducedMotion ? undefined : { x: [0, 260] }}
+                            transition={{ duration: 2.3, repeat: Infinity, ease: 'linear' }}
+                          >
+                            <path
+                              d="M 0 14 Q 32.5 0 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
+                              fill="rgba(225, 29, 72, 0.85)"
+                            />
+                          </motion.svg>
+
+                          {/* Nữ Front Counter-Wave */}
+                          <motion.svg
+                            viewBox="0 0 800 28"
+                            preserveAspectRatio="none"
+                            className="absolute right-0 top-[3px] h-[17px] w-[520px]"
+                            animate={reducedMotion ? undefined : { x: [260, 0] }}
+                            transition={{ duration: 1.75, repeat: Infinity, ease: 'linear' }}
+                          >
+                            <path
+                              d="M 0 14 Q 32.5 28 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
+                              fill="rgba(251, 113, 133, 0.94)"
+                            />
+                          </motion.svg>
+
+                          {/* Nữ Solid Liquid Body below the 15px wave crest */}
+                          <div
+                            className="absolute inset-x-0 bottom-0 top-[15px]"
+                            style={{
+                              background: 'linear-gradient(180deg, rgba(251,113,133,0.92) 0%, rgba(244,63,94,0.9) 50%, rgba(225,29,72,0.94) 100%)',
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Soft Iridescent Blend seam where Nam's Blue meets Nữ's Pink */}
+                      {splitBodyX > 0 && splitBodyX < 100 && (
+                        <div
+                          className="pointer-events-none absolute bottom-0 top-[8px] w-5 -translate-x-1/2 blur-[4px] transition-all duration-700"
+                          style={{
+                            left: `${splitBodyX}%`,
+                            background: 'linear-gradient(90deg, rgba(56,189,248,0.85) 0%, rgba(192,132,252,0.9) 50%, rgba(251,113,133,0.85) 100%)',
+                          }}
+                        />
+                      )}
+
+                      {/* Full-Width Shimmering Surface Meniscus Ripple & Internal Wave Ribbons */}
                       <motion.svg
-                        viewBox="0 0 800 32"
+                        viewBox="0 0 800 24"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[22%] h-[26px] w-[200%]"
-                        animate={reducedMotion ? undefined : { x: ['-50%', '0%'], y: [0, -4, 0] }}
-                        transition={{
-                          x: { duration: 2.4, repeat: Infinity, ease: 'linear' },
-                          y: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' },
-                        }}
+                        className="pointer-events-none absolute left-0 top-[2px] h-[14px] w-[200%]"
+                        animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
+                        transition={{ duration: 1.9, repeat: Infinity, ease: 'linear' }}
                       >
-                        <defs>
-                          <linearGradient id="inner-ripple-a" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.65" />
-                            <stop offset="35%" stopColor="#f472b6" stopOpacity="0.65" />
-                            <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.65" />
-                            <stop offset="100%" stopColor="#fb7185" stopOpacity="0.65" />
-                          </linearGradient>
-                        </defs>
                         <path
-                          d="M 0 16 Q 50 0 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 Q 750 32 700 24 T 600 24 T 500 24 T 400 24 T 300 24 T 200 24 T 100 24 T 0 24 Z"
-                          fill="url(#inner-ripple-a)"
+                          d="M 0 12 Q 50 2 100 12 T 200 12 T 300 12 T 400 12 T 500 12 T 600 12 T 700 12 T 800 12 L 800 17 L 0 17 Z"
+                          fill="rgba(255, 255, 255, 0.65)"
                         />
                       </motion.svg>
 
-                      {/* Internal Rippling Wave Ribbon B (Counter-flowing at 58% depth) */}
+                      {/* Internal White-Aqua Shimmer Ribbon inside the water */}
                       <motion.svg
-                        viewBox="0 0 800 32"
+                        viewBox="0 0 800 28"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[58%] h-[26px] w-[200%]"
-                        animate={reducedMotion ? undefined : { x: ['0%', '-50%'], y: [0, 4, 0] }}
-                        transition={{
-                          x: { duration: 2.9, repeat: Infinity, ease: 'linear' },
-                          y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-                        }}
+                        className="pointer-events-none absolute left-0 top-[45%] h-[18px] w-[200%]"
+                        animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
+                        transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
                       >
-                        <defs>
-                          <linearGradient id="inner-ripple-b" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#fda4af" stopOpacity="0.6" />
-                            <stop offset="35%" stopColor="#38bdf8" stopOpacity="0.6" />
-                            <stop offset="70%" stopColor="#fb7185" stopOpacity="0.6" />
-                            <stop offset="100%" stopColor="#7dd3fc" stopOpacity="0.6" />
-                          </linearGradient>
-                        </defs>
                         <path
-                          d="M 0 16 Q 50 32 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 Q 750 8 700 22 T 600 22 T 500 22 T 400 22 T 300 22 T 200 22 T 100 22 T 0 22 Z"
-                          fill="url(#inner-ripple-b)"
+                          d="M 0 14 Q 50 0 100 14 T 200 14 T 300 14 T 400 14 T 500 14 T 600 14 T 700 14 T 800 14 L 800 20 L 0 20 Z"
+                          fill="rgba(255, 255, 255, 0.24)"
                         />
                       </motion.svg>
 
-                      {/* Effervescent Dual-Color Rising Water Bubbles */}
+                      {/* Effervescent Rising Water Bubbles */}
                       {!reducedMotion &&
-                        [14, 28, 42, 56, 70, 84].map((leftPct, bIdx) => {
-                          const isBlueBubble = leftPct <= pctMale
+                        [18, 34, 50, 66, 82].map((leftPct, bIdx) => {
+                          const isBlueBubble = leftPct <= splitBodyX
                           return (
                             <motion.span
                               key={bIdx}
-                              className={`absolute bottom-1 rounded-full ${
+                              className={`pointer-events-none absolute bottom-1 rounded-full ${
                                 isBlueBubble
-                                  ? 'bg-sky-100 shadow-[0_0_8px_#38bdf8]'
-                                  : 'bg-pink-100 shadow-[0_0_8px_#f43f5e]'
+                                  ? 'bg-sky-100 shadow-[0_0_6px_#ffffff]'
+                                  : 'bg-pink-100 shadow-[0_0_6px_#ffffff]'
                               }`}
                               style={{
                                 left: `${leftPct}%`,
-                                width: 5 + (bIdx % 3) * 3,
-                                height: 5 + (bIdx % 3) * 3,
+                                width: 4 + (bIdx % 3) * 2.5,
+                                height: 4 + (bIdx % 3) * 2.5,
                               }}
                               animate={{
-                                y: [0, -spriteHeight * (visualFill / 100)],
-                                x: [0, bIdx % 2 === 0 ? 8 : -8, bIdx % 2 === 0 ? -4 : 4, 0],
-                                opacity: [0, 0.95, 0.85, 0],
+                                y: [0, -Math.max(24, spriteHeight * (visualFill / 100) - 16)],
+                                x: [0, bIdx % 2 === 0 ? 6 : -6, 0],
+                                opacity: [0, 0.9, 0],
                               }}
                               transition={{
-                                duration: 1.9 + (bIdx % 3) * 0.4,
+                                duration: 1.8 + (bIdx % 3) * 0.35,
                                 repeat: Infinity,
                                 delay: bIdx * 0.3,
                                 ease: 'easeInOut',
@@ -546,8 +573,8 @@ export function Interactive3DStage({
                             />
                           )
                         })}
-                    </div>
-                  </motion.div>
+                    </motion.div>
+                  )}
 
                   {/* 4C. Subtle 3D Pig Facial & Contour Detail Overlay so eyes/snout/ears stay crisp over the water */}
                   <img
