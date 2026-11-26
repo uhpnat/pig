@@ -2,11 +2,11 @@
 import { ChevronLeft, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { DuoSlotMachine3D } from '@/components/pig/DuoSlotMachine3D'
 import { Avatar, Badge, Button, Chip } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import type { MemberId } from '@/domain/types'
 import { useJourney, useStore } from '@/hooks/useStore'
-import { IMG } from '@/lib/assets'
 import { beep, haptic } from '@/lib/fx'
 
 export default function RevealPage() {
@@ -31,7 +31,6 @@ export default function RevealPage() {
       a: Math.max(10_000, Math.round((Math.random() * scale * 0.7) / 10_000) * 10_000),
       b: Math.max(10_000, Math.round((Math.random() * scale * 0.5) / 10_000) * 10_000),
     })
-    // Seed initial rolling numbers BEFORE setting rolling=true so it never flashes "+0đ" on the first frame!
     setTicker(randomTick())
     setRolling(true)
     haptic(state.settings, 40)
@@ -69,6 +68,12 @@ export default function RevealPage() {
     }
   }
 
+  const displayAmounts = rolling
+    ? ticker
+    : reveal
+      ? reveal.amounts
+      : { a: 0, b: 0 }
+
   return (
     <div
       className="relative min-h-[100dvh] pb-10"
@@ -104,46 +109,36 @@ export default function RevealPage() {
         </button>
       </div>
 
-      {/* Crisp Native Header Title + 3D Crystal Coin Globe Illustration */}
-      <div className="mt-2 px-4 text-center">
-        <h1 className="text-[23px] font-black leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(30,10,90,.45)]">
+      {/* Crisp Native Header Title + 3D Piggy Duo Twin-Reel Slot Machine */}
+      <div className="relative z-10 mt-2 px-4 text-center">
+        <h1 className="text-[22px] font-black leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(30,10,90,.45)]">
           Hôm nay là ngày
           <br />
           cùng nhau thử thách!
         </h1>
       </div>
-      <div className="relative mt-1 overflow-hidden">
-        <motion.img
-          src={IMG.glob}
-          alt="Hôm nay là ngày cùng nhau thử thách!"
-          className="mx-auto block max-h-[260px] w-full select-none object-cover"
-          style={{
-            maskImage: 'linear-gradient(180deg, #000 0%, #000 86%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 86%, transparent 100%)',
-          }}
-          animate={
-            motionOff
-              ? undefined
-              : rolling
-                ? { scale: [1, 1.03, 0.98, 1], rotate: [-1.2, 1.2, -1.2] }
-                : { y: [0, -6, 0] }
-          }
-          transition={{ duration: rolling ? 0.45 : 2.6, repeat: Infinity }}
-        />
-      </div>
 
-      {/* Soft Pink Rounded Sheet matching 04_daily_reveal.png */}
+      <DuoSlotMachine3D
+        journey={j}
+        rolling={rolling}
+        revealed={!!reveal && !rolling}
+        amounts={displayAmounts}
+        reducedMotion={motionOff}
+        onPullLever={() => start(!!reveal)}
+      />
+
+      {/* Soft Pink Rounded Sheet */}
       <div
-        className="relative -mt-7 rounded-t-[36px] px-5 pb-7 pt-5 text-center shadow-[0_-12px_32px_rgba(90,50,180,.2)]"
+        className="relative z-10 mt-1 rounded-t-[36px] px-5 pb-7 pt-5 text-center shadow-[0_-12px_32px_rgba(90,50,180,.2)]"
         style={{ background: 'linear-gradient(180deg, #ffeaf2 0%, #fff7fa 60%, #ffffff 100%)' }}
       >
         <p className="text-[15px] font-black leading-snug text-[#1e1b4b]">
-          Hệ thống sẽ random số tiền
+          Máy quay số Heo Đôi sẽ random số tiền
           <br />
-          cho mỗi người trong ngày này!
+          cho cả {j.members.a.name} & {j.members.b.name} cùng lúc!
         </p>
         <p className="mt-1 text-[13px] font-extrabold text-[#4b5563]">
-          Tổng tiền vẫn bằng nhau theo mục tiêu nhé <span className="text-[#ff3b6b]">❤️</span>
+          Tổng tiền vẫn bám sát mục tiêu chung nhé <span className="text-[#ff3b6b]">❤️</span>
         </p>
 
         {goalReached && !reveal ? (
@@ -156,38 +151,9 @@ export default function RevealPage() {
           </div>
         ) : !reveal || rolling ? (
           <>
-            <div className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-4 shadow-[0_12px_28px_rgba(143,124,240,.16)]">
-              <h2 className="text-[18px] font-black text-[#4c1d95]">Kết quả hôm nay</h2>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                {(['a', 'b'] as const).map((k, idx) => (
-                  <div key={k} className="text-center">
-                    <div
-                      className={`mx-auto grid h-20 w-20 place-items-center rounded-full p-1 ${
-                        idx === 0 ? 'bg-[#dbeafe]' : 'bg-[#fce7f3]'
-                      }`}
-                    >
-                      <Avatar value={j.members[k].avatar} size={70} />
-                    </div>
-                    <p
-                      className="mt-1.5 text-xs font-extrabold"
-                      style={{ color: idx === 0 ? '#2563eb' : '#ec4899' }}
-                    >
-                      {j.members[k].name}
-                    </p>
-                    <p
-                      className="mt-0.5 text-[21px] font-black tabular-nums"
-                      style={{ color: idx === 0 ? '#1d4ed8' : '#e11d48' }}
-                    >
-                      {rolling ? `+${ticker[k].toLocaleString('vi-VN')}đ` : '???'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {!rolling && (
               <div className="mt-3 flex items-center justify-center gap-2 text-xs font-extrabold text-[#4b5563]">
-                <span>Người bấm mở:</span>
+                <span>Người kéo cần gạt:</span>
                 {(['a', 'b'] as const).map((k) => (
                   <Chip key={k} on={by === k} onClick={() => setBy(k)}>
                     {j.members[k].name}
@@ -196,13 +162,18 @@ export default function RevealPage() {
               </div>
             )}
 
-            <Button variant="violet" className="mt-4 !py-4 !text-[18px]" disabled={rolling} onClick={() => start(false)}>
-              {rolling ? 'Đang quay số… 🎲' : 'MỞ KẾT QUẢ HÔM NAY 🎉'}
+            <Button
+              variant="violet"
+              className="mt-4 !py-4 !text-[18px]"
+              disabled={rolling}
+              onClick={() => start(false)}
+            >
+              {rolling ? 'Đang quay 2 lồng số… 🎰' : 'KÉO CẦN GẠT MỞ SỐ HÔM NAY 🎰'}
             </Button>
           </>
         ) : (
           <>
-            {/* Revealed Result White Card matching 04_daily_reveal.png */}
+            {/* Revealed Result White Card */}
             <div className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-4 shadow-[0_12px_28px_rgba(143,124,240,.16)]">
               <h2 className="text-[19px] font-black text-[#4c1d95]">Kết quả hôm nay</h2>
               <div className="mt-3 grid grid-cols-2 gap-3">
@@ -247,7 +218,6 @@ export default function RevealPage() {
                 })}
               </div>
 
-              {/* Individual confirmation buttons if pending */}
               {cs.some((c) => c.status === 'pending') && (
                 <div className="mt-3.5 grid gap-2 border-t border-[#f3e8ff] pt-3">
                   {cs.map((c) =>
