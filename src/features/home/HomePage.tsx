@@ -154,7 +154,7 @@ export default function HomePage() {
           spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
           alt={`${j.pig.name} – ${stage.label}`}
           theme="meadow"
-          spriteHeight={300}
+          spriteHeight={355}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
           membersShare={{

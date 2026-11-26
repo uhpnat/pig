@@ -6,7 +6,7 @@ import { confirmedTotals, pendingTotals, progressPct } from '@/domain/stats'
 import type { AppState, Journey, Member, MemberId } from '@/domain/types'
 import { DomainError } from '@/domain/types'
 import { applyTheme, beep, haptic, prefersReducedMotion } from '@/lib/fx'
-import { fireBrowserNotification, shouldNotifyEvent } from '@/lib/pushNotify'
+import { fireBrowserNotification, notificationRoute, shouldNotifyEvent } from '@/lib/pushNotify'
 import { repository } from '@/services'
 import type { Repository } from '@/services/repository'
 
@@ -99,7 +99,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     for (const n of fresh) {
       seenNotifIds.current.add(n.id)
       if (!shouldNotifyEvent(n, state.settings)) continue
-      void fireBrowserNotification(`🐷 ${n.title}`, n.message, n.id)
+      const { to } = notificationRoute(n)
+      void fireBrowserNotification(`🐷 ${n.title}`, n.message, n.id, to)
       toast(`🔔 ${n.title}: ${n.message}`)
       haptic(state.settings, 35)
       beep(state.settings, 'win')

@@ -1,10 +1,32 @@
 import type { AppNotification, AppSettings } from '@/domain/types'
 
+/** Maps a notification type to the corresponding in-app route. */
+export function notificationRoute(n: Pick<AppNotification, 'type' | 'title'>): { to: string; label: string } {
+  switch (n.type) {
+    case 'reveal':
+      return { to: '/reveal', label: 'Mở số & Xác nhận →' }
+    case 'partner_confirmed':
+    case 'pending':
+      return { to: '/journal', label: 'Xem Nhật ký →' }
+    case 'challenge':
+      return { to: '/challenges', label: 'Xem Thử thách →' }
+    case 'milestone':
+    case 'goal':
+      return { to: '/pig', label: 'Xem Heo đất →' }
+    case 'invite':
+    case 'recap':
+      return { to: '/couple', label: 'Xem Của mình →' }
+    default:
+      return { to: '/', label: 'Về Trang chủ →' }
+  }
+}
+
 /**
  * Triggers a native OS / PWA system notification (via ServiceWorker when installed as PWA, or Notification API).
  */
-export async function fireBrowserNotification(title: string, body: string, tag?: string) {
+export async function fireBrowserNotification(title: string, body: string, tag?: string, route = '/') {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  const hashUrl = `./#${route}`
   try {
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration()
@@ -14,11 +36,17 @@ export async function fireBrowserNotification(title: string, body: string, tag?:
           icon: './icon-192.png',
           badge: './icon-192.png',
           tag: tag || `piggy-${Date.now()}`,
+          data: { url: hashUrl },
         })
         return
       }
     }
-    new Notification(title, { body, icon: './icon-192.png', tag })
+    const notif = new Notification(title, { body, icon: './icon-192.png', tag })
+    notif.onclick = () => {
+      window.focus()
+      window.location.hash = `#${route}`
+      notif.close()
+    }
   } catch {
     /* ignore if blocked by OS */
   }

@@ -186,18 +186,18 @@ export function Interactive3DStage({
       >
         {/* LAYER 1: Ambient Radiant Halo & Drifting Clouds */}
         <motion.div style={{ x: bgShiftX }} className="pointer-events-none absolute inset-0">
-          {/* Glowing central aura behind the crystal pig */}
-          <div
-            className="
-              absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl
-            "
-            style={{
-              width: spriteHeight * 1.05,
-              height: spriteHeight * 0.9,
-              background:
-                'radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(56,189,248,0.28) 45%, rgba(244,63,94,0.25) 80%, transparent 100%)',
-            }}
-          />
+          {/* Glowing central aura behind the crystal pig (Centered via flexbox so it never shifts) */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div
+              className="rounded-full blur-2xl"
+              style={{
+                width: spriteHeight * 1.05,
+                height: spriteHeight * 0.9,
+                background:
+                  'radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(56,189,248,0.28) 45%, rgba(244,63,94,0.25) 80%, transparent 100%)',
+              }}
+            />
+          </div>
 
           {theme !== 'galaxy' && (
             <>
@@ -271,26 +271,30 @@ export function Interactive3DStage({
           </div>
         )}
 
-        {/* Glowing 3D Pedestal Ring under the Pig */}
-        <motion.div
+        {/* Glowing 3D Pedestal Shadow under the Pig (Centered via flexbox wrapper so Framer Motion scaleX never shifts it!) */}
+        <div
           aria-hidden
-          className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-[50%]"
-          style={{
-            width: Math.min(300, spriteHeight * 0.88),
-            height: 28,
-            background:
-              'radial-gradient(ellipse at center, rgba(255,255,255,0.75) 0%, rgba(56,189,248,0.35) 45%, rgba(244,63,94,0.35) 80%, transparent 100%)',
-            boxShadow: '0 6px 18px rgba(30, 27, 75, 0.22)',
-          }}
-          animate={
-            reducedMotion
-              ? undefined
-              : jumping
-                ? { scaleX: [1, 0.72, 1.06, 1], opacity: [0.85, 0.45, 0.95, 0.85] }
-                : { scaleX: [1, 0.95, 1], opacity: [0.85, 0.7, 0.85] }
-          }
-          transition={{ duration: jumping ? 0.6 : 2.6, repeat: jumping ? 0 : Infinity, ease: 'easeInOut' }}
-        />
+          className="pointer-events-none absolute inset-x-0 bottom-2.5 flex justify-center"
+        >
+          <motion.div
+            className="rounded-[50%]"
+            style={{
+              width: Math.min(320, spriteHeight * 0.78),
+              height: 26,
+              background:
+                'radial-gradient(ellipse at center, rgba(30,27,75,0.34) 0%, rgba(56,189,248,0.26) 48%, rgba(244,63,94,0.22) 78%, transparent 100%)',
+              filter: 'blur(2px)',
+            }}
+            animate={
+              reducedMotion
+                ? undefined
+                : jumping
+                  ? { scaleX: [1, 0.7, 1.08, 1], opacity: [0.9, 0.45, 1, 0.9] }
+                  : { scaleX: [1, 0.94, 1], opacity: [0.88, 0.72, 0.88] }
+            }
+            transition={{ duration: jumping ? 0.6 : 2.6, repeat: jumping ? 0 : Infinity, ease: 'easeInOut' }}
+          />
+        </div>
 
         {/* LAYER 4: 3D Cutout Pig Mascot with Crystal Shell + Monthly % Rising Liquid */}
         <div className="absolute inset-x-0 bottom-3.5 flex justify-center">
