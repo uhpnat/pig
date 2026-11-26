@@ -1,6 +1,7 @@
 import { Calendar, ChevronLeft, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { CoinStackSticker, MoneyBagSticker, StarSticker } from '@/components/Stickers'
 import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Modal } from '@/components/ui'
 import { fmtDate, fmtDateTime, vnd } from '@/domain/format'
 import type { Activity, ActivityType } from '@/domain/types'
@@ -22,19 +23,15 @@ function TimelineIcon({ a, avatar }: { a: Activity; avatar?: string }) {
       </div>
     )
   }
-  const badge =
-    a.type === 'milestone'
-      ? { emoji: '⭐', bg: 'from-[#fff3b0] to-[#fde047]' }
-      : a.type === 'reveal'
-        ? { emoji: '🪙', bg: 'from-[#fef08a] to-[#facc15]' }
-        : a.type === 'challenge'
-          ? { emoji: '💰', bg: 'from-[#fde68a] to-[#fbbf24]' }
-          : { emoji: '🐷', bg: 'from-[#fbcfe8] to-[#f472b6]' }
   return (
-    <div
-      className={`relative z-10 grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-white bg-gradient-to-b ${badge.bg} text-2xl shadow-md`}
-    >
-      {badge.emoji}
+    <div className="relative z-10 grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-white bg-white shadow-md">
+      {a.type === 'milestone' ? (
+        <StarSticker size={34} />
+      ) : a.type === 'reveal' ? (
+        <CoinStackSticker size={34} />
+      ) : (
+        <MoneyBagSticker size={34} />
+      )}
     </div>
   )
 }

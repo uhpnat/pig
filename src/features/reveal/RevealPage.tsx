@@ -91,15 +91,22 @@ export default function RevealPage() {
         </button>
       </div>
 
-      {/* 3D Crystal Coin Globe Illustration (`glob.jpg` already has "Hôm nay là ngày cùng nhau thử thách!" at the top) */}
-      <div className="relative -mt-2 overflow-hidden">
+      {/* Crisp Native Header Title + 3D Crystal Coin Globe Illustration */}
+      <div className="mt-2 px-4 text-center">
+        <h1 className="text-[23px] font-black leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(30,10,90,.45)]">
+          Hôm nay là ngày
+          <br />
+          cùng nhau thử thách!
+        </h1>
+      </div>
+      <div className="relative mt-1 overflow-hidden">
         <motion.img
           src={IMG.glob}
           alt="Hôm nay là ngày cùng nhau thử thách!"
-          className="block w-full select-none object-cover"
+          className="mx-auto block max-h-[260px] w-full select-none object-cover"
           style={{
-            maskImage: 'linear-gradient(180deg, #000 84%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(180deg, #000 84%, transparent 100%)',
+            maskImage: 'linear-gradient(180deg, transparent 0%, #000 10%, #000 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 10%, #000 85%, transparent 100%)',
           }}
           animate={
             motionOff

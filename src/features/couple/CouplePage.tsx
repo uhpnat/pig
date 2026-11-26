@@ -7,11 +7,11 @@ import {
   RefreshCw,
   Settings,
   Smartphone,
-  Target,
   UserPlus,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { MoneyBagSticker, PartySticker, TargetSticker } from '@/components/Stickers'
 import { Avatar, Button, Card, ConfirmDialog, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
 import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
@@ -64,8 +64,8 @@ export default function CouplePage() {
 
   const menuRows = [
     {
-      icon: <Target size={20} className="text-[#ef4444]" />,
-      bg: 'bg-[#fee2e2]',
+      icon: <TargetSticker size={28} />,
+      bg: 'bg-[#fff1f2]',
       label: 'Mục tiêu & Kế hoạch',
       sub: `${vnd(j.goal)} · ${durationLabel(j.months)}`,
       onClick: () => setPlanOpen(true),
@@ -124,10 +124,17 @@ export default function CouplePage() {
         className="relative -mt-7 rounded-t-[36px] px-4 pb-6 pt-5 shadow-[0_-10px_30px_rgba(255,140,180,.18)]"
         style={{ background: 'linear-gradient(180deg, #fff9fb 0%, #fdf2f7 100%)' }}
       >
+        {/* Subtitle slogan matching 08_shared_journey.png */}
+        <p className="text-center text-[15px] font-black leading-snug text-[#172554]">
+          Cùng nhau, chúng ta có thể
+          <br />
+          đạt được nhiều hơn! <span className="text-[#ff4d8d]">💕</span>
+        </p>
+
         {/* Couple Avatars Pill */}
-        <div className="mt-1 flex items-center justify-center gap-6">
+        <div className="mt-2.5 flex items-center justify-center gap-4">
           {(['a', 'b'] as const).map((k) => (
-            <div key={k} className="flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 shadow-sm">
+            <div key={k} className="flex items-center gap-2 rounded-full border border-white bg-white px-3.5 py-1.5 shadow-sm">
               <Avatar value={j.members[k].avatar} size={34} />
               <div className="text-left">
                 <p className="text-xs font-black text-[#1e1b4b]">{j.members[k].name}</p>
@@ -138,22 +145,20 @@ export default function CouplePage() {
         </div>
 
         {/* Highlight Card: Tổng tiền 2 người đã góp */}
-        <div className="mt-4 flex items-center justify-between rounded-[26px] border border-white bg-white px-5 py-4 shadow-[0_10px_28px_rgba(143,124,240,.14)]">
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-[#fff3c4] to-[#fde08d] text-3xl shadow-inner">
-            💰
+        <div className="mt-3.5 flex items-center justify-between rounded-[26px] border-2 border-white bg-white px-4 py-3.5 shadow-[0_10px_28px_rgba(143,124,240,.14)]">
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#fff8e1] shadow-inner">
+            <MoneyBagSticker size={44} />
           </div>
-          <div className="min-w-0 flex-1 px-3.5">
+          <div className="min-w-0 flex-1 px-3">
             <p className="text-[13px] font-extrabold text-[#4b5563]">Tổng tiền 2 người đã góp</p>
-            <p className="mt-0.5 truncate text-[26px] font-black leading-tight tracking-tight text-[#1e1b4b]">
+            <p className="mt-0.5 truncate text-[25px] font-black leading-tight tracking-tight text-[#172554]">
               {vnd(confirmed.total)}
             </p>
-            <p className="text-[11px] font-extrabold text-[#8f7cf0]">
+            <p className="text-[11px] font-extrabold text-[#7c3aed]">
               Đạt {pct(progress)} mục tiêu ({vnd(j.goal)})
             </p>
           </div>
-          <div className="shrink-0 text-3xl" aria-hidden>
-            🎉
-          </div>
+          <PartySticker size={40} className="shrink-0" />
         </div>
 
         {/* iOS-Style Grouped Menu Card */}

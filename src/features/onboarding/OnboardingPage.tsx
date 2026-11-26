@@ -118,15 +118,25 @@ export default function OnboardingPage() {
         >
           {step === 0 && (
             <>
-              {/* 3D Couple & Pig Hero (`ob.jpg` includes the title & illustration matching 01_onboarding.png) */}
-              <div className="-mx-4 mt-1 overflow-hidden">
+              {/* 3D Couple & Pig Hero + Crisp Native Title */}
+              <div className="mt-2 text-center">
+                <h1 className="text-[24px] font-black leading-tight tracking-tight text-[#172554]">
+                  Bắt đầu hành trình
+                  <br />
+                  Tiết kiệm cùng nhau! <span className="text-[#ff3b6b]">💗</span>
+                </h1>
+                <p className="mt-1 text-[13px] font-extrabold text-[#475569]">
+                  Cùng nuôi heo đất, đạt mục tiêu và biến ước mơ thành hiện thực 💕
+                </p>
+              </div>
+              <div className="-mx-4 mt-2 overflow-hidden">
                 <img
                   src={IMG.ob}
                   alt="Bắt đầu hành trình tiết kiệm cùng nhau"
                   className="block w-full select-none object-cover"
                   style={{
-                    maskImage: 'linear-gradient(180deg, #000 88%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(180deg, #000 88%, transparent 100%)',
+                    maskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
                   }}
                 />
               </div>

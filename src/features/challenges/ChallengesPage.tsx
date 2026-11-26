@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { CoinStackSticker, GiftBoxSticker } from '@/components/Stickers'
 import { Badge, Button, Field, Modal, MoneyInput, ProgressBar } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import { useChallenges, useStore } from '@/hooks/useStore'
@@ -84,7 +85,9 @@ export default function ChallengesPage() {
       <h2 className="mt-5 text-[16px] font-black text-[#172554]">Nhiệm vụ hôm nay</h2>
       <div className="mt-2.5 flex items-center justify-between rounded-[24px] border-2 border-white bg-white/95 px-4 py-3.5 shadow-[0_10px_24px_rgba(143,124,240,.13)]">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#fef9c3] text-2xl">🪙</span>
+          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fffbeb] shadow-inner">
+            <CoinStackSticker size={36} />
+          </span>
           <div>
             <p className="text-[15px] font-black text-[#172554]">Góp ít nhất 50.000đ</p>
             <p className="text-xs font-bold text-[#64748b]">Mở số tiền hôm nay cùng người ấy</p>
@@ -122,8 +125,8 @@ export default function ChallengesPage() {
               className="flex w-full cursor-pointer items-center gap-3.5 rounded-[24px] border-2 border-white bg-white/95 px-4 py-3.5 text-left shadow-[0_8px_22px_rgba(143,124,240,.12)] transition-transform active:scale-[0.99]"
               style={{ fontFamily: 'inherit' }}
             >
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff1f2] text-2xl">
-                🎁
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#fff1f2] shadow-inner">
+                <GiftBoxSticker size={34} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">

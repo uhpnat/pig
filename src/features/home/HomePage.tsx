@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ActivityRow } from '@/components/ActivityRow'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
+import { GiftBoxSticker, TrophySticker } from '@/components/Stickers'
 import { Avatar, Badge, Button, Card, EmptyState } from '@/components/ui'
 import { diffDays, vnd } from '@/domain/format'
 import { actualShares, confirmedTotals } from '@/domain/stats'
@@ -11,6 +12,14 @@ import { useJourney, useStore } from '@/hooks/useStore'
 import { IMG } from '@/lib/assets'
 import { TopUpDialog } from './TopUpDialog'
 
+const STYLE_HERO: Record<string, string> = {
+  crown: IMG.hero,
+  baby: IMG.hero,
+  round: IMG.t1,
+  glasses: IMG.t2,
+  hat: IMG.t1,
+  hoodie: IMG.t3,
+}
 const fmtM = (n: number) => `${(n / 1e6).toFixed(1)}M`
 
 export default function HomePage() {
@@ -79,12 +88,12 @@ export default function HomePage() {
       {/* 3. Full-bleed 3D Pig Hero on grassy hill + Overlapping Glassy Progress Card */}
       <div className="relative mt-1">
         <motion.img
-          src={IMG.hero}
+          src={STYLE_HERO[j.pig.style] || IMG.hero}
           alt={j.pig.name}
-          className="block w-full select-none object-cover"
+          className="mx-auto block max-h-[250px] w-full select-none object-cover"
           style={{
-            maskImage: 'linear-gradient(180deg, transparent 0%, #000 10%, #000 88%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 10%, #000 88%, transparent 100%)',
+            maskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
           }}
           animate={motionOff ? undefined : { y: [0, -4, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
@@ -134,9 +143,7 @@ export default function HomePage() {
                   transition={{ duration: 0.9, ease: 'easeOut' }}
                 />
               </div>
-              <span className=" -mr-1 text-2xl drop-shadow" aria-hidden>
-                🎁
-              </span>
+              <GiftBoxSticker size={34} className="-mr-1 shrink-0 drop-shadow" />
             </div>
 
             {pending.total > 0 && (
@@ -198,9 +205,7 @@ export default function HomePage() {
         {/* 6. Trophy Goal Card matching the mockup */}
         <div className="mt-3.5 flex items-center justify-between rounded-[26px] border-2 border-white bg-white/95 px-4 py-3.5 shadow-[0_10px_24px_rgba(180,140,160,.15)]">
           <div className="flex items-center gap-3">
-            <span className="text-4xl drop-shadow-sm" aria-hidden>
-              🏆
-            </span>
+            <TrophySticker size={44} className="shrink-0 drop-shadow-sm" />
             <div>
               <p className="text-xs font-extrabold text-[#6b7280]">Mục tiêu của chúng ta</p>
               <p className="text-[19px] font-black leading-tight text-[#1e1b4b]">{vnd(j.goal)}</p>
