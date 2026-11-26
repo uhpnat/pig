@@ -431,32 +431,32 @@ export default function HomePage() {
                   const partnerReported = cBy.includes(partnerMemberId)
                   const iApprovedPartner = cBy.includes(myMemberId)
                   return (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-2.5 text-center">
+                    <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-2.5 text-center">
                       <div className="flex items-center justify-center gap-1 min-w-0">
                         <Avatar value={partnerMember?.avatar || 'girl'} size={24} />
-                        <span className="truncate text-xs font-black text-slate-700">
+                        <span className="truncate text-xs font-black text-[#1e1b4b]">
                           {partnerMember?.name}
                         </span>
                       </div>
-                      <p className="mt-1 text-base font-black tabular-nums text-slate-700">
+                      <p className="mt-1 text-base font-black tabular-nums text-purple-800">
                         +{vnd(reveal.amounts[partnerMemberId])}
                       </p>
                       {done ? (
-                        <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-700">
+                        <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-800">
                           Đã vào quỹ (2/2) ✅
                         </span>
                       ) : iApprovedPartner ? (
-                        <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1 text-[10px] font-black text-amber-800">
+                        <div className="mt-1.5 rounded-xl border border-amber-300 bg-amber-100 px-2 py-1.5 text-[10.5px] font-black text-amber-950">
                           ⏳ Đã duyệt (1/2) · Chờ {partnerMember?.name}
                         </div>
                       ) : (
                         <button
                           type="button"
                           onClick={() => partnerC && handleConfirmContrib(partnerC)}
-                          className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-[11px] font-black active:scale-95 ${
+                          className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 px-2 py-1.5 text-xs font-black text-white shadow-md transition-transform active:scale-95 ${
                             partnerReported
-                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm animate-pulse'
-                              : 'border border-slate-200 bg-white text-slate-600'
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 animate-pulse'
+                              : 'bg-gradient-to-r from-violet-600 to-indigo-600'
                           }`}
                         >
                           {partnerReported
