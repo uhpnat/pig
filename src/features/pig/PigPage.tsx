@@ -5,29 +5,38 @@ import {
   Clock,
   Hammer,
   Pencil,
+  Sparkles,
   Trophy,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { Badge, Button, Card, Modal } from '@/components/ui'
+import { monthlyBudget } from '@/domain/engine'
 import { diffDays, fmtDate, vnd } from '@/domain/format'
-import { pigStage } from '@/domain/stats'
+import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { beep, haptic } from '@/lib/fx'
 import { IMG } from '@/lib/assets'
 import type { PigConfig } from '@/domain/types'
 
 const PIG_AVATARS: { id: PigConfig['style']; label: string; thumb: string; sprite: string }[] = [
-  { id: 'crown', label: 'Heo đồng xu vàng', thumb: IMG.t0, sprite: IMG.spriteHero },
+  { id: 'crown', label: 'Heo pha lê vàng', thumb: IMG.t0, sprite: IMG.spriteHero },
   { id: 'round', label: 'Heo kính râm', thumb: IMG.t1, sprite: IMG.spriteShades },
   { id: 'glasses', label: 'Heo kính cận', thumb: IMG.t2, sprite: IMG.spriteGlasses },
   { id: 'hoodie', label: 'Heo áo hoodie', thumb: IMG.t3, sprite: IMG.spriteHoodie },
 ]
 
+const EVOLUTION_STAGES = [
+  { pct: 0, icon: '🐣', name: 'Heo con mới sinh', desc: 'Bắt đầu hành trình tích luỹ' },
+  { pct: 25, icon: '🍼', name: 'Đang ăn dặm', desc: 'Đã gom được 1/4 chặng đường' },
+  { pct: 60, icon: '🌸', name: 'Tròn trịa mũm mĩm', desc: 'Bụng heo đã lưng lửng xu vàng' },
+  { pct: 100, icon: '👑', name: 'Heo vàng đại gia', desc: 'Sẵn sàng đập heo ăn mừng!' },
+]
+
 export default function PigPage() {
   const j = useJourney()
-  const { state, repo, run, celebrate, toast, confirmed, progress, today } = useStore()
+  const { state, repo, run, celebrate, toast, confirmed, progress, today, motionOff } = useStore()
   const nav = useNavigate()
 
   const [pig, setPig] = useState<PigConfig>(j.pig)
@@ -37,6 +46,18 @@ export default function PigPage() {
 
   const idx = Math.max(0, PIG_AVATARS.findIndex((a) => a.id === pig.style))
   const current = PIG_AVATARS[idx] || PIG_AVATARS[0]
+
+  // Monthly water fill & member shares so the pig on Heo Đất tab also glows with translucent monthly fill!
+  const t = confirmedTotals(state.contributions)
+  const actual = actualShares(state.contributions)
+  const shareA = actual.a * 100
+  const shareB = actual.b * 100
+  const curMonthKey = today.slice(0, 7)
+  const monthSaved = state.contributions
+    .filter((c) => c.status === 'confirmed' && c.date.startsWith(curMonthKey))
+    .reduce((sum, c) => sum + c.amount, 0)
+  const mBudget = Math.max(1, monthlyBudget(j))
+  const monthPct = Math.min(100, (monthSaved / mBudget) * 100)
 
   // Final Target Date Countdown
   const targetDateStr = j.endDate
@@ -76,7 +97,7 @@ export default function PigPage() {
   const stageInfo = pigStage(progress)
 
   // Average daily saving rate
-  const dailyAvg = elapsedDays > 0 ? Math.round(confirmed.total / elapsedDays) : 0
+  const dailyAvg = elapsedDays > 0 ? Math.round(confirmed.total / elapsedDays) : Math.round(confirmed.total)
   const remainingMoney = Math.max(0, j.goal - confirmed.total)
 
   const cycle = (dir: -1 | 1) => {
@@ -109,52 +130,66 @@ export default function PigPage() {
     <div
       className="relative min-h-[100dvh] pb-[calc(104px+env(safe-area-inset-bottom))]"
       style={{
-        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(180deg, #dbeafe 0%, #eff6ff 40%, #f5f3ff 75%, #fce7f3 100%)',
+        paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(180deg, #dbeafe 0%, #eff6ff 38%, #f5f3ff 72%, #fce7f3 100%)',
       }}
     >
       {/* 1. Header Bar */}
-      <header className="relative z-10 flex items-center justify-between px-4">
+      <header className="relative z-20 flex items-center justify-between px-4">
         {!j.setupDone ? (
           <button
             type="button"
             aria-label="Quay lại"
             onClick={() => nav('/welcome')}
-            className="grid h-10 w-10 place-items-center rounded-full border-0 bg-white/80 text-[#1e1b4b] shadow-sm"
+            className="grid h-10 w-10 place-items-center rounded-full border-0 bg-white/85 text-[#1e1b4b] shadow-sm"
           >
             <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
         ) : (
-          <div className="flex items-center gap-1.5 rounded-full border border-white/80 bg-white/75 px-3 py-1 shadow-sm backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => {
+              setTempName(pig.name)
+              setEditNameOpen(true)
+            }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/90 bg-white/85 px-3.5 py-1.5 shadow-sm backdrop-blur-md transition-transform active:scale-95"
+          >
             <span className="text-base">🐷</span>
             <span className="text-xs font-black text-[#1e1b4b]">{pig.name}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setTempName(pig.name)
-                setEditNameOpen(true)
-              }}
-              className="text-slate-400 hover:text-slate-700 ml-0.5"
-            >
-              <Pencil size={13} />
-            </button>
-          </div>
+            <Pencil size={12} className="text-indigo-500 ml-0.5" />
+          </button>
         )}
 
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-purple-200 bg-purple-50 px-2.5 py-1 text-[11px] font-black text-purple-700 shadow-sm">
-            {stageInfo.label}
-          </span>
-        </div>
+        <span className="rounded-full border border-purple-200 bg-white/90 px-3 py-1 text-xs font-black text-purple-700 shadow-sm">
+          {stageInfo.label}
+        </span>
       </header>
 
-      {/* 2. Interactive 3D Piggy Mascot */}
-      <div className="relative mt-2">
+      {/* 2. Interactive 3D Piggy Mascot with Translucent Monthly Fill */}
+      <div className="relative mt-1">
         <Interactive3DStage
           spriteSrc={current.sprite}
           alt={pig.name}
           theme="pastel"
-          spriteHeight={260}
+          spriteHeight={270}
+          reducedMotion={motionOff}
+          liquidFillPct={monthPct}
+          membersShare={{
+            a: {
+              name: j.members.a.name,
+              avatar: j.members.a.avatar,
+              amount: t.a,
+              pct: shareA,
+              gender: j.members.a.gender,
+            },
+            b: {
+              name: j.members.b.name,
+              avatar: j.members.b.avatar,
+              amount: t.b,
+              pct: shareB,
+              gender: j.members.b.gender,
+            },
+          }}
           onPoke={() => {
             beep(state.settings, 'tick')
             haptic(state.settings, 30)
@@ -162,55 +197,62 @@ export default function PigPage() {
         />
 
         {/* Carousel arrows to preview styles */}
-        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none">
+        <div className="pointer-events-none absolute inset-x-3 top-[42%] -translate-y-1/2 flex items-center justify-between z-20">
           <button
             type="button"
             onClick={() => cycle(-1)}
             aria-label="Trang phục trước"
-            className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-white/90 text-[#1e1b4b] shadow-md backdrop-blur-sm transition-transform active:scale-95"
+            className="pointer-events-auto grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white bg-white/90 text-[#1e1b4b] shadow-md backdrop-blur-sm transition-transform active:scale-95"
           >
-            <ChevronLeft size={20} strokeWidth={2.5} />
+            <ChevronLeft size={18} strokeWidth={2.5} />
           </button>
           <button
             type="button"
             onClick={() => cycle(1)}
             aria-label="Trang phục kế tiếp"
-            className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-white/90 text-[#1e1b4b] shadow-md backdrop-blur-sm transition-transform active:scale-95"
+            className="pointer-events-auto grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white bg-white/90 text-[#1e1b4b] shadow-md backdrop-blur-sm transition-transform active:scale-95"
           >
-            <ChevronRight size={20} strokeWidth={2.5} />
+            <ChevronRight size={18} strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
-      <div className="mt-3.5 space-y-3.5 px-4">
+      <div className="mt-3 space-y-3 px-4">
+        {/*First-time onboarding confirm button if setupDone is false */}
+        {!j.setupDone && (
+          <Button variant="violet" className="w-full !py-3.5 !text-base shadow-lg" onClick={saveStyle}>
+            ✨ Hoàn tất & Bắt đầu nuôi {pig.name}
+          </Button>
+        )}
+
         {/* 3. ĐỒNG HỒ ĐẾM NGƯỢC THỜI GIAN CUỐI CÙNG (Live Final Countdown Clock) */}
-        <div className="relative overflow-hidden rounded-[28px] border-2 border-white bg-white/95 p-4 text-center shadow-[0_12px_28px_rgba(70,30,130,.15)] backdrop-blur-md">
-          <div className="flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#6366f1]">
-            <Clock size={15} /> Đếm ngược đến ngày đập heo cuối cùng
+        <div className="relative overflow-hidden rounded-[26px] border-2 border-white bg-white/95 p-4 text-center shadow-[0_12px_28px_rgba(70,30,130,.12)] backdrop-blur-md">
+          <div className="inline-flex items-center justify-center gap-1.5 rounded-full bg-indigo-50 px-3 py-0.5 text-[11px] font-black uppercase tracking-wider text-indigo-600">
+            <Clock size={13} /> Đếm ngược đến ngày đập heo
           </div>
-          <p className="mt-0.5 text-xs font-bold text-slate-500">
-            Ngày về đích: <b className="text-[#1e1b4b]">{fmtDate(targetDateStr)}</b>
+          <p className="mt-1 text-xs font-bold text-slate-500">
+            Hạn chót: <b className="text-[#1e1b4b]">{fmtDate(targetDateStr)}</b>
           </p>
 
           {/* 4 Flip-Box Countdown Display */}
           <div className="mt-3 grid grid-cols-4 gap-2">
             {[
-              { val: timeLeft.days, label: 'Ngày', color: '#4f46e5' },
-              { val: timeLeft.hours, label: 'Giờ', color: '#2563eb' },
-              { val: timeLeft.minutes, label: 'Phút', color: '#db2777' },
-              { val: timeLeft.seconds, label: 'Giây', color: '#e11d48' },
+              { val: timeLeft.days, label: 'Ngày', bg: 'bg-indigo-50/80 border-indigo-100', color: '#4f46e5' },
+              { val: timeLeft.hours, label: 'Giờ', bg: 'bg-sky-50/80 border-sky-100', color: '#0284c7' },
+              { val: timeLeft.minutes, label: 'Phút', bg: 'bg-purple-50/80 border-purple-100', color: '#9333ea' },
+              { val: timeLeft.seconds, label: 'Giây', bg: 'bg-pink-50/80 border-pink-100', color: '#e11d48' },
             ].map((box, i) => (
               <div
                 key={i}
-                className="flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-[#f8fafc] py-2 shadow-inner"
+                className={`flex flex-col items-center justify-center rounded-2xl border py-2.5 shadow-inner ${box.bg}`}
               >
                 <span
-                  className="text-[26px] font-black leading-none tabular-nums"
+                  className="text-[24px] font-black leading-none tabular-nums"
                   style={{ color: box.color }}
                 >
                   {String(box.val).padStart(2, '0')}
                 </span>
-                <span className="mt-1 text-[10px] font-black uppercase text-slate-400">
+                <span className="mt-1 text-[10px] font-black uppercase text-slate-500">
                   {box.label}
                 </span>
               </div>
@@ -218,11 +260,11 @@ export default function PigPage() {
           </div>
 
           {/* Timeline Bar from Start to End */}
-          <div className="mt-4">
+          <div className="mt-3.5">
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
-              <span>Bắt đầu: {fmtDate(j.startDate)}</span>
-              <span className="font-black text-purple-700">Đã đi {timeProgressPct.toFixed(0)}%</span>
-              <span>Đích: {fmtDate(j.endDate)}</span>
+              <span>{fmtDate(j.startDate)}</span>
+              <span className="font-black text-indigo-700">Đã đi {timeProgressPct.toFixed(0)}% thời gian</span>
+              <span>{fmtDate(j.endDate)}</span>
             </div>
             <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-100 p-0.5">
               <motion.div
@@ -238,64 +280,16 @@ export default function PigPage() {
           </div>
         </div>
 
-        {/* 4. DỰ BÁO NGÀY ĐẬP HEO & TIẾN TRÌNH TIẾT KIỆM */}
+        {/* 4. THAY TRANG PHỤC CHO BÉ HEO (Wardrobe Dock) */}
         <Card className="!mt-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Trophy size={18} className="text-amber-500" />
-              <h2 className="h3 text-[#1e1b4b]">Kế hoạch về đích</h2>
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={16} className="text-pink-500" />
+              <h2 className="h3 text-[#1e1b4b]">Tủ đồ của {pig.name}</h2>
             </div>
-            <Badge tone={progress >= 100 ? 'ok' : 'warn'}>
-              {progress >= 100 ? 'Đã hoàn thành! 🎆' : `${progress.toFixed(1)}%`}
-            </Badge>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2 text-center text-xs">
-            <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-              <p className="text-slate-500 font-bold">Đã bỏ vào heo</p>
-              <p className="mt-0.5 text-base font-black text-emerald-600">{vnd(confirmed.total)}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-              <p className="text-slate-500 font-bold">Còn thiếu</p>
-              <p className="mt-0.5 text-base font-black text-rose-600">{vnd(remainingMoney)}</p>
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-2xl bg-amber-50/80 p-3 border border-amber-200/80 text-xs font-extrabold text-amber-900 leading-relaxed">
-            💡 Tốc độ gom tiền trung bình: <b>~{vnd(dailyAvg)}/ngày</b>.
-            {progress >= 100 ? (
-              <span className="block mt-1 text-emerald-700 font-black">
-                🎉 Mục tiêu đã hoàn thành xuất sắc! Hai đứa mình có thể đập heo ngay bây giờ!
-              </span>
-            ) : (
-              <span className="block mt-1">
-                Duy trì tốc độ này, hai bạn sẽ đạt <b>{vnd(j.goal)}</b> đúng hạn vào ngày {fmtDate(j.endDate)}!
-              </span>
-            )}
-          </div>
-
-          {/* Smash Pig Button */}
-          <div className="mt-3">
-            <Button
-              variant={progress >= 100 ? 'pink' : 'ghost'}
-              className="w-full !py-3 flex items-center justify-center gap-2 text-sm"
-              onClick={() => {
-                celebrate(['🪙', '✨', '🎉', '💖'])
-                haptic(state.settings, [80, 50, 80])
-                beep(state.settings, 'win')
-                setSmashModal(true)
-              }}
-            >
-              <Hammer size={18} /> {progress >= 100 ? '🔨 ĐẬP HEO ĂN MỪNG NGAY!' : '🔨 Xem trước lễ đập heo'}
-            </Button>
-          </div>
-        </Card>
-
-        {/* 5. THAY TRANG PHỤC CHO BÉ HEO */}
-        <Card className="!mt-0">
-          <div className="flex items-center justify-between">
-            <h2 className="h3 text-[#1e1b4b]">Trang phục heo đất</h2>
-            <span className="text-xs font-bold text-slate-500">{current.label}</span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-black text-slate-600">
+              {current.label}
+            </span>
           </div>
 
           <div className="mt-3 grid grid-cols-4 gap-2">
@@ -306,13 +300,13 @@ export default function PigPage() {
                   key={a.id}
                   type="button"
                   onClick={() => setPig((p) => ({ ...p, style: a.id }))}
-                  className={`flex flex-col items-center justify-center rounded-2xl border-2 p-2 transition-all ${
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 p-2 transition-all ${
                     active
-                      ? 'border-[#6366f1] bg-[#e0e7ff] shadow-md ring-2 ring-indigo-300'
+                      ? 'border-indigo-500 bg-indigo-50/90 shadow-sm ring-2 ring-indigo-200'
                       : 'border-slate-100 bg-slate-50 hover:bg-slate-100'
                   }`}
                 >
-                  <img src={a.thumb} alt={a.label} className="h-12 w-12 object-contain" />
+                  <img src={a.sprite} alt={a.label} className="h-12 w-12 object-contain drop-shadow-sm" />
                   <span className="mt-1 truncate text-[10px] font-black text-[#1e1b4b]">
                     {a.label.replace('Heo ', '')}
                   </span>
@@ -323,9 +317,101 @@ export default function PigPage() {
 
           {pig.style !== j.pig.style && (
             <Button variant="violet" className="mt-3 w-full !py-2.5 text-xs" onClick={saveStyle}>
-              Lưu trang phục mới này 🐷
+              ✨ Lưu trang phục mới này
             </Button>
           )}
+        </Card>
+
+        {/* 5. CẤP ĐỘ TIẾN HÓA HEO ĐẤT (4-Stage Evolution Roadmap) */}
+        <Card className="!mt-0">
+          <h2 className="h3 text-[#1e1b4b]">🌱 Cấp độ tiến hóa của Heo</h2>
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            {EVOLUTION_STAGES.map((st, i) => {
+              const unlocked = progress >= st.pct
+              const isCurrent =
+                progress >= st.pct &&
+                (i === EVOLUTION_STAGES.length - 1 || progress < EVOLUTION_STAGES[i + 1].pct)
+              return (
+                <div
+                  key={st.name}
+                  className={`rounded-2xl border p-2.5 transition-all ${
+                    isCurrent
+                      ? 'border-pink-400 bg-pink-50/80 shadow-sm ring-1 ring-pink-300'
+                      : unlocked
+                        ? 'border-emerald-200 bg-emerald-50/40'
+                        : 'border-slate-100 bg-slate-50/70 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">{st.icon}</span>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-slate-600 shadow-sm">
+                      Mốc {st.pct}%
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs font-black text-[#1e1b4b]">{st.name}</p>
+                  <p className="text-[10.5px] font-semibold text-slate-500 leading-snug">{st.desc}</p>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+
+        {/* 6. DỰ BÁO NGÀY ĐẬP HEO & TIẾN TRÌNH TIẾT KIỆM */}
+        <Card className="!mt-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy size={18} className="text-amber-500" />
+              <h2 className="h3 text-[#1e1b4b]">Kế hoạch về đích</h2>
+            </div>
+            <Badge tone={progress >= 100 ? 'ok' : 'warn'}>
+              {progress >= 100 ? 'Đã hoàn thành! 🎆' : `Đạt ${progress.toFixed(1)}%`}
+            </Badge>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5">
+              <p className="font-bold text-slate-500">Đã bỏ vào heo</p>
+              <p className="mt-0.5 text-base font-black text-emerald-600 tabular-nums">
+                {vnd(confirmed.total)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-2.5">
+              <p className="font-bold text-slate-500">Còn thiếu</p>
+              <p className="mt-0.5 text-base font-black text-rose-600 tabular-nums">
+                {vnd(remainingMoney)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-amber-200/80 bg-amber-50/80 p-3 text-xs font-extrabold leading-relaxed text-amber-900">
+            💡 Tốc độ gom tiền trung bình: <b>~{vnd(dailyAvg)}/ngày</b>.
+            {progress >= 100 ? (
+              <span className="mt-1 block font-black text-emerald-700">
+                🎉 Mục tiêu đã hoàn thành xuất sắc! Hai bạn có thể đập heo ngay bây giờ!
+              </span>
+            ) : (
+              <span className="mt-1 block">
+                Cùng nhau duy trì để cán mốc <b>{vnd(j.goal)}</b> vào ngày {fmtDate(j.endDate)} nhé!
+              </span>
+            )}
+          </div>
+
+          {/* Smash Pig Button */}
+          <div className="mt-3">
+            <Button
+              variant={progress >= 100 ? 'pink' : 'ghost'}
+              className="flex w-full items-center justify-center gap-2 !py-3 text-sm"
+              onClick={() => {
+                celebrate(['🪙', '✨', '🎉', '💖'])
+                haptic(state.settings, [80, 50, 80])
+                beep(state.settings, 'win')
+                setSmashModal(true)
+              }}
+            >
+              <Hammer size={18} />{' '}
+              {progress >= 100 ? '🔨 ĐẬP HEO ĂN MỪNG NGAY!' : '🔨 Xem trước lễ đập heo'}
+            </Button>
+          </div>
         </Card>
       </div>
 
@@ -336,11 +422,11 @@ export default function PigPage() {
             🐷🪙
           </div>
           <h3 className="mt-3 text-lg font-black text-[#1e1b4b]">
-            Tổng số tiền trong bụng bé heo:
+            Tổng số tiền trong bụng {pig.name}:
           </h3>
           <p className="text-3xl font-black text-[#e11d48]">{vnd(confirmed.total)}</p>
-          <p className="mt-2 text-xs font-bold text-slate-500 leading-relaxed">
-            Hành trình của {j.members.a.name} & {j.members.b.name} đếm ngược đến ngày{' '}
+          <p className="mt-2 text-xs font-bold leading-relaxed text-slate-500">
+            Hành trình của {j.members.a.name} & {j.members.b.name} hướng tới ngày{' '}
             <b>{fmtDate(j.endDate)}</b>. Mỗi đồng xu nhỏ gom góp đều là tình yêu của hai bạn!
           </p>
           <Button
