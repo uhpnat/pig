@@ -43,7 +43,7 @@ export default function ChallengesPage() {
 
   return (
     <div
-      className="min-h-[100dvh] px-4 pb-8"
+      className="min-h-[100dvh] px-4 pb-[calc(96px+env(safe-area-inset-bottom))]"
       style={{
         paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
         background: 'linear-gradient(180deg, #ede9fe 0%, #f5efff 38%, #ffeef5 100%)',

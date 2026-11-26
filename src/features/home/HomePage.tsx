@@ -54,7 +54,7 @@ export default function HomePage() {
 
   return (
     <div
-      className="relative min-h-[100dvh] pb-8"
+      className="relative min-h-[100dvh] pb-[calc(96px+env(safe-area-inset-bottom))]"
       style={{
         paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
         background: 'linear-gradient(180deg, #86c5ff 0%, #b8deff 26%, #e6f5d0 52%, #fdf2e9 72%, #fce8ef 100%)',

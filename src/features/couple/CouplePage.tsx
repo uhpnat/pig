@@ -99,7 +99,7 @@ export default function CouplePage() {
 
   return (
     <div
-      className="relative min-h-[100dvh] pb-8"
+      className="relative min-h-[100dvh] pb-[calc(96px+env(safe-area-inset-bottom))]"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         background: 'linear-gradient(180deg, #fde8f1 0%, #fff9fb 40%, #fdf2f7 100%)',

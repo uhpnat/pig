@@ -16,9 +16,7 @@ export function AppFrame({ nav }: { nav: boolean }) {
   return (
     <div
       className="mx-auto min-h-[100dvh] w-full max-w-[440px]"
-      style={{
-        paddingBottom: nav ? 'calc(88px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)',
-      }}
+
     >
       {!online && (
         <div role="status" className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3b2a6b] px-3 py-1.5 text-xs font-extrabold text-white">
