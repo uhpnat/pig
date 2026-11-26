@@ -5,6 +5,9 @@ export type Unsubscribe = () => void
 export interface SheetSyncConfig {
   spreadsheetId: string
   appsScriptUrl: string
+  passcode: string
+  isStaticHost: boolean
+  needsAppsScript: boolean
   lastSyncedAt: string | null
   lastError: string | null
   syncing: boolean
@@ -20,7 +23,7 @@ export interface Repository {
   /** Realtime: called when another device/tab or Google Sheet changes the data. */
   subscribe(cb: (s: AppState) => void): Unsubscribe
   getSheetConfig(): SheetSyncConfig
-  setSheetConfig(patch: Partial<Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl'>>): void
+  setSheetConfig(patch: Partial<Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'>>): void
   syncWithSheet(direction?: 'push' | 'pull'): Promise<AppState>
 
   saveDraft(draft: DraftSetup | null): Promise<AppState>

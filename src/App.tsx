@@ -1,6 +1,7 @@
 ﻿import { AnimatePresence, motion } from 'framer-motion'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { FullLayout, TabLayout } from '@/components/Layout'
+import { PasscodeGate } from '@/components/PasscodeGate'
 import { useStore } from '@/hooks/useStore'
 import ChallengesPage from '@/features/challenges/ChallengesPage'
 import CouplePage from '@/features/couple/CouplePage'
@@ -30,24 +31,26 @@ function Gate({ children }: { children: ReactNode }) {
 export default function App() {
   const loc = useLocation()
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <Routes location={loc} key={loc.pathname}>
-        <Route element={<FullLayout />}>
-          <Route path="/welcome" element={<Page><OnboardingPage /></Page>} />
-          <Route path="/pig" element={<PigGate />} />
-          <Route path="/reveal" element={<Gate><Page><RevealPage /></Page></Gate>} />
-          <Route path="/stats" element={<Gate><Page><Suspense fallback={<div className="p-8 text-center font-black text-vio">Đang tải biểu đồ…</div>}><StatsPage /></Suspense></Page></Gate>} />
-          <Route path="/notifications" element={<Gate><Page><NotificationsPage /></Page></Gate>} />
-        </Route>
-        <Route element={<TabLayout />}>
-          <Route path="/" element={<Gate><Page><HomePage /></Page></Gate>} />
-          <Route path="/journal" element={<Gate><Page><JournalPage /></Page></Gate>} />
-          <Route path="/challenges" element={<Gate><Page><ChallengesPage /></Page></Gate>} />
-          <Route path="/couple" element={<Gate><Page><CouplePage /></Page></Gate>} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+    <PasscodeGate>
+      <AnimatePresence mode="wait" initial={false}>
+        <Routes location={loc} key={loc.pathname}>
+          <Route element={<FullLayout />}>
+            <Route path="/welcome" element={<Page><OnboardingPage /></Page>} />
+            <Route path="/pig" element={<PigGate />} />
+            <Route path="/reveal" element={<Gate><Page><RevealPage /></Page></Gate>} />
+            <Route path="/stats" element={<Gate><Page><Suspense fallback={<div className="p-8 text-center font-black text-vio">Đang tải biểu đồ…</div>}><StatsPage /></Suspense></Page></Gate>} />
+            <Route path="/notifications" element={<Gate><Page><NotificationsPage /></Page></Gate>} />
+          </Route>
+          <Route element={<TabLayout />}>
+            <Route path="/" element={<Gate><Page><HomePage /></Page></Gate>} />
+            <Route path="/journal" element={<Gate><Page><JournalPage /></Page></Gate>} />
+            <Route path="/challenges" element={<Gate><Page><ChallengesPage /></Page></Gate>} />
+            <Route path="/couple" element={<Gate><Page><CouplePage /></Page></Gate>} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
+    </PasscodeGate>
   )
 }
 

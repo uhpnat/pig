@@ -10,6 +10,12 @@ const CFG_KEY = 'piggy-duo:gsheets-cfg:v1'
 const CHANNEL = 'piggy-duo-sync'
 export const DEFAULT_SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s'
 
+function isLocalhost(): boolean {
+  if (typeof location === 'undefined') return true
+  const h = location.hostname
+  return h === 'localhost' || h === '127.0.0.1' || h.startsWith('192.168.')
+}
+
 function read(): AppState {
   try {
     const raw = localStorage.getItem(KEY)
@@ -23,28 +29,43 @@ function read(): AppState {
   return A.createInitialState()
 }
 
-function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl'> {
+function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'> {
+  // Also allow configuring via URL query parameters on first open: ?gas=...&pin=...
+  let urlGas = ''
+  let urlPin = ''
+  if (typeof location !== 'undefined') {
+    const sp = new URLSearchParams(location.search || location.hash.split('?')[1] || '')
+    urlGas = sp.get('gas') || ''
+    urlPin = sp.get('key') || sp.get('pin') || ''
+  }
   try {
     const raw = localStorage.getItem(CFG_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      return {
+      const cfg = {
         spreadsheetId: parsed.spreadsheetId || import.meta.env.VITE_GOOGLE_SHEET_ID || DEFAULT_SPREADSHEET_ID,
-        appsScriptUrl: parsed.appsScriptUrl || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
+        appsScriptUrl: urlGas || parsed.appsScriptUrl || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
+        passcode: urlPin || parsed.passcode || '',
       }
+      if (urlGas || urlPin) localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
+      return cfg
     }
   } catch {
     /* ignore */
   }
-  return {
+  const fallback = {
     spreadsheetId: import.meta.env.VITE_GOOGLE_SHEET_ID || DEFAULT_SPREADSHEET_ID,
-    appsScriptUrl: import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
+    appsScriptUrl: urlGas || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
+    passcode: urlPin || '',
   }
+  if (urlGas || urlPin) localStorage.setItem(CFG_KEY, JSON.stringify(fallback))
+  return fallback
 }
 
 /**
- * Offline-first repository backed by Google Sheets (via Vite `/api/gsheets` bridge or Google Apps Script Web App URL)
- * with instant localStorage caching and multi-tab BroadcastChannel synchronization.
+ * Offline-first repository backed by Google Sheets:
+ * - On localhost dev server: uses Vite `/api/gsheets` bridge automatically.
+ * - On GitHub Pages / static hosts: uses the user's Google Apps Script Web App URL (avoids HTTP 405 from GitHub Pages).
  */
 export class LocalRepository implements Repository {
   readonly kind = 'gsheets' as const
@@ -62,38 +83,65 @@ export class LocalRepository implements Repository {
 
   getSheetConfig(): SheetSyncConfig {
     const cfg = readCfg()
-    return { ...cfg, ...this.syncStatus }
+    const isStaticHost = !isLocalhost()
+    const needsAppsScript = isStaticHost && !cfg.appsScriptUrl
+    return { ...cfg, isStaticHost, needsAppsScript, ...this.syncStatus }
   }
 
-  setSheetConfig(patch: Partial<Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl'>>) {
+  setSheetConfig(patch: Partial<Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'>>) {
     const cur = readCfg()
     const next = {
       spreadsheetId: patch.spreadsheetId !== undefined ? patch.spreadsheetId.trim() || DEFAULT_SPREADSHEET_ID : cur.spreadsheetId,
       appsScriptUrl: patch.appsScriptUrl !== undefined ? patch.appsScriptUrl.trim() : cur.appsScriptUrl,
+      passcode: patch.passcode !== undefined ? patch.passcode.trim() : cur.passcode,
     }
     localStorage.setItem(CFG_KEY, JSON.stringify(next))
+    this.syncStatus = { ...this.syncStatus, lastError: null }
     this.notify(read())
   }
 
-  private endpointUrl(): string {
-    const { spreadsheetId, appsScriptUrl } = readCfg()
-    if (appsScriptUrl) return appsScriptUrl
-    return `/api/gsheets?id=${encodeURIComponent(spreadsheetId)}`
+  private endpointUrl(): string | null {
+    const { spreadsheetId, appsScriptUrl, passcode } = readCfg()
+    if (appsScriptUrl) {
+      if (!passcode) return appsScriptUrl
+      const sep = appsScriptUrl.includes('?') ? '&' : '?'
+      return `${appsScriptUrl}${sep}key=${encodeURIComponent(passcode)}`
+    }
+    if (isLocalhost()) {
+      return `/api/gsheets?id=${encodeURIComponent(spreadsheetId)}`
+    }
+    // On GitHub Pages without an Apps Script URL, do not POST to /api/gsheets (which causes 405 Method Not Allowed)
+    return null
   }
 
-  private async pushToSheet(state: AppState): Promise<void> {
+  private async pushToSheet(state: AppState, explicit = false): Promise<void> {
     if (typeof fetch === 'undefined') return
-    const { spreadsheetId, appsScriptUrl } = readCfg()
+    const url = this.endpointUrl()
+    if (!url) {
+      if (explicit) {
+        this.syncStatus = {
+          ...this.syncStatus,
+          syncing: false,
+          lastError: 'Trên GitHub Pages, bạn hãy dán Apps Script Web App URL ở bên dưới để đồng bộ với Google Sheet nhé (tránh lỗi 405 của GitHub).',
+        }
+        this.notify(read())
+      }
+      return
+    }
+    const { spreadsheetId, appsScriptUrl, passcode } = readCfg()
     this.syncStatus = { ...this.syncStatus, syncing: true, lastError: null }
     this.notify(state)
     try {
-      const res = await fetch(this.endpointUrl(), {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': appsScriptUrl ? 'text/plain;charset=utf-8' : 'application/json' },
-        body: JSON.stringify({ spreadsheetId, state }),
+        body: JSON.stringify({ spreadsheetId, passcode, state }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data?.ok === false) {
+        if (res.status === 405) {
+          throw new Error('GitHub Pages không nhận POST (405). Hãy dán link Google Apps Script Web App URL (https://script.google.com/macros/s/.../exec) vào ô cấu hình bên dưới nhé!')
+        }
         throw new Error(data?.error || `HTTP ${res.status}`)
       }
       this.syncStatus = { syncing: false, lastSyncedAt: data.syncedAt || new Date().toISOString(), lastError: null }
@@ -104,11 +152,23 @@ export class LocalRepository implements Repository {
     }
   }
 
-  private async pullFromSheet(): Promise<AppState | null> {
+  private async pullFromSheet(explicit = false): Promise<AppState | null> {
     if (typeof fetch === 'undefined') return null
+    const url = this.endpointUrl()
+    if (!url) {
+      if (explicit) {
+        this.syncStatus = {
+          ...this.syncStatus,
+          syncing: false,
+          lastError: 'Trên GitHub Pages, bạn hãy dán Apps Script Web App URL ở bên dưới để tải dữ liệu từ Google Sheet nhé.',
+        }
+        this.notify(read())
+      }
+      return null
+    }
     this.syncStatus = { ...this.syncStatus, syncing: true, lastError: null }
     try {
-      const res = await fetch(this.endpointUrl(), { method: 'GET' })
+      const res = await fetch(url, { method: 'GET' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data?.ok === false) {
         throw new Error(data?.error || `HTTP ${res.status}`)
@@ -129,24 +189,26 @@ export class LocalRepository implements Repository {
     } catch (e) {
       this.syncStatus = { ...this.syncStatus, syncing: false, lastError: e instanceof Error ? e.message : String(e) }
       return null
+    } finally {
+      this.notify(read())
     }
   }
 
   async syncWithSheet(direction: 'push' | 'pull' = 'push'): Promise<AppState> {
     if (direction === 'pull') {
-      const remote = await this.pullFromSheet()
+      const remote = await this.pullFromSheet(true)
       if (remote) return remote
       return read()
     }
     const cur = read()
-    await this.pushToSheet(cur)
+    await this.pushToSheet(cur, true)
     return cur
   }
 
   private commit(next: AppState): AppState {
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
-    void this.pushToSheet(next)
+    void this.pushToSheet(next, false)
     return next
   }
 
@@ -160,9 +222,9 @@ export class LocalRepository implements Repository {
 
   async load() {
     const local = read()
-    void this.pullFromSheet().then((remote) => {
+    void this.pullFromSheet(false).then((remote) => {
       if (!remote && local.journey) {
-        void this.pushToSheet(local)
+        void this.pushToSheet(local, false)
       }
     })
     return local
@@ -182,7 +244,7 @@ export class LocalRepository implements Repository {
   }
 
   saveDraft(draft: AppState['draft']) { return this.mutate((s) => A.saveDraft(s, draft)) }
-  saveJourney(j: Parameters<Repository['saveJourney']>[0]) { return this.mutate((s) => A.saveJourney(s, j)) }
+  saveJourney(j: Parameters<Repository['saveJourney']>[0]) { return this.mutate((s, ) => A.saveJourney(s, j)) }
   updateJourney(p: Parameters<Repository['updateJourney']>[0]) { return this.mutate((s) => A.updateJourney(s, p)) }
 
   async revealToday(by: Parameters<Repository['revealToday']>[0]) {

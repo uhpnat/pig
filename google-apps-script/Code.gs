@@ -1,9 +1,9 @@
 /**
  * ============================================================================
- * PIGGY DUO – GOOGLE APPS SCRIPT BACKEND (Tùy chọn cho bản Production / 2 máy)
+ * PIGGY DUO – GOOGLE APPS SCRIPT BACKEND (Dùng cho GitHub Pages / 2 điện thoại)
  * ============================================================================
- * Hướng dẫn cài đặt lên Google Sheet của bạn:
- * 1. Mở file Google Sheet:
+ * Hướng dẫn gắn vào Google Sheet của bạn (chỉ làm 1 lần, mất 30 giây):
+ * 1. Mở file Google Sheet của bạn:
  *    https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit
  * 2. Trên thanh menu, chọn: Tiện ích mở rộng (Extensions) -> Apps Script.
  * 3. Xoá mã mặc định trong Code.gs và dán toàn bộ nội dung file này vào.
@@ -11,11 +11,29 @@
  * 5. Chọn loại: "Ứng dụng web" (Web app):
  *    - Thực thi dưới dạng (Execute as): Tôi (Me)
  *    - Ai có quyền truy cập (Who has access): Bất kỳ ai (Anyone)
- * 6. Nhấn Triển khai, copy URL Web App (https://script.google.com/macros/s/.../exec)
- *    và dán vào mục "Kết nối Google Sheets" trong tab "Của chúng mình" trên app!
+ * 6. Nhấn Triển khai, cấp quyền cho tài khoản Google của bạn, rồi copy URL Web App
+ *    (có dạng https://script.google.com/macros/s/.../exec)
+ * 7. Dán URL đó vào mục "Kết nối Google Sheets" trong tab "Của chúng mình" trên app!
  */
 
-function doGet() {
+// Nếu bạn muốn khoá thêm ở tầng Google Sheet, điền cùng Mã khoá đôi mình vào đây (để trống = không bắt buộc):
+var SECRET_PASSCODE = '';
+
+function checkPasscode(pass) {
+  if (!SECRET_PASSCODE) return true;
+  return String(pass || '').trim() === SECRET_PASSCODE;
+}
+
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  var pass = e && e.parameter ? e.parameter.key : '';
+  if (!checkPasscode(pass)) {
+    return jsonOut({ ok: false, error: 'Sai mã khoá bảo mật (SECRET_PASSCODE)' });
+  }
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
   var val = sheet.getRange('C2').getValue();
@@ -23,19 +41,20 @@ function doGet() {
   var out = val
     ? { ok: true, updatedAt: updated, state: JSON.parse(val) }
     : { ok: true, empty: true };
-  return ContentService.createTextOutput(JSON.stringify(out))
-    .setMimeType(ContentService.MimeType.JSON);
+  return jsonOut(out);
 }
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var payload = JSON.parse(e.postData.contents || '{}');
+    var payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    if (!checkPasscode(payload.passcode)) {
+      return jsonOut({ ok: false, error: 'Sai mã khoá bảo mật (SECRET_PASSCODE)' });
+    }
     var state = payload.state;
     if (!state) {
-      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Missing state' }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return jsonOut({ ok: false, error: 'Missing state' });
     }
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var now = new Date().toISOString();
@@ -98,8 +117,7 @@ function doPost(e) {
     });
     aSheet.getRange(1, 1, aRows.length, 8).setValues(aRows);
 
-    return ContentService.createTextOutput(JSON.stringify({ ok: true, syncedAt: now }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonOut({ ok: true, syncedAt: now });
   } finally {
     lock.releaseLock();
   }
