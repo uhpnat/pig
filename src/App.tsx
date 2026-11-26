@@ -1,4 +1,5 @@
 ﻿import { AnimatePresence, motion } from 'framer-motion'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { FullLayout, TabLayout } from '@/components/Layout'
 import { PasscodeGate } from '@/components/PasscodeGate'
@@ -17,7 +18,12 @@ const StatsPage = lazy(() => import('@/features/stats/StatsPage'))
 
 function Page({ children }: { children: ReactNode }) {
   const { motionOff } = useStore()
-  return <motion.div initial={motionOff ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>{children}</motion.div>
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [])
+  return <motion.div initial={motionOff ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.14 }}>{children}</motion.div>
 }
 
 /** Redirects to onboarding / pig creation until the journey is fully set up. */
@@ -37,6 +43,11 @@ function WelcomeGate() {
 
 export default function App() {
   const loc = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [loc.pathname])
   return (
     <PasscodeGate>
       <AnimatePresence mode="wait" initial={false}>
