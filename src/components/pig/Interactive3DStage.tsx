@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 function FluffyCloud({ className = '', scale = 1 }: { className?: string; scale?: number }) {
   return (
@@ -54,10 +54,8 @@ function GrassyHillsSVG({ variant = 'green' }: { variant?: 'green' | 'pink' }) {
           <stop offset="100%" stopColor={variant === 'pink' ? '#FCE7F3' : '#BBF7D0'} stopOpacity="0" />
         </radialGradient>
       </defs>
-      {/* Rolling background hills that fade smoothly into mist at the bottom */}
       <path d="M-20 78 Q 110 20 240 54 T 460 44 L 460 140 L -20 140 Z" fill="url(#hill-back)" />
       <path d="M-20 56 Q 220 8 460 58 L 460 140 L -20 140 Z" fill="url(#hill-front)" />
-      {/* Soft 3D Floating Meadow Island under the pig */}
       <ellipse cx="220" cy="86" rx="175" ry="38" fill="url(#island-podium)" />
       {[
         { x: 56, y: 70, s: 0.9 },
@@ -78,6 +76,114 @@ function GrassyHillsSVG({ variant = 'green' }: { variant?: 'green' | 'pink' }) {
   )
 }
 
+interface InternalCoinSpec {
+  id: number
+  /** Horizontal center inside the pig body (11%..89%) */
+  xPct: number
+  /** Bottom offset from base of pig body (2%..87%) */
+  yBottomPct: number
+  /** Tilt angle in degrees */
+  rot: number
+  /** Size multiplier */
+  scale: number
+  /** Visual variant: gold (classic gold coin) or gem-tinted */
+  tone: 'gold' | 'male' | 'female'
+}
+
+/** Deterministic pseudo-random helper so internal coins stay stable across renders */
+function seededRand(seed: number) {
+  const x = Math.sin(seed * 9999.91) * 10000
+  return x - Math.floor(x)
+}
+
+/** Pre-compute 76 interlocking 3D coins stacked organically from bottom (2%) to top (88%) of the pig's belly */
+const VAULT_COINS: Omit<InternalCoinSpec, 'tone'>[] = (() => {
+  const rows = 10
+  const cols = 8
+  const list: Omit<InternalCoinSpec, 'tone'>[] = []
+  let id = 0
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      id++
+      const r1 = seededRand(id * 3 + 1)
+      const r2 = seededRand(id * 7 + 2)
+      const r3 = seededRand(id * 13 + 5)
+      // Stagger odd rows like real stacked coins inside a jar
+      const rowOffset = r % 2 === 1 ? 4.8 : 0
+      const baseX = 11 + c * 9.8 + rowOffset + (r1 - 0.5) * 4.2
+      const baseY = 2.5 + r * 8.4 + (r2 - 0.5) * 2.6
+      list.push({
+        id,
+        xPct: Math.max(8, Math.min(91, baseX)),
+        yBottomPct: Math.max(2, Math.min(89, baseY)),
+        rot: Math.round((r3 - 0.5) * 44),
+        scale: Number((0.88 + seededRand(id * 19) * 0.24).toFixed(2)),
+      })
+    }
+  }
+  return list
+})()
+
+/** Crisp 3D Metallic Gold Coin SVG (with optional Sky-Blue / Rose-Pink gem emblem for Nam / Nữ) */
+function Coin3DBadge({
+  size = 24,
+  tone = 'gold',
+  className = '',
+}: {
+  size?: number
+  tone?: 'gold' | 'male' | 'female'
+  className?: string
+}) {
+  const rimColor = tone === 'male' ? '#0284c7' : tone === 'female' ? '#e11d48' : '#b45309'
+  const innerRing = tone === 'male' ? '#38bdf8' : tone === 'female' ? '#fb7185' : '#fef08a'
+  const coreBg =
+    tone === 'male'
+      ? 'linear-gradient(135deg, #fde047 0%, #f59e0b 58%, #38bdf8 100%)'
+      : tone === 'female'
+        ? 'linear-gradient(135deg, #fde047 0%, #f59e0b 58%, #fb7185 100%)'
+        : 'linear-gradient(135deg, #fef08a 0%, #facc15 45%, #d97706 100%)'
+
+  return (
+    <div
+      aria-hidden
+      className={`relative inline-flex select-none items-center justify-center rounded-full ${className}`}
+      style={{
+        width: size,
+        height: size,
+        background: coreBg,
+        border: `2px solid ${innerRing}`,
+        boxShadow: `0 2.5px 0 ${rimColor}, 0 4px 8px rgba(30,27,75,0.24), inset 0 1.5px 2px rgba(255,255,255,0.9)`,
+      }}
+    >
+      {/* Inner embossed ring */}
+      <div
+        className="flex items-center justify-center rounded-full"
+        style={{
+          width: size * 0.7,
+          height: size * 0.7,
+          border: `1px dashed ${tone === 'male' ? 'rgba(2,132,199,0.55)' : tone === 'female' ? 'rgba(225,29,72,0.55)' : 'rgba(180,83,9,0.55)'}`,
+        }}
+      >
+        <span
+          className="font-black leading-none"
+          style={{
+            fontSize: Math.max(8, Math.round(size * 0.42)),
+            color: tone === 'male' ? '#0369a1' : tone === 'female' ? '#be123c' : '#92400e',
+            textShadow: '0 1px 0 rgba(255,255,255,0.75)',
+          }}
+        >
+          ₫
+        </span>
+      </div>
+      {/* Glossy diagonal highlight */}
+      <div
+        className="pointer-events-none absolute left-[15%] top-[10%] rounded-full bg-white/75"
+        style={{ width: size * 0.28, height: size * 0.14, transform: 'rotate(-28deg)' }}
+      />
+    </div>
+  )
+}
+
 export interface MembersShareData {
   a: { name: string; avatar: string; amount: number; pct: number; gender?: 'male' | 'female' }
   b: { name: string; avatar: string; amount: number; pct: number; gender?: 'male' | 'female' }
@@ -94,6 +200,18 @@ interface StageProps {
   liquidFillPct?: number
   liquidLabel?: string
   membersShare?: MembersShareData
+  /** Increment or change this token whenever a deposit is fully confirmed (2/2) to trigger a coin shower into the pig! */
+  coinBurstKey?: number
+}
+
+interface FlyingCoinParticle {
+  id: number
+  startX: number
+  startY: number
+  midX: number
+  delay: number
+  tone: 'gold' | 'male' | 'female'
+  size: number
 }
 
 export function Interactive3DStage({
@@ -106,11 +224,14 @@ export function Interactive3DStage({
   onPoke,
   liquidFillPct,
   membersShare,
+  coinBurstKey,
 }: StageProps) {
   const [jumping, setJumping] = useState(false)
   const [droppingCoin, setDroppingCoin] = useState(false)
   const [quoteIdx, setQuoteIdx] = useState(0)
   const [bursts, setBursts] = useState<{ id: number; x: number; emoji: string }[]>([])
+  const [flyingCoins, setFlyingCoins] = useState<FlyingCoinParticle[]>([])
+  const lastBurstKeyRef = useRef<number | undefined>(coinBurstKey)
 
   const mx = useMotionValue(0)
   const my = useMotionValue(0)
@@ -132,12 +253,44 @@ export function Interactive3DStage({
     my.set(0)
   }
 
+  // Launch a multi-coin shower flying from the screen into the pig's back coin slot!
+  const launchCoinShower = (count = 12) => {
+    const now = Date.now()
+    const tones: ('gold' | 'male' | 'female')[] = ['gold', 'male', 'gold', 'female', 'gold']
+    const batch: FlyingCoinParticle[] = Array.from({ length: count }, (_, i) => {
+      const angleSpread = (i - (count - 1) / 2) * 26
+      return {
+        id: now + i,
+        startX: angleSpread + (Math.random() * 18 - 9),
+        startY: -45 - (i % 3) * 18,
+        midX: angleSpread * 0.45,
+        delay: i * 0.055,
+        tone: tones[i % tones.length],
+        size: 24 + (i % 3) * 4,
+      }
+    })
+    setFlyingCoins(batch)
+    setJumping(true)
+    setTimeout(() => setJumping(false), 750)
+    setTimeout(() => {
+      setFlyingCoins((curr) => curr.filter((c) => !batch.some((b) => b.id === c.id)))
+    }, 1500)
+  }
+
+  // Trigger coin shower automatically when coinBurstKey increments (e.g. when 2/2 confirmation completes!)
+  useEffect(() => {
+    if (typeof coinBurstKey === 'number' && coinBurstKey > 0 && coinBurstKey !== lastBurstKeyRef.current) {
+      lastBurstKeyRef.current = coinBurstKey
+      launchCoinShower(14)
+    }
+  }, [coinBurstKey])
+
   const triggerJump = () => {
     setJumping(true)
     setDroppingCoin(true)
     onPoke?.()
     setQuoteIdx((q) => q + 1)
-    const emojis = theme === 'romantic' ? ['💗', '💕', '✨', '💖'] : ['🪙', '💧', '💗', '✨']
+    const emojis = theme === 'romantic' ? ['💗', '💕', '✨', '💖'] : ['🪙', '✨', '💗', '💰']
     const now = Date.now()
     setBursts((b) => [
       ...b.slice(-8),
@@ -153,15 +306,15 @@ export function Interactive3DStage({
     }, 680)
   }
 
-  const hasLiquid = typeof liquidFillPct === 'number'
-  const clampedFill = hasLiquid ? Math.max(0, Math.min(100, liquidFillPct)) : 100
-  // Accurate vertical mapping: 0% = 0% (100% transparent empty pig); >0% maps linearly across the pig's body (3.6% paws to 93.6% ears), 100% = 100%
+  const hasCoinFill = typeof liquidFillPct === 'number'
+  const clampedFill = hasCoinFill ? Math.max(0, Math.min(100, liquidFillPct)) : 100
+  // Accurate vertical mapping: 0% = 0% (100% transparent empty pig); >0% maps linearly across the pig's belly (4% paws to 92% back)
   const visualFill =
     clampedFill <= 0
       ? 0
       : clampedFill >= 100
-        ? 100
-        : Number((3.6 + (clampedFill / 100) * 90).toFixed(2))
+        ? 95
+        : Number((5 + (clampedFill / 100) * 87).toFixed(2))
 
   // Identify Male (Chàng / Sky Blue) vs Female (Nàng / Rose Pink)
   const isBMale = membersShare?.b?.gender === 'male' || membersShare?.a?.gender === 'female'
@@ -175,26 +328,38 @@ export function Interactive3DStage({
   const totalShare = rawPctMale + rawPctFemale
   const pctMale = totalShare > 0 ? (rawPctMale / totalShare) * 100 : 50
   const pctFemale = totalShare > 0 ? (rawPctFemale / totalShare) * 100 : 50
-  // Horizontal split across the pig's physical body width (6% left edge to 94% right edge)
+  // Horizontal split across the pig's physical body width (8% left edge to 92% right edge)
   const splitBodyX =
     pctMale <= 0.5
       ? 0
       : pctMale >= 99.5
         ? 100
-        : Number((6 + (pctMale / 100) * 88).toFixed(2))
+        : Number((8 + (pctMale / 100) * 84).toFixed(2))
 
-  // Dynamic Pig Quotes reflecting who is contributing more or less and monthly progress
+  // Filter & colorize the 3D coins visible inside the transparent piggy bank up to `visualFill%`
+  const visibleCoins = useMemo(() => {
+    if (visualFill <= 0) return []
+    return VAULT_COINS.filter((c) => c.yBottomPct <= visualFill + 1.5).map((c) => {
+      // Coins on Nam's side get subtle Sky-Blue gem rims mixed with pure gold; Nữ's side gets Rose-Pink gem rims mixed with pure gold
+      const isLeft = c.xPct <= splitBodyX
+      const tone: 'gold' | 'male' | 'female' =
+        c.id % 3 === 0 ? 'gold' : isLeft ? 'male' : 'female'
+      return { ...c, tone }
+    })
+  }, [visualFill, splitBodyX])
+
+  // Dynamic Pig Quotes reflecting coin accumulation
   const quotes = [
     clampedFill <= 0
-      ? `🐷 Bụng heo tháng này đang trong suốt nè! Cùng mở số bỏ xu đầu tiên nha 🪙`
+      ? `🐷 Bụng heo pha lê đang trống nè! Xác nhận đủ 2/2 để đồng xu đầu tiên bay vào heo nha 🪙`
       : pctMale > pctFemale
-        ? `👑 ${nameMale} đang dẫn đầu (${pctMale.toFixed(0)}%) · ${nameFemale} cố lên nè! 💕`
+        ? `🪙 ${nameMale} đang góp ${pctMale.toFixed(0)}% kho xu · ${nameFemale} (${pctFemale.toFixed(0)}%) cố lên nè! 💕`
         : pctFemale > pctMale
-          ? `👑 ${nameFemale} đang dẫn đầu (${pctFemale.toFixed(0)}%) · ${nameMale} đuổi theo nha! 💕`
-          : `⚖️ Hai bạn đang cân tài cân sức (${pctMale.toFixed(0)}%) · Tuyệt vời quá! 💗`,
-    `💧 Tháng này heo đã được tô màu ${clampedFill.toFixed(0)}% rồi đó! Chạm vào heo nha 🪙`,
-    `✨ Nước xanh của ${nameMale} 💙 hòa cùng nước hồng của ${nameFemale} 💗`,
-    `🏡 Tích tiểu thành đại, mỗi ngày một chút là sớm chạm đích thôi!`,
+          ? `🪙 ${nameFemale} đang góp ${pctFemale.toFixed(0)}% kho xu · ${nameMale} (${pctMale.toFixed(0)}%) đuổi theo nha! 💕`
+          : `⚖️ Kho xu của hai bạn đang cân tài cân sức (${pctMale.toFixed(0)}%) · Tuyệt vời quá! 🪙`,
+    `🪙 Bụng heo đã đầy ${clampedFill.toFixed(0)}% xu vàng rồi đó! Chạm vào heo nghe tiếng xu leng keng nha ✨`,
+    `✨ Xu xanh của ${nameMale} 💙 lấp lánh bên xu hồng của ${nameFemale} 💗`,
+    `🏡 Tích tiểu thành đại, mỗi ngày bỏ ống một ít là bụng heo đầy ắp xu vàng thôi!`,
   ]
   const currentQuote = quotes[quoteIdx % quotes.length]
 
@@ -214,7 +379,6 @@ export function Interactive3DStage({
       >
         {/* LAYER 1: Ambient Radiant Halo & Drifting Clouds */}
         <motion.div style={{ x: bgShiftX }} className="pointer-events-none absolute inset-0">
-          {/* Glowing central aura behind the crystal pig (Centered via flexbox so it never shifts) */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
               className="rounded-full blur-2xl"
@@ -222,7 +386,7 @@ export function Interactive3DStage({
                 width: spriteHeight * 1.05,
                 height: spriteHeight * 0.9,
                 background:
-                  'radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(56,189,248,0.28) 45%, rgba(244,63,94,0.25) 80%, transparent 100%)',
+                  'radial-gradient(circle, rgba(255,255,255,0.88) 0%, rgba(250,204,21,0.28) 45%, rgba(244,63,94,0.22) 80%, transparent 100%)',
               }}
             />
           </div>
@@ -277,19 +441,51 @@ export function Interactive3DStage({
           </div>
         </motion.div>
 
-        {/* Coin Dropping Animation into Pig's Slot */}
+        {/* Single Tap Coin Drop into Pig's Slot */}
         <AnimatePresence>
           {droppingCoin && (
             <motion.div
-              initial={{ y: 4, scale: 0.6, opacity: 0 }}
-              animate={{ y: spriteHeight * 0.24, scale: 1.25, opacity: 1 }}
+              initial={{ y: -8, scale: 0.7, opacity: 0, rotateY: 0 }}
+              animate={{ y: spriteHeight * 0.28, scale: [1.15, 0.85], opacity: [1, 1, 0], rotateY: 360 }}
               exit={{ scale: 0.2, opacity: 0 }}
-              transition={{ duration: 0.38, ease: 'easeIn' }}
-              className="pointer-events-none absolute inset-x-0 top-8 z-30 flex justify-center text-3xl drop-shadow-[0_4px_12px_rgba(250,204,21,.7)]"
+              transition={{ duration: 0.48, ease: 'easeIn' }}
+              className="pointer-events-none absolute inset-x-0 top-7 z-30 flex justify-center"
             >
-              🪙
+              <Coin3DBadge size={32} tone="gold" />
             </motion.div>
           )}
+        </AnimatePresence>
+
+        {/* CELEBRATION COIN SHOWER: Multiple 3D Coins Flying into the Piggy Bank when 2/2 confirmed! */}
+        <AnimatePresence>
+          {flyingCoins.map((fc) => (
+            <motion.div
+              key={fc.id}
+              initial={{
+                x: fc.startX,
+                y: fc.startY,
+                scale: 0.4,
+                opacity: 0,
+                rotate: -45,
+              }}
+              animate={{
+                x: [fc.startX, fc.midX, 0],
+                y: [fc.startY, 12, spriteHeight * 0.34],
+                scale: [0.5, 1.25, 0.55],
+                opacity: [0, 1, 1, 0],
+                rotate: [0, 180, 360],
+              }}
+              exit={{ opacity: 0, scale: 0.2 }}
+              transition={{
+                duration: 0.82,
+                delay: fc.delay,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="pointer-events-none absolute left-1/2 top-8 z-40 -ml-3.5"
+            >
+              <Coin3DBadge size={fc.size} tone={fc.tone} />
+            </motion.div>
+          ))}
         </AnimatePresence>
 
         {/* LAYER 2: 3D Ground & Podium Pedestal */}
@@ -299,7 +495,7 @@ export function Interactive3DStage({
           </div>
         )}
 
-        {/* Glowing 3D Pedestal Shadow under the Pig (Centered via flexbox wrapper so Framer Motion scaleX never shifts it!) */}
+        {/* Glowing 3D Pedestal Shadow under the Pig */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 bottom-2.5 flex justify-center"
@@ -310,7 +506,7 @@ export function Interactive3DStage({
               width: Math.min(320, spriteHeight * 0.78),
               height: 26,
               background:
-                'radial-gradient(ellipse at center, rgba(30,27,75,0.34) 0%, rgba(56,189,248,0.26) 48%, rgba(244,63,94,0.22) 78%, transparent 100%)',
+                'radial-gradient(ellipse at center, rgba(30,27,75,0.34) 0%, rgba(245,158,11,0.28) 48%, rgba(244,63,94,0.22) 78%, transparent 100%)',
               filter: 'blur(2px)',
             }}
             animate={
@@ -324,7 +520,7 @@ export function Interactive3DStage({
           />
         </div>
 
-        {/* LAYER 4: 3D Cutout Pig Mascot with Crystal Shell + Monthly % Rising Liquid */}
+        {/* LAYER 4: 3D Transparent Crystal Piggy Bank Filled with Visible 3D Coins */}
         <div className="absolute inset-x-0 bottom-3.5 flex justify-center">
           <motion.div
             style={{
@@ -337,7 +533,7 @@ export function Interactive3DStage({
                 ? undefined
                 : jumping
                   ? {
-                      y: [0, -30, 3, 0],
+                      y: [0, -28, 3, 0],
                       scaleX: [1, 0.92, 1.08, 1],
                       scaleY: [1, 1.08, 0.92, 1],
                       rotateZ: [0, -4, 4, 0],
@@ -355,7 +551,7 @@ export function Interactive3DStage({
             }
             className="relative"
           >
-            {!hasLiquid ? (
+            {!hasCoinFill ? (
               <img
                 src={spriteSrc}
                 alt={alt}
@@ -375,24 +571,24 @@ export function Interactive3DStage({
                   width: spriteHeight,
                   maxWidth: '92vw',
                   filter:
-                    'drop-shadow(0 0 22px rgba(56, 189, 248, 0.38)) drop-shadow(0 0 22px rgba(244, 63, 94, 0.38)) drop-shadow(0 12px 20px rgba(30, 27, 75, 0.22))',
+                    'drop-shadow(0 0 20px rgba(250, 204, 21, 0.35)) drop-shadow(0 0 20px rgba(244, 63, 94, 0.28)) drop-shadow(0 12px 20px rgba(30, 27, 75, 0.24))',
                 }}
               >
-                {/* 4A. Translucent Frosted Crystal Glass Piggy Shell (Unfilled top stays clear crystal) */}
+                {/* 4A. Translucent Frosted Crystal Glass Piggy Shell (Back glass wall) */}
                 <img
                   src={spriteSrc}
                   alt={alt}
                   style={{
                     height: '100%',
                     width: '100%',
-                    opacity: 0.38,
-                    filter: 'saturate(0.12) brightness(1.25) contrast(1.15)',
+                    opacity: 0.42,
+                    filter: 'saturate(0.18) brightness(1.24) contrast(1.12)',
                   }}
                   className="block select-none object-contain"
                   draggable={false}
                 />
 
-                {/* 4B. ACCURATE % RIPPLING DUAL-COLOR WATER WAVES (Nam Sky Blue + Nữ Rose Pink proportional to their exact %) */}
+                {/* 4B. TRANSPARENT BELLY VAULT: Visible 3D Gold Coins stacked inside the pig's silhouette */}
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -407,185 +603,83 @@ export function Interactive3DStage({
                     maskPosition: 'center',
                   }}
                 >
-                  {/* Rising Liquid Container: 0% when clampedFill is 0, rises accurately to visualFill% */}
+                  {/* Golden warm ambient glow at the bottom of the coin pile */}
                   {visualFill > 0 && (
                     <motion.div
-                      className="absolute inset-x-0 bottom-0 overflow-hidden"
+                      className="absolute inset-x-0 bottom-0"
                       initial={{ height: '0%' }}
                       animate={{ height: `${visualFill}%` }}
-                      transition={{ duration: 0.95, ease: 'easeOut' }}
-                    >
-                      {/* LEFT ZONE: Nam's Sky-Blue Rippling Water Column (Width = splitBodyX%) */}
-                      {splitBodyX > 0 && (
-                        <div
-                          className="absolute inset-y-0 left-0 overflow-hidden transition-all duration-700"
-                          style={{ width: `${splitBodyX}%` }}
-                        >
-                          {/* Nam Back Wave */}
-                          <motion.svg
-                            viewBox="0 0 800 28"
-                            preserveAspectRatio="none"
-                            className="absolute left-0 top-0 h-[18px] w-[520px]"
-                            animate={reducedMotion ? undefined : { x: [0, -260] }}
-                            transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
-                          >
-                            <path
-                              d="M 0 14 Q 32.5 0 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
-                              fill="rgba(2, 132, 199, 0.85)"
-                            />
-                          </motion.svg>
-
-                          {/* Nam Front Counter-Wave */}
-                          <motion.svg
-                            viewBox="0 0 800 28"
-                            preserveAspectRatio="none"
-                            className="absolute left-0 top-[3px] h-[17px] w-[520px]"
-                            animate={reducedMotion ? undefined : { x: [-260, 0] }}
-                            transition={{ duration: 1.85, repeat: Infinity, ease: 'linear' }}
-                          >
-                            <path
-                              d="M 0 14 Q 32.5 28 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
-                              fill="rgba(56, 189, 248, 0.94)"
-                            />
-                          </motion.svg>
-
-                          {/* Nam Solid Liquid Body below the 15px wave crest */}
-                          <div
-                            className="absolute inset-x-0 bottom-0 top-[15px]"
-                            style={{
-                              background: 'linear-gradient(180deg, rgba(56,189,248,0.92) 0%, rgba(14,165,233,0.9) 50%, rgba(2,132,199,0.94) 100%)',
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* RIGHT ZONE: Nữ's Rose-Pink Rippling Water Column (Width = 100 - splitBodyX%) */}
-                      {splitBodyX < 100 && (
-                        <div
-                          className="absolute inset-y-0 right-0 overflow-hidden transition-all duration-700"
-                          style={{ width: `${100 - splitBodyX}%` }}
-                        >
-                          {/* Nữ Back Wave */}
-                          <motion.svg
-                            viewBox="0 0 800 28"
-                            preserveAspectRatio="none"
-                            className="absolute right-0 top-0 h-[18px] w-[520px]"
-                            animate={reducedMotion ? undefined : { x: [0, 260] }}
-                            transition={{ duration: 2.3, repeat: Infinity, ease: 'linear' }}
-                          >
-                            <path
-                              d="M 0 14 Q 32.5 0 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
-                              fill="rgba(225, 29, 72, 0.85)"
-                            />
-                          </motion.svg>
-
-                          {/* Nữ Front Counter-Wave */}
-                          <motion.svg
-                            viewBox="0 0 800 28"
-                            preserveAspectRatio="none"
-                            className="absolute right-0 top-[3px] h-[17px] w-[520px]"
-                            animate={reducedMotion ? undefined : { x: [260, 0] }}
-                            transition={{ duration: 1.75, repeat: Infinity, ease: 'linear' }}
-                          >
-                            <path
-                              d="M 0 14 Q 32.5 28 65 14 T 130 14 T 195 14 T 260 14 T 325 14 T 390 14 T 455 14 T 520 14 L 520 28 L 0 28 Z"
-                              fill="rgba(251, 113, 133, 0.94)"
-                            />
-                          </motion.svg>
-
-                          {/* Nữ Solid Liquid Body below the 15px wave crest */}
-                          <div
-                            className="absolute inset-x-0 bottom-0 top-[15px]"
-                            style={{
-                              background: 'linear-gradient(180deg, rgba(251,113,133,0.92) 0%, rgba(244,63,94,0.9) 50%, rgba(225,29,72,0.94) 100%)',
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Soft Iridescent Blend seam where Nam's Blue meets Nữ's Pink */}
-                      {splitBodyX > 0 && splitBodyX < 100 && (
-                        <div
-                          className="pointer-events-none absolute bottom-0 top-[8px] w-5 -translate-x-1/2 blur-[4px] transition-all duration-700"
-                          style={{
-                            left: `${splitBodyX}%`,
-                            background: 'linear-gradient(90deg, rgba(56,189,248,0.85) 0%, rgba(192,132,252,0.9) 50%, rgba(251,113,133,0.85) 100%)',
-                          }}
-                        />
-                      )}
-
-                      {/* Full-Width Shimmering Surface Meniscus Ripple & Internal Wave Ribbons */}
-                      <motion.svg
-                        viewBox="0 0 800 24"
-                        preserveAspectRatio="none"
-                        className="pointer-events-none absolute left-0 top-[2px] h-[14px] w-[200%]"
-                        animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                        transition={{ duration: 1.9, repeat: Infinity, ease: 'linear' }}
-                      >
-                        <path
-                          d="M 0 12 Q 50 2 100 12 T 200 12 T 300 12 T 400 12 T 500 12 T 600 12 T 700 12 T 800 12 L 800 17 L 0 17 Z"
-                          fill="rgba(255, 255, 255, 0.65)"
-                        />
-                      </motion.svg>
-
-                      {/* Internal White-Aqua Shimmer Ribbon inside the water */}
-                      <motion.svg
-                        viewBox="0 0 800 28"
-                        preserveAspectRatio="none"
-                        className="pointer-events-none absolute left-0 top-[45%] h-[18px] w-[200%]"
-                        animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
-                      >
-                        <path
-                          d="M 0 14 Q 50 0 100 14 T 200 14 T 300 14 T 400 14 T 500 14 T 600 14 T 700 14 T 800 14 L 800 20 L 0 20 Z"
-                          fill="rgba(255, 255, 255, 0.24)"
-                        />
-                      </motion.svg>
-
-                      {/* Effervescent Rising Water Bubbles */}
-                      {!reducedMotion &&
-                        [18, 34, 50, 66, 82].map((leftPct, bIdx) => {
-                          const isBlueBubble = leftPct <= splitBodyX
-                          return (
-                            <motion.span
-                              key={bIdx}
-                              className={`pointer-events-none absolute bottom-1 rounded-full ${
-                                isBlueBubble
-                                  ? 'bg-sky-100 shadow-[0_0_6px_#ffffff]'
-                                  : 'bg-pink-100 shadow-[0_0_6px_#ffffff]'
-                              }`}
-                              style={{
-                                left: `${leftPct}%`,
-                                width: 4 + (bIdx % 3) * 2.5,
-                                height: 4 + (bIdx % 3) * 2.5,
-                              }}
-                              animate={{
-                                y: [0, -Math.max(24, spriteHeight * (visualFill / 100) - 16)],
-                                x: [0, bIdx % 2 === 0 ? 6 : -6, 0],
-                                opacity: [0, 0.9, 0],
-                              }}
-                              transition={{
-                                duration: 1.8 + (bIdx % 3) * 0.35,
-                                repeat: Infinity,
-                                delay: bIdx * 0.3,
-                                ease: 'easeInOut',
-                              }}
-                            />
-                          )
-                        })}
-                    </motion.div>
+                      transition={{ duration: 0.85, ease: 'easeOut' }}
+                      style={{
+                        background:
+                          'linear-gradient(90deg, rgba(56,189,248,0.28) 0%, rgba(250,204,21,0.38) 50%, rgba(251,113,133,0.28) 100%)',
+                      }}
+                    />
                   )}
 
-                  {/* 4C. Subtle 3D Pig Facial & Contour Detail Overlay so eyes/snout/ears stay crisp over the water */}
+                  {/* Stacked 3D Coins inside the Transparent Piggy Bank */}
+                  <AnimatePresence initial={false}>
+                    {visibleCoins.map((c) => {
+                      const coinPx = Math.round(spriteHeight * 0.095 * c.scale)
+                      return (
+                        <motion.div
+                          key={c.id}
+                          initial={{ y: -90, opacity: 0, scale: 0.4 }}
+                          animate={{ y: 0, opacity: 1, scale: 1, rotate: c.rot }}
+                          exit={{ opacity: 0, scale: 0.3 }}
+                          transition={{
+                            type: 'spring',
+                            stiffness: 260,
+                            damping: 20,
+                            delay: Math.min(0.45, (c.id % 12) * 0.03),
+                          }}
+                          className="absolute -translate-x-1/2"
+                          style={{
+                            left: `${c.xPct}%`,
+                            bottom: `${c.yBottomPct}%`,
+                          }}
+                        >
+                          <Coin3DBadge size={coinPx} tone={c.tone} />
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
+
+                  {/* Twinkling Gold Sparkles inside the coin pile */}
+                  {!reducedMotion &&
+                    visualFill > 12 &&
+                    [22, 42, 60, 76].map((leftPct, sIdx) => (
+                      <motion.span
+                        key={sIdx}
+                        className="pointer-events-none absolute text-[11px] drop-shadow-[0_0_6px_#fef08a]"
+                        style={{
+                          left: `${leftPct}%`,
+                          bottom: `${Math.min(visualFill - 4, 10 + sIdx * 18)}%`,
+                        }}
+                        animate={{
+                          scale: [0.7, 1.25, 0.7],
+                          opacity: [0.3, 1, 0.3],
+                        }}
+                        transition={{
+                          duration: 1.6 + sIdx * 0.3,
+                          repeat: Infinity,
+                          delay: sIdx * 0.35,
+                        }}
+                      >
+                        ✨
+                      </motion.span>
+                    ))}
+
+                  {/* 4C. Crystal Glass Pig Front Shell & Facial Contour Overlay so eyes/snout/ears & glass reflection shine over the coins */}
                   <img
                     src={spriteSrc}
                     alt=""
                     style={{
                       height: '100%',
                       width: '100%',
-                      opacity: 0.34,
+                      opacity: 0.32,
                       mixBlendMode: 'multiply',
-                      filter: 'contrast(1.25) brightness(1.05)',
+                      filter: 'contrast(1.22) brightness(1.06)',
                     }}
                     className="pointer-events-none absolute inset-0 block select-none object-contain"
                     draggable={false}
@@ -596,7 +690,7 @@ export function Interactive3DStage({
                     className="pointer-events-none absolute inset-0"
                     style={{
                       background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.48) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0.2) 100%)',
+                        'linear-gradient(135deg, rgba(255,255,255,0.52) 0%, rgba(255,255,255,0.05) 36%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.28) 100%)',
                     }}
                   />
                 </div>

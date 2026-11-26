@@ -1,5 +1,5 @@
 import { Bell, Calendar, ChevronLeft, ChevronRight, Clock, History, PlusCircle, Sparkles } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
@@ -74,6 +74,22 @@ export default function HomePage() {
   const [genderDialogOpen, setGenderDialogOpen] = useState(false)
   const [depositAlertDismissed, setDepositAlertDismissed] = useState(false)
   const [monthListModalOpen, setMonthListModalOpen] = useState(false)
+  const [coinBurstKey, setCoinBurstKey] = useState(0)
+
+  const confirmedCount = useMemo(
+    () => state.contributions.filter((c) => c.status === 'confirmed').length,
+    [state.contributions],
+  )
+  const prevConfirmedCountRef = useRef<number>(confirmedCount)
+
+  // Whenever a deposit finishes 2/2 confirmation (whether approved locally or synced from partner's device), fly coins into the piggy bank!
+  useEffect(() => {
+    if (confirmedCount > prevConfirmedCountRef.current) {
+      setCoinBurstKey((k) => k + 1)
+      beep(state.settings, 'win')
+    }
+    prevConfirmedCountRef.current = confirmedCount
+  }, [confirmedCount, state.settings])
 
   // Two Pig Modes right on HomePage: 'month' (Heo theo tháng) vs 'final' (Heo cuối kỳ)
   const [pigMode, setPigMode] = useState<'month' | 'final'>('month')
@@ -113,9 +129,10 @@ export default function HomePage() {
     if (!out) return
     const updated = out.contributions.find((x) => x.id === c.id)
     if (updated?.status === 'confirmed') {
-      celebrate(['🪙', '💧', '✨', '🎉'])
+      setCoinBurstKey((k) => k + 1)
+      celebrate(['🪙', '✨', '🎉', '💰'])
       toast(
-        `Đã duyệt hoàn tất (2/2)! Khoản ${vnd(c.amount)} của ${j.members[c.member].name} đã vào quỹ heo đất! 🐷🎉`,
+        `Đã duyệt hoàn tất (2/2)! Đồng xu ${vnd(c.amount)} của ${j.members[c.member].name} đã bay vào heo đất! 🐷🪙`,
       )
     } else if (c.member === myMemberId) {
       toast(`Đã báo nạp ${vnd(c.amount)} (1/2)! Chờ ${partnerMember?.name} xác nhận chéo nhé ⏳`)
@@ -287,6 +304,7 @@ export default function HomePage() {
             spriteHeight={255}
             reducedMotion={motionOff}
             liquidFillPct={activeFillPct}
+            coinBurstKey={coinBurstKey}
             membersShare={{
               a: {
                 name: j.members.a.name,
