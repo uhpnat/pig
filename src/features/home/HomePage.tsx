@@ -4,21 +4,22 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ActivityRow } from '@/components/ActivityRow'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
+import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { GiftBoxSticker, TrophySticker } from '@/components/Stickers'
 import { Avatar, Badge, Button, Card, EmptyState } from '@/components/ui'
 import { diffDays, vnd } from '@/domain/format'
-import { actualShares, confirmedTotals } from '@/domain/stats'
+import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { IMG } from '@/lib/assets'
 import { TopUpDialog } from './TopUpDialog'
 
-const STYLE_HERO: Record<string, string> = {
-  crown: IMG.hero,
-  baby: IMG.hero,
-  round: IMG.t1,
-  glasses: IMG.t2,
-  hat: IMG.t1,
-  hoodie: IMG.t3,
+const STYLE_SPRITE: Record<string, string> = {
+  crown: IMG.spriteHero,
+  baby: IMG.spriteHero,
+  round: IMG.spriteShades,
+  glasses: IMG.spriteGlasses,
+  hat: IMG.spriteShades,
+  hoodie: IMG.spriteHoodie,
 }
 const fmtM = (n: number) => `${(n / 1e6).toFixed(1)}M`
 
@@ -86,22 +87,18 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* 3. Full-bleed 3D Pig Hero on grassy hill + Overlapping Glassy Progress Card */}
-      <div className="relative mt-1">
-        <motion.img
-          src={STYLE_HERO[j.pig.style] || IMG.hero}
-          alt={j.pig.name}
-          className="mx-auto block max-h-[250px] w-full select-none object-cover"
-          style={{
-            maskImage: 'linear-gradient(180deg, #000 0%, #000 88%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 88%, transparent 100%)',
-          }}
-          animate={motionOff ? undefined : { y: [0, -3, 0] }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      {/* 3. Separated 3D Cutout Pig Mascot on Interactive Multi-Layer 3D Cloud & Grassy Hill Stage + Overlapping Progress Card */}
+      <div className="relative mt-0.5">
+        <Interactive3DStage
+          spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
+          alt={`${j.pig.name} – ${pigStage(progress).label}`}
+          theme="meadow"
+          spriteHeight={195}
+          reducedMotion={motionOff}
         />
 
         {/* Overlapping Glossy Green Progress Card */}
-        <div className="relative -mt-8 px-4">
+        <div className="relative -mt-6 px-4">
           <div
             className="relative overflow-hidden rounded-[32px] border-[2.5px] border-white/85 px-5 pb-4 pt-3 text-center text-white shadow-[0_16px_32px_rgba(90,150,60,.32),inset_0_2px_6px_rgba(255,255,255,.75)] backdrop-blur-md"
             style={{

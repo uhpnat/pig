@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Pencil, User } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -6,11 +7,11 @@ import { useJourney, useStore } from '@/hooks/useStore'
 import { IMG } from '@/lib/assets'
 import type { PigConfig } from '@/domain/types'
 
-const PIG_AVATARS: { id: PigConfig['style']; label: string; thumb: string; big: string }[] = [
-  { id: 'crown', label: 'Heo vương miện', thumb: IMG.t0, big: IMG.big },
-  { id: 'round', label: 'Heo kính râm', thumb: IMG.t1, big: IMG.t1 },
-  { id: 'glasses', label: 'Heo kính cận', thumb: IMG.t2, big: IMG.t2 },
-  { id: 'hoodie', label: 'Heo áo hoodie', thumb: IMG.t3, big: IMG.t3 },
+const PIG_AVATARS: { id: PigConfig['style']; label: string; thumb: string; sprite: string }[] = [
+  { id: 'crown', label: 'Heo đồng xu vàng', thumb: IMG.t0, sprite: IMG.spriteHero },
+  { id: 'round', label: 'Heo kính râm', thumb: IMG.t1, sprite: IMG.spriteShades },
+  { id: 'glasses', label: 'Heo kính cận', thumb: IMG.t2, sprite: IMG.spriteGlasses },
+  { id: 'hoodie', label: 'Heo áo hoodie', thumb: IMG.t3, sprite: IMG.spriteHoodie },
 ]
 
 export default function PigPage() {
@@ -74,11 +75,24 @@ export default function PigPage() {
             <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
 
-          <div className="relative h-[210px] w-[225px] overflow-hidden rounded-[46px] border-[4px] border-white bg-gradient-to-b from-[#cfe2ff] to-[#e9e4ff] shadow-[0_18px_36px_rgba(110,130,220,.32)]">
-            <img
-              src={current.big}
+          <div className="relative grid h-[215px] w-[230px] place-items-center overflow-visible rounded-[46px] border-[4px] border-white bg-gradient-to-b from-[#d8ebff] via-[#eef5ff] to-[#dcfce7] shadow-[0_18px_36px_rgba(110,130,220,.32)]">
+            {/* Dynamic 3D ground contact shadow */}
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute bottom-4 h-5 w-32 rounded-[50%] bg-[#1e1b4b]/20 blur-[2px]"
+              animate={{ scaleX: [1, 0.9, 1], opacity: [0.24, 0.16, 0.24] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            {/* Floating cutout 3D pig sprite popping out of the frame */}
+            <motion.img
+              key={current.id}
+              src={current.sprite}
               alt={current.label}
-              className="h-full w-full object-cover"
+              initial={{ scale: 0.8, y: 12, opacity: 0 }}
+              animate={{ scale: 1, y: [0, -7, 0], opacity: 1 }}
+              transition={{ y: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }, duration: 0.25 }}
+              style={{ filter: 'drop-shadow(0 12px 16px rgba(30,27,75,.25))' }}
+              className="relative z-10 h-[180px] w-auto select-none object-contain"
             />
           </div>
 

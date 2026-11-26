@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { MoneyBagSticker, PartySticker, TargetSticker } from '@/components/Stickers'
 import { Avatar, Button, Card, ConfirmDialog, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
@@ -110,18 +111,23 @@ export default function CouplePage() {
         </button>
       </div>
 
-      {/* Full-bleed 3D Two Pigs Hero Banner */}
-      <div className="relative overflow-hidden">
-        <img
-          src={IMG.duo}
-          alt="Hai chú heo đất của đôi mình"
-          className="block w-full object-cover"
+      {/* Separated 3D Cutout Two Pigs on Interactive Romantic Cloud & Meadow Stage */}
+      <div
+        className="relative overflow-hidden pt-1"
+        style={{ background: 'linear-gradient(180deg, #fde8f1 0%, #fbcfe8 55%, #dcfce7 100%)' }}
+      >
+        <Interactive3DStage
+          spriteSrc={IMG.spriteDuo}
+          alt="Hai chú heo đất 3D của đôi mình"
+          theme="romantic"
+          spriteHeight={185}
+          reducedMotion={state.settings.animations === 'off'}
         />
       </div>
 
       {/* Overlapping Soft Pastel Bottom Sheet */}
       <div
-        className="relative -mt-7 rounded-t-[36px] px-4 pb-6 pt-5 shadow-[0_-10px_30px_rgba(255,140,180,.18)]"
+        className="relative -mt-6 rounded-t-[36px] px-4 pb-6 pt-5 shadow-[0_-10px_30px_rgba(255,140,180,.18)]"
         style={{ background: 'linear-gradient(180deg, #fff9fb 0%, #fdf2f7 100%)' }}
       >
         {/* Subtitle slogan matching 08_shared_journey.png */}
