@@ -357,34 +357,14 @@ export function Interactive3DStage({
                   style={{
                     height: '100%',
                     width: '100%',
-                    opacity: 0.34,
-                    filter: 'saturate(0.1) brightness(1.26) contrast(1.15)',
+                    opacity: 0.38,
+                    filter: 'saturate(0.12) brightness(1.25) contrast(1.15)',
                   }}
                   className="block select-none object-contain"
                   draggable={false}
                 />
 
-                {/* 4B. Vibrant Full-Color 3D Pig Revealed from Bottom to Top by the Monthly % Water Level */}
-                <motion.div
-                  className="pointer-events-none absolute inset-0 overflow-hidden"
-                  initial={{ clipPath: 'inset(100% 0% 0% 0%)' }}
-                  animate={{ clipPath: `inset(${100 - visualFill}% 0% 0% 0%)` }}
-                  transition={{ duration: 1.1, ease: 'easeOut' }}
-                >
-                  <img
-                    src={spriteSrc}
-                    alt=""
-                    style={{
-                      height: '100%',
-                      width: '100%',
-                      filter: 'brightness(1.08) saturate(1.28) contrast(1.06)',
-                    }}
-                    className="block select-none object-contain"
-                    draggable={false}
-                  />
-                </motion.div>
-
-                {/* 4C. DUAL SLOSHING WATER WAVES (Sky Blue for Nam, Rose Pink for Nữ, rising by monthly %) */}
+                {/* 4B. UNDULATING INTERTWINING DUAL-COLOR WATER WAVES (Nam Sky Blue + Nữ Rose Pink weaving together) */}
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -399,75 +379,152 @@ export function Interactive3DStage({
                     maskPosition: 'center',
                   }}
                 >
-                  {/* Specular crystal glass sheen across entire body */}
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.52) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.22) 100%)',
-                    }}
-                  />
-
-                  {/* Rising Dual-Color Liquid Column */}
+                  {/* Rising Liquid Container (Height = monthly %) */}
                   {visualFill > 0 && (
                     <motion.div
                       className="absolute inset-x-0 bottom-0"
                       initial={{ height: '0%' }}
                       animate={{ height: `${visualFill}%` }}
-                      transition={{ duration: 1.1, ease: 'easeOut' }}
+                      transition={{ duration: 1.2, ease: 'easeOut' }}
                     >
-                      {/* Back Wave (Dual tone: Sky Blue for Nam, Rose Pink for Nữ) */}
+                      {/* WAVE LAYER 1 (Back): Chàng's Sky-Blue Undulating Wave rolling Left -> Right */}
                       <motion.svg
-                        viewBox="0 0 400 28"
+                        viewBox="0 0 800 320"
                         preserveAspectRatio="none"
-                        className="absolute -top-[18px] left-0 h-[22px] w-[200%]"
+                        className="absolute -top-[28px] left-0 w-[200%]"
+                        style={{
+                          height: 'calc(100% + 28px)',
+                          opacity: Math.max(0.55, Math.min(0.95, 0.45 + (pctMale / 100) * 0.55)),
+                        }}
                         animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                        transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 3.6, repeat: Infinity, ease: 'linear' }}
                       >
                         <defs>
-                          <linearGradient id="wave-grad-back" x1="0" y1="0" x2="1" y2="0">
+                          <linearGradient id="pig-wave-blue" x1="0" y1="0" x2="1" y2="1">
                             <stop offset="0%" stopColor="#0284c7" stopOpacity="0.92" />
-                            <stop offset={`${Math.max(18, Math.min(82, pctMale))}%`} stopColor="#c026d3" stopOpacity="0.88" />
-                            <stop offset="100%" stopColor="#e11d48" stopOpacity="0.92" />
+                            <stop offset="45%" stopColor="#38bdf8" stopOpacity="0.88" />
+                            <stop offset="75%" stopColor="#818cf8" stopOpacity="0.78" />
+                            <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.92" />
                           </linearGradient>
                         </defs>
                         <path
-                          d="M0 14 Q 50 0 100 14 T 200 14 T 300 14 T 400 14 L 400 28 L 0 28 Z"
-                          fill="url(#wave-grad-back)"
+                          d="M 0 26 Q 100 -8 200 26 T 400 26 T 600 26 T 800 26 L 800 320 L 0 320 Z"
+                          fill="url(#pig-wave-blue)"
                         />
                       </motion.svg>
 
-                      {/* Front Sloshing Wave (glowing meniscus crest) */}
+                      {/* WAVE LAYER 2 (Middle-Front): Nàng's Rose-Pink Undulating Wave rolling Right -> Left (Intertwining!) */}
                       <motion.svg
-                        viewBox="0 0 400 28"
+                        viewBox="0 0 800 320"
                         preserveAspectRatio="none"
-                        className="absolute -top-[14px] left-0 h-[18px] w-[200%]"
+                        className="absolute -top-[24px] left-0 w-[200%]"
+                        style={{
+                          height: 'calc(100% + 24px)',
+                          opacity: Math.max(0.55, Math.min(0.95, 0.45 + (pctFemale / 100) * 0.55)),
+                          mixBlendMode: 'normal',
+                        }}
                         animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 2.8, repeat: Infinity, ease: 'linear' }}
                       >
+                        <defs>
+                          <linearGradient id="pig-wave-pink" x1="1" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#e11d48" stopOpacity="0.88" />
+                            <stop offset="45%" stopColor="#fb7185" stopOpacity="0.82" />
+                            <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.55" />
+                            <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.88" />
+                          </linearGradient>
+                        </defs>
                         <path
-                          d="M0 14 Q 50 28 100 14 T 200 14 T 300 14 T 400 14 L 400 28 L 0 28 Z"
-                          fill="rgba(255, 255, 255, 0.86)"
+                          d="M 0 24 Q 100 54 200 24 T 400 24 T 600 24 T 800 24 L 800 320 L 0 320 Z"
+                          fill="url(#pig-wave-pink)"
                         />
                       </motion.svg>
 
-                      {/* Vivid Glowing Dual Liquid Body (Left = Nam Sky Blue, Right = Nữ Rose Pink) */}
-                      <div
-                        className="relative h-full w-full overflow-hidden"
-                        style={{
-                          background: `linear-gradient(90deg, rgba(2,132,199,0.68) 0%, rgba(56,189,248,0.62) ${Math.max(10, pctMale - 8)}%, rgba(244,63,94,0.62) ${Math.min(90, pctMale + 8)}%, rgba(225,29,72,0.68) 100%)`,
-                          boxShadow: 'inset 0 0 22px rgba(255,255,255,0.45)',
-                        }}
-                      >
-                        {/* Dual rising neon bubbles: Sky Blue on left, Rose Pink on right */}
+                      {/* WAVE LAYER 3 (Internal Intertwining Currents): Swirling Blue & Pink Ribbons inside the water */}
+                      <div className="absolute inset-0 overflow-hidden">
+                        {/* Internal undulating ribbon 1 (Blue current weaving through Pink) */}
+                        <motion.svg
+                          viewBox="0 0 800 200"
+                          preserveAspectRatio="none"
+                          className="absolute inset-y-0 left-0 h-full w-[200%]"
+                          animate={reducedMotion ? undefined : { x: ['0%', '-50%'], y: [0, -5, 0] }}
+                          transition={{
+                            x: { duration: 4.2, repeat: Infinity, ease: 'linear' },
+                            y: { duration: 2.1, repeat: Infinity, ease: 'easeInOut' },
+                          }}
+                        >
+                          <defs>
+                            <linearGradient id="swirl-blue-pink" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.72" />
+                              <stop offset={`${Math.max(20, Math.min(80, pctMale))}%`} stopColor="#a855f7" stopOpacity="0.55" />
+                              <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.72" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M 0 60 Q 100 10 200 60 T 400 60 T 600 60 T 800 60 L 800 150 Q 700 195 600 150 T 400 150 T 200 150 T 0 150 Z"
+                            fill="url(#swirl-blue-pink)"
+                          />
+                        </motion.svg>
+
+                        {/* Internal undulating ribbon 2 (Counter-flowing Pink & Cyan wave ribbon) */}
+                        <motion.svg
+                          viewBox="0 0 800 200"
+                          preserveAspectRatio="none"
+                          className="absolute inset-y-0 left-0 h-full w-[200%]"
+                          animate={reducedMotion ? undefined : { x: ['-50%', '0%'], y: [0, 6, 0] }}
+                          transition={{
+                            x: { duration: 3.1, repeat: Infinity, ease: 'linear' },
+                            y: { duration: 1.9, repeat: Infinity, ease: 'easeInOut' },
+                          }}
+                        >
+                          <defs>
+                            <linearGradient id="swirl-pink-blue" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.65" />
+                              <stop offset="35%" stopColor="#f43f5e" stopOpacity="0.68" />
+                              <stop offset="70%" stopColor="#0ea5e9" stopOpacity="0.65" />
+                              <stop offset="100%" stopColor="#ec4899" stopOpacity="0.68" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M 0 95 Q 100 145 200 95 T 400 95 T 600 95 T 800 95 L 800 200 L 0 200 Z"
+                            fill="url(#swirl-pink-blue)"
+                          />
+                        </motion.svg>
+
+                        {/* WAVE LAYER 4 (Surface Crest Foam): Shimmering dual-colored crest line at the top */}
+                        <motion.svg
+                          viewBox="0 0 800 36"
+                          preserveAspectRatio="none"
+                          className="absolute -top-[14px] left-0 h-[28px] w-[200%]"
+                          animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
+                          transition={{ duration: 2.3, repeat: Infinity, ease: 'linear' }}
+                        >
+                          <defs>
+                            <linearGradient id="crest-shimmer" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.9" />
+                              <stop offset="25%" stopColor="#ffffff" stopOpacity="0.95" />
+                              <stop offset="50%" stopColor="#fbcfe8" stopOpacity="0.9" />
+                              <stop offset="75%" stopColor="#ffffff" stopOpacity="0.95" />
+                              <stop offset="100%" stopColor="#bae6fd" stopOpacity="0.9" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M 0 18 Q 100 0 200 18 T 400 18 T 600 18 T 800 18 Q 700 32 600 22 T 400 22 T 200 22 T 0 22 Z"
+                            fill="url(#crest-shimmer)"
+                          />
+                        </motion.svg>
+
+                        {/* Effervescent Dual-Color Rising Water Bubbles */}
                         {!reducedMotion &&
-                          [16, 32, 50, 68, 84].map((leftPct, bIdx) => {
-                            const isLeftA = leftPct < 50
+                          [14, 28, 42, 56, 70, 84].map((leftPct, bIdx) => {
+                            const isBlueBubble = bIdx % 2 === 0
                             return (
                               <motion.span
                                 key={bIdx}
-                                className={`absolute bottom-1 rounded-full shadow-[0_0_8px_rgba(255,255,255,1)] ${
-                                  isLeftA ? 'bg-sky-200' : 'bg-pink-200'
+                                className={`absolute bottom-1 rounded-full ${
+                                  isBlueBubble
+                                    ? 'bg-sky-200 shadow-[0_0_8px_#38bdf8]'
+                                    : 'bg-pink-200 shadow-[0_0_8px_#f43f5e]'
                                 }`}
                                 style={{
                                   left: `${leftPct}%`,
@@ -476,14 +533,14 @@ export function Interactive3DStage({
                                 }}
                                 animate={{
                                   y: [0, -spriteHeight * (visualFill / 100)],
-                                  x: [0, bIdx % 2 === 0 ? 5 : -5, 0],
-                                  opacity: [0, 0.95, 0],
+                                  x: [0, isBlueBubble ? 9 : -9, isBlueBubble ? -5 : 5, 0],
+                                  opacity: [0, 0.95, 0.85, 0],
                                 }}
                                 transition={{
-                                  duration: 1.8 + bIdx * 0.35,
+                                  duration: 2.0 + (bIdx % 3) * 0.45,
                                   repeat: Infinity,
-                                  delay: bIdx * 0.4,
-                                  ease: 'easeIn',
+                                  delay: bIdx * 0.32,
+                                  ease: 'easeInOut',
                                 }}
                               />
                             )
@@ -491,6 +548,30 @@ export function Interactive3DStage({
                       </div>
                     </motion.div>
                   )}
+
+                  {/* 4C. Subtle 3D Pig Facial & Contour Detail Overlay so eyes/snout/ears stay crisp over the water */}
+                  <img
+                    src={spriteSrc}
+                    alt=""
+                    style={{
+                      height: '100%',
+                      width: '100%',
+                      opacity: 0.36,
+                      mixBlendMode: 'multiply',
+                      filter: 'contrast(1.25) brightness(1.05)',
+                    }}
+                    className="pointer-events-none absolute inset-0 block select-none object-contain"
+                    draggable={false}
+                  />
+
+                  {/* Specular crystal glass sheen across entire body */}
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        'linear-gradient(135deg, rgba(255,255,255,0.48) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0.2) 100%)',
+                    }}
+                  />
                 </div>
               </div>
             )}
