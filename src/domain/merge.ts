@@ -9,13 +9,19 @@ import type { Activity, AppNotification, AppState, Contribution, Reveal } from '
  * - Challenges & Milestones: union of completed / active statuses.
  */
 export function mergeStates(local: AppState, remote: AppState): AppState {
-  // Choose the most complete journey config, ensuring member gender is never lost during remote sync
-  let baseJourney =
+  // Determine which side has the most recent journey/settings update so name/role edits are never overwritten by stale remote state
+  const localSettingsAt = local.activity?.find((a) => a.type === 'settings')?.at ?? ''
+  const remoteSettingsAt = remote.activity?.find((a) => a.type === 'settings')?.at ?? ''
+  const preferLocalJourney = localSettingsAt >= remoteSettingsAt
+
+  const baseJourney =
     remote.journey?.setupDone && !local.journey?.setupDone
       ? remote.journey
       : local.journey?.setupDone && !remote.journey?.setupDone
         ? local.journey
-        : remote.journey || local.journey
+        : preferLocalJourney
+          ? local.journey || remote.journey
+          : remote.journey || local.journey
 
   const journey = baseJourney
     ? {
@@ -23,11 +29,19 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
         members: {
           a: {
             ...baseJourney.members.a,
-            gender: local.journey?.members?.a?.gender || remote.journey?.members?.a?.gender || baseJourney.members.a.gender,
+            gender:
+              (preferLocalJourney ? local.journey?.members?.a?.gender : remote.journey?.members?.a?.gender) ||
+              local.journey?.members?.a?.gender ||
+              remote.journey?.members?.a?.gender ||
+              baseJourney.members.a.gender,
           },
           b: {
             ...baseJourney.members.b,
-            gender: local.journey?.members?.b?.gender || remote.journey?.members?.b?.gender || baseJourney.members.b.gender,
+            gender:
+              (preferLocalJourney ? local.journey?.members?.b?.gender : remote.journey?.members?.b?.gender) ||
+              local.journey?.members?.b?.gender ||
+              remote.journey?.members?.b?.gender ||
+              baseJourney.members.b.gender,
           },
         },
       }

@@ -93,7 +93,7 @@ export default function CouplePage() {
     {
       icon: <span className="text-[20px] leading-none">👫</span>,
       bg: 'bg-[#fce7f3]',
-      label: 'Vai trò Chàng & Nàng',
+      label: 'Đổi tên & Vai trò Chàng / Nàng',
       sub: `${j.members.a.name}: ${j.members.a.gender === 'male' ? 'Nam 👦' : 'Nữ 👧'} · ${j.members.b.name}: ${j.members.b.gender === 'male' ? 'Nam 👦' : 'Nữ 👧'}`,
       onClick: () => setGenderDialogOpen(true),
     },
@@ -155,16 +155,24 @@ export default function CouplePage() {
           đạt được nhiều hơn! <span className="text-[#ff4d8d]">💕</span>
         </p>
 
-        {/* Couple Avatars Pill */}
-        <div className="mt-2.5 flex items-center justify-center gap-4">
+        {/* Couple Avatars Pill (Click to edit names & roles) */}
+        <div className="mt-2.5 flex items-center justify-center gap-3">
           {(['a', 'b'] as const).map((k) => (
-            <div key={k} className="flex items-center gap-2 rounded-full border border-white bg-white px-3.5 py-1.5 shadow-sm">
+            <button
+              key={k}
+              type="button"
+              onClick={() => setGenderDialogOpen(true)}
+              className="flex cursor-pointer items-center gap-2 rounded-full border border-white bg-white px-3.5 py-1.5 shadow-sm transition-transform active:scale-95"
+            >
               <Avatar value={j.members[k].avatar} size={34} />
               <div className="text-left">
-                <p className="text-xs font-black text-[#1e1b4b]">{j.members[k].name}</p>
+                <p className="flex items-center gap-1 text-xs font-black text-[#1e1b4b]">
+                  <span>{j.members[k].name}</span>
+                  <span className="text-[10px] text-indigo-500">✏️</span>
+                </p>
                 <p className="text-[11px] font-bold text-[#ff5c85]">{vnd(confirmed[k])}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 

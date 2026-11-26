@@ -134,7 +134,7 @@ export default function HomePage() {
                 isMyMale ? 'bg-sky-200/80 text-sky-800' : 'bg-pink-200/80 text-pink-800'
               }`}
             >
-              Đổi
+              ✏️ Sửa
             </span>
           </button>
 
