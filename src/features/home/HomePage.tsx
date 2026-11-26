@@ -36,6 +36,14 @@ export default function HomePage() {
   const cs = reveal ? state.contributions.filter((c) => c.revealId === reveal.id) : []
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
 
+  // Monthly contribution progress (%) to pour water/color into the translucent 3D pig!
+  const curMonthKey = today.slice(0, 7)
+  const monthSaved = state.contributions
+    .filter((c) => c.status === 'confirmed' && c.date.startsWith(curMonthKey))
+    .reduce((sum, c) => sum + c.amount, 0)
+  const mBudget = Math.max(1, monthlyBudget(j))
+  const monthPct = Math.min(100, (monthSaved / mBudget) * 100)
+
   const daysLeft = Math.max(0, diffDays(today, j.endDate))
   const timeRemainingLabel =
     daysLeft >= 330
