@@ -10,6 +10,7 @@ const CFG_KEY = 'piggy-duo:gsheets-cfg:v1'
 const CHANNEL = 'piggy-duo-sync'
 export const DEFAULT_SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s'
 export const HARDCODED_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit?gid=0#gid=0'
+export const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwLMlr3eqKCDTEPLMlXuggYuKsYk_5UBDq45KPSsO16mu-DwEQJauCSL0FXlb5vvibX/exec'
 
 function extractSpreadsheetId(input: string): string {
   const trimmed = (input || '').trim()
@@ -52,7 +53,7 @@ function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'p
       const parsed = JSON.parse(raw)
       const cfg = {
         spreadsheetId: DEFAULT_SPREADSHEET_ID,
-        appsScriptUrl: urlGas || parsed.appsScriptUrl || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
+        appsScriptUrl: urlGas || parsed.appsScriptUrl || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL,
         passcode: urlPin || parsed.passcode || '',
       }
       if (urlGas || urlPin) localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
@@ -63,7 +64,7 @@ function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'p
   }
   const fallback = {
     spreadsheetId: DEFAULT_SPREADSHEET_ID,
-    appsScriptUrl: urlGas || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || '',
+    appsScriptUrl: urlGas || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL,
     passcode: urlPin || '',
   }
   if (urlGas || urlPin) localStorage.setItem(CFG_KEY, JSON.stringify(fallback))
@@ -100,7 +101,7 @@ export class LocalRepository implements Repository {
     const cur = readCfg()
     const next = {
       spreadsheetId: patch.spreadsheetId !== undefined ? extractSpreadsheetId(patch.spreadsheetId) : DEFAULT_SPREADSHEET_ID,
-      appsScriptUrl: patch.appsScriptUrl !== undefined ? patch.appsScriptUrl.trim() : cur.appsScriptUrl,
+      appsScriptUrl: patch.appsScriptUrl !== undefined ? patch.appsScriptUrl.trim() || DEFAULT_APPS_SCRIPT_URL : cur.appsScriptUrl,
       passcode: patch.passcode !== undefined ? patch.passcode.trim() : cur.passcode,
     }
     localStorage.setItem(CFG_KEY, JSON.stringify(next))
