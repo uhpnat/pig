@@ -38,7 +38,7 @@ function TimelineIcon({ a, avatar }: { a: Activity; avatar?: string }) {
 
 export default function JournalPage() {
   const j = useJourney()
-  const { state, repo, run, toast, celebrate } = useStore()
+  const { state, repo, run, toast, celebrate, myMemberId } = useStore()
   const nav = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
   const [showSearch, setShowSearch] = useState(false)
@@ -62,10 +62,15 @@ export default function JournalPage() {
 
   const confirm = async (id: string) => {
     const before = state.milestonesReached.length
-    const out = await run(repo.confirmContribution(id))
+    const out = await run(repo.confirmContribution(id, myMemberId))
     if (out) {
-      toast('Đã xác nhận khoản góp 💰')
-      if (out.milestonesReached.length > before) celebrate(['🎉', '🎆', '🪙'])
+      const updated = out.contributions.find((x) => x.id === id)
+      if (updated?.status === 'confirmed') {
+        toast('Đã duyệt hoàn tất (2/2) vào quỹ heo đất! 💰🎉')
+        if (out.milestonesReached.length > before) celebrate(['🎉', '🎆', '🪙'])
+      } else {
+        toast('Đã ghi nhận xác nhận của bạn (1/2) – chờ người ấy xác nhận chéo! ⏳')
+      }
     }
   }
 
@@ -143,30 +148,46 @@ export default function JournalPage() {
         </div>
       )}
 
-      {/* Pending confirmations banner */}
+      {/* Pending confirmations banner (Requires 2-person mutual confirmation 2/2) */}
       {pending.length > 0 && (
         <Card className="!mt-3.5 !bg-[#fff8e6]">
-          <h2 className="h3 text-[#92400e]">⏳ Đang chờ xác nhận ({pending.length})</h2>
-          <ul className="mt-2 space-y-2">
-            {pending.map((c) => (
-              <li key={c.id} className="flex items-center gap-3">
-                <Avatar value={j.members[c.member].avatar} size={36} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-[#1e1b4b]">
-                    {j.members[c.member].name} · {vnd(c.amount)}
-                  </p>
-                  <p className="muted !text-[11px]">{fmtDate(c.date)}</p>
-                </div>
-                {!c.revealId && (
-                  <button type="button" className="chip" onClick={() => setVoidId(c.id)}>
-                    Huỷ
-                  </button>
-                )}
-                <Button size="sm" block={false} onClick={() => confirm(c.id)}>
-                  Xác nhận
-                </Button>
-              </li>
-            ))}
+          <h2 className="h3 text-[#92400e]">⏳ Chờ 2 người xác nhận chéo ({pending.length})</h2>
+          <ul className="mt-2 space-y-2.5">
+            {pending.map((c) => {
+              const cBy = c.confirmedBy ?? []
+              const iConfirmed = cBy.includes(myMemberId)
+              const otherId = myMemberId === 'a' ? 'b' : 'a'
+              return (
+                <li key={c.id} className="flex items-center gap-3 rounded-2xl bg-white/80 p-2.5 shadow-sm">
+                  <Avatar value={j.members[c.member].avatar} size={36} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-black text-[#1e1b4b]">
+                      {j.members[c.member].name} · {vnd(c.amount)}{' '}
+                      <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
+                        {cBy.length}/2
+                      </span>
+                    </p>
+                    <p className="muted !text-[11px]">
+                      {fmtDate(c.date)} · {c.revealId ? 'Số quay hôm nay' : c.notes || 'Khoản nạp thêm'}
+                    </p>
+                  </div>
+                  {!c.revealId && (
+                    <button type="button" className="chip !py-1.5 !px-2.5 !text-xs" onClick={() => setVoidId(c.id)}>
+                      Huỷ
+                    </button>
+                  )}
+                  {iConfirmed ? (
+                    <span className="shrink-0 rounded-xl bg-amber-100 px-2.5 py-1.5 text-[11px] font-black text-amber-800">
+                      ⏳ Chờ {j.members[otherId].name}
+                    </span>
+                  ) : (
+                    <Button size="sm" block={false} onClick={() => confirm(c.id)}>
+                      {c.member === myMemberId ? '💸 Tôi đã nạp' : '✅ Duyệt chéo'}
+                    </Button>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </Card>
       )}

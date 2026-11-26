@@ -47,18 +47,18 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
       }
     : null
 
-  // 1. Merge daily reveals by date (LATEST createdAt wins so when a user re-rolls today's reveal, the new random amount wins across devices!)
+  // 1. Merge daily reveals by date (EARLIEST createdAt wins: 1 day only allows 1 random roll, locked by the first person who rolled!)
   const revealByDate = new Map<string, Reveal>()
   for (const r of [...remote.reveals, ...local.reveals]) {
     const prev = revealByDate.get(r.date)
-    if (!prev || r.createdAt >= prev.createdAt) {
+    if (!prev || r.createdAt <= prev.createdAt) {
       revealByDate.set(r.date, r)
     }
   }
   const reveals = [...revealByDate.values()].sort((a, b) => a.date.localeCompare(b.date))
   const canonicalRevealIdByDate = new Map(reveals.map((r) => [r.date, r.id]))
 
-  // 2. Merge contributions
+  // 2. Merge contributions (with 2-person mutual confirmation union!)
   const rank: Record<Contribution['status'], number> = { pending: 0, confirmed: 1, voided: 2 }
   const contribMap = new Map<string, Contribution>()
 
@@ -80,12 +80,26 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     if (!prev) {
       contribMap.set(key, c)
     } else {
-      const winnerStatus = rank[c.status] >= rank[prev.status] ? c.status : prev.status
+      const unionConfirmedBy = Array.from(
+        new Set([
+          ...(prev.confirmedBy ?? (prev.status === 'confirmed' ? (['a', 'b'] as const) : [])),
+          ...(c.confirmedBy ?? (c.status === 'confirmed' ? (['a', 'b'] as const) : [])),
+        ]),
+      )
+      const bothConfirmed = unionConfirmedBy.includes('a') && unionConfirmedBy.includes('b')
+      let winnerStatus = rank[c.status] >= rank[prev.status] ? c.status : prev.status
+      if (winnerStatus !== 'voided' && bothConfirmed) {
+        winnerStatus = 'confirmed'
+      }
       contribMap.set(key, {
         ...prev,
         ...c,
         status: winnerStatus,
-        confirmedAt: c.confirmedAt || prev.confirmedAt,
+        confirmedBy: unionConfirmedBy,
+        confirmedAt:
+          c.confirmedAt ||
+          prev.confirmedAt ||
+          (winnerStatus === 'confirmed' ? new Date().toISOString() : null),
         notes: c.notes || prev.notes,
       })
     }

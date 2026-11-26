@@ -2,6 +2,7 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { FullLayout, TabLayout } from '@/components/Layout'
+import { ROLE_CONFIG_KEY } from '@/components/GenderSelectDialog'
 import { PasscodeGate } from '@/components/PasscodeGate'
 import { useStore } from '@/hooks/useStore'
 import ChallengesPage from '@/features/challenges/ChallengesPage'
@@ -30,6 +31,27 @@ function Gate({ children }: { children: ReactNode }) {
   const { journey } = useStore()
   if (!journey) return <Navigate to="/welcome" replace />
   if (!journey.setupDone) return <Navigate to="/pig" replace />
+  return <>{children}</>
+}
+
+/**
+ * First person entering the app today (once role Nam/Nu is selected) is immediately taken to /reveal
+ * to roll today's random savings amounts!
+ */
+function HomeGate({ children }: { children: ReactNode }) {
+  const { journey, state, today, goalReached } = useStore()
+  if (!journey) return <Navigate to="/welcome" replace />
+  if (!journey.setupDone) return <Navigate to="/pig" replace />
+
+  const isRoleConfigured =
+    typeof window !== 'undefined' &&
+    localStorage.getItem(ROLE_CONFIG_KEY) === 'true' &&
+    (localStorage.getItem('piggy_my_member') === 'a' || localStorage.getItem('piggy_my_member') === 'b')
+
+  const hasTodayReveal = state.reveals.some((r) => r.date === today)
+  if (isRoleConfigured && !hasTodayReveal && !goalReached && journey.revealEnabled !== false) {
+    return <Navigate to="/reveal" replace />
+  }
   return <>{children}</>
 }
 
@@ -83,7 +105,7 @@ export default function App() {
             <Route path="/notifications" element={<Gate><Page><NotificationsPage /></Page></Gate>} />
           </Route>
           <Route element={<TabLayout />}>
-            <Route path="/" element={<Gate><Page><HomePage /></Page></Gate>} />
+            <Route path="/" element={<HomeGate><Page><HomePage /></Page></HomeGate>} />
             <Route path="/pig" element={<PigGate />} />
             <Route path="/journal" element={<Gate><Page><JournalPage /></Page></Gate>} />
             <Route path="/challenges" element={<Gate><Page><ChallengesPage /></Page></Gate>} />

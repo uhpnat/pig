@@ -339,7 +339,9 @@ export class LocalRepository implements Repository {
     return next
   }
 
-  confirmContribution(id: string) { return this.mutate((s) => A.confirmContribution(s, id)) }
+  confirmContribution(id: string, by?: Parameters<Repository['confirmContribution']>[1]) {
+    return this.mutate((s) => A.confirmContribution(s, id, new Date().toISOString(), by))
+  }
   addContribution(m: Parameters<Repository['addContribution']>[0], amount: number, notes: string) {
     return this.mutate((s) => A.addContribution(s, m, amount, notes, todayIn(s.journey?.timezone)))
   }

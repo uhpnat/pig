@@ -89,6 +89,23 @@ describe('idempotency and confirmation', () => {
     s = confirmContribution(s, a.id)
     expect(() => resetTodayReveal(s, '2026-03-02')).toThrow(/ALREADY_CONFIRMED|xác nhận/)
   })
+  it('requires both members (2/2 mutual confirmation) before approving money into fund when byMember is specified', () => {
+    let s = saveJourney(createInitialState(), J())
+    s = revealToday(s, '2026-03-02', 'a', seededRand(1)).state
+    const a = s.contributions.find((c) => c.member === 'a')!
+    // Member A reports depositing -> 1/2 confirmed, still pending!
+    s = confirmContribution(s, a.id, '2026-03-02T10:00:00Z', 'a')
+    expect(s.contributions.find((c) => c.id === a.id)!.status).toBe('pending')
+    expect(s.contributions.find((c) => c.id === a.id)!.confirmedBy).toEqual(['a'])
+    expect(confirmedTotals(s.contributions).total).toBe(0)
+    // Member A clicking again is idempotent (cannot self-approve 2/2)
+    s = confirmContribution(s, a.id, '2026-03-02T10:01:00Z', 'a')
+    expect(s.contributions.find((c) => c.id === a.id)!.status).toBe('pending')
+    // Member B cross-confirms -> 2/2 confirmed, now officially approved!
+    s = confirmContribution(s, a.id, '2026-03-02T10:05:00Z', 'b')
+    expect(s.contributions.find((c) => c.id === a.id)!.status).toBe('confirmed')
+    expect(confirmedTotals(s.contributions).total).toBe(a.amount)
+  })
 })
 
 describe('demo + stats', () => {

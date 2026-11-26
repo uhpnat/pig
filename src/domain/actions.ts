@@ -148,35 +148,106 @@ export function revealToday(state: AppState, date: string, by: MemberId, rand: (
   pushActivity(s, { at: now, type: 'reveal', member: by, amount: amounts.a + amounts.b, title: '🐷 Kết quả tiết kiệm hôm nay', description: `${names.a.name}: +${vnd(amounts.a)} · ${names.b.name}: +${vnd(amounts.b)}`, status: 'done' })
   for (const k of ['a', 'b'] as MemberId[]) {
     if (amounts[k] <= 0) continue
-    const c: Contribution = { id: `ct_${reveal.id}_${k}`, member: k, revealId: reveal.id, amount: amounts[k], date, status: j.requireConfirmation ? 'pending' : 'confirmed', notes: '', createdAt: now, confirmedAt: j.requireConfirmation ? null : now }
+    const c: Contribution = {
+      id: `ct_${reveal.id}_${k}`,
+      member: k,
+      revealId: reveal.id,
+      amount: amounts[k],
+      date,
+      status: j.requireConfirmation ? 'pending' : 'confirmed',
+      notes: '',
+      createdAt: now,
+      confirmedAt: j.requireConfirmation ? null : now,
+      confirmedBy: j.requireConfirmation ? [] : ['a', 'b'],
+    }
     s.contributions.push(c)
   }
   const other: MemberId = by === 'a' ? 'b' : 'a'
-  pushNotification(s, 'reveal', `${names[by].name} vừa mở số tiền hôm nay`, `${names[other].name} nhớ xác nhận khoản góp nhé!`, now)
+  pushNotification(s, 'reveal', `${names[by].name} vừa mở số tiền hôm nay`, `${names[other].name} cần nạp +${vnd(amounts[other])} vào quỹ hôm nay nhé!`, now)
   if (!j.requireConfirmation) afterConfirmation(s, now)
   return { state: s, reveal, created: true }
 }
 
-export function confirmContribution(state: AppState, contributionId: string, now = new Date().toISOString()): AppState {
+export function confirmContribution(
+  state: AppState,
+  contributionId: string,
+  now = new Date().toISOString(),
+  byMember?: MemberId,
+): AppState {
   const c0 = state.contributions.find((c) => c.id === contributionId)
   if (!c0) throw new DomainError('NOT_FOUND', 'Không tìm thấy khoản góp.')
   if (c0.status !== 'pending') return state // idempotent
+  const existingBy = c0.confirmedBy ?? []
+  if (byMember && existingBy.includes(byMember)) return state // already confirmed by this member
+
   const s = clone(state)
   const j = requireJourney(s)
   const c = s.contributions.find((x) => x.id === contributionId)!
+  const ownerName = j.members[c.member].name
+
+  // Legacy / unit-test call without byMember -> confirm immediately by both
+  if (!byMember) {
+    c.confirmedBy = ['a', 'b']
+    c.status = 'confirmed'
+    c.confirmedAt = now
+    pushActivity(s, { at: now, type: 'confirmation', member: c.member, amount: c.amount, title: `💰 ${ownerName} đã xác nhận góp`, description: c.notes || (c.revealId ? 'Khoản góp từ kết quả mở số' : 'Khoản nạp thêm'), status: 'done' })
+    pushNotification(s, 'partner_confirmed', `${ownerName} đã xác nhận ${vnd(c.amount)}`, 'Heo cảm ơn bạn! 🐷', now)
+    afterConfirmation(s, now)
+    return s
+  }
+
+  const nextBy = Array.from(new Set([...(c.confirmedBy ?? []), byMember]))
+  c.confirmedBy = nextBy
+  const bothDone = nextBy.includes('a') && nextBy.includes('b')
+  const actorName = j.members[byMember].name
+  const otherId: MemberId = byMember === 'a' ? 'b' : 'a'
+  const otherName = j.members[otherId].name
+
+  if (!bothDone) {
+    // Step 1 of 2: One person confirmed, waiting for the other person to cross-confirm!
+    const isOwner = byMember === c.member
+    const actTitle = isOwner
+      ? `⏳ ${ownerName} báo đã nạp ${vnd(c.amount)} (1/2)`
+      : `⏳ ${actorName} đã xác nhận cho ${ownerName} (1/2)`
+    const actDesc = isOwner
+      ? `Đang chờ ${otherName} kiểm tra và xác nhận chéo để duyệt vào quỹ.`
+      : `Đang chờ ${ownerName} bấm xác nhận đã nạp.`
+    pushActivity(s, { at: now, type: 'confirmation', member: byMember, amount: c.amount, title: actTitle, description: actDesc, status: 'pending' })
+    pushNotification(
+      s,
+      'pending',
+      isOwner ? `⏳ ${ownerName} vừa nạp ${vnd(c.amount)} vào quỹ` : `⏳ ${actorName} đã duyệt khoản của ${ownerName}`,
+      isOwner ? `${otherName} ơi, vào kiểm tra và bấm xác nhận chéo cho ${ownerName} nhé! (1/2)` : `${ownerName} nhớ bấm xác nhận đã nạp nhé! (1/2)`,
+      now,
+    )
+    return s
+  }
+
+  // Step 2 of 2: Both people have confirmed! Officially approved into the fund!
   c.status = 'confirmed'
   c.confirmedAt = now
-  const who = j.members[c.member].name
-  pushActivity(s, { at: now, type: 'confirmation', member: c.member, amount: c.amount, title: `💰 ${who} đã xác nhận góp`, description: c.notes || (c.revealId ? 'Khoản góp từ kết quả mở số' : 'Khoản nạp thêm'), status: 'done' })
-  const other: MemberId = c.member === 'a' ? 'b' : 'a'
-  pushNotification(s, 'partner_confirmed', `${who} đã xác nhận ${vnd(c.amount)}`, 'Heo cảm ơn bạn! 🐷', now)
+  pushActivity(s, {
+    at: now,
+    type: 'confirmation',
+    member: c.member,
+    amount: c.amount,
+    title: `💰 Đã duyệt khoản ${vnd(c.amount)} của ${ownerName} (2/2 ✅)`,
+    description: `${j.members.a.name} & ${j.members.b.name} đã xác nhận chéo hoàn tất.`,
+    status: 'done',
+  })
+  pushNotification(
+    s,
+    'partner_confirmed',
+    `💰 Đã duyệt ${vnd(c.amount)} của ${ownerName} vào heo!`,
+    `Cả ${j.members.a.name} & ${j.members.b.name} đã xác nhận (2/2). Heo cảm ơn hai bạn! 🐷`,
+    now,
+  )
   if (c.revealId) {
     const mates = s.contributions.filter((x) => x.revealId === c.revealId)
     if (mates.length > 1 && mates.every((x) => x.status === 'confirmed')) {
-      pushActivity(s, { at: now, type: 'confirmation', title: '🎉 Cả hai đã góp xong hôm nay', description: `Tổng ${vnd(mates.reduce((t, x) => t + x.amount, 0))} đã được cộng vào heo.`, status: 'done' })
+      pushActivity(s, { at: now, type: 'confirmation', title: '🎉 Cả hai đã duyệt xong quỹ hôm nay', description: `Tổng ${vnd(mates.reduce((t, x) => t + x.amount, 0))} đã được cộng vào heo.`, status: 'done' })
     }
   }
-  void other
   afterConfirmation(s, now)
   return s
 }
@@ -189,14 +260,26 @@ export function addContribution(state: AppState, member: MemberId, amount: numbe
   if (amount > remaining) throw new DomainError('OUT_OF_RANGE', `Chỉ còn thiếu ${vnd(remaining)} để đạt mục tiêu.`)
   const s = clone(state)
   const pending = j.requireConfirmation
-  const c: Contribution = { id: uid('ct'), member, revealId: null, amount: Math.round(amount), date, status: pending ? 'pending' : 'confirmed', notes: notes.trim(), createdAt: now, confirmedAt: pending ? null : now }
+  const otherId: MemberId = member === 'a' ? 'b' : 'a'
+  const c: Contribution = {
+    id: uid('ct'),
+    member,
+    revealId: null,
+    amount: Math.round(amount),
+    date,
+    status: pending ? 'pending' : 'confirmed',
+    notes: notes.trim(),
+    createdAt: now,
+    confirmedAt: pending ? null : now,
+    confirmedBy: pending ? [member] : ['a', 'b'],
+  }
   s.contributions.push(c)
-  pushActivity(s, { at: now, type: 'contribution', member, amount: c.amount, title: `➕ ${j.members[member].name} nạp thêm`, description: c.notes || 'Khoản nạp thêm', status: pending ? 'pending' : 'done' })
+  pushActivity(s, { at: now, type: 'contribution', member, amount: c.amount, title: `➕ ${j.members[member].name} nạp thêm (1/2)`, description: c.notes ? `${c.notes} · Chờ ${j.members[otherId].name} xác nhận` : `Chờ ${j.members[otherId].name} xác nhận chéo`, status: pending ? 'pending' : 'done' })
   pushNotification(
     s,
-    'partner_confirmed',
+    pending ? 'pending' : 'partner_confirmed',
     `➕ ${j.members[member].name} vừa nạp thêm ${vnd(c.amount)}`,
-    c.notes ? `Ghi chú: ${c.notes}` : pending ? 'Đang chờ xác nhận vào heo đất.' : 'Đã cộng thẳng vào heo đất! 🐷',
+    pending ? `Chờ ${j.members[otherId].name} xác nhận chéo (1/2) để duyệt vào heo đất.` : 'Đã cộng thẳng vào heo đất! 🐷',
     now,
   )
   if (!pending) afterConfirmation(s, now)

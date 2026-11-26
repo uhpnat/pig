@@ -6,10 +6,11 @@ import { ActivityRow } from '@/components/ActivityRow'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { GiftBoxSticker } from '@/components/Stickers'
-import { Avatar, Badge, Button, Card, EmptyState } from '@/components/ui'
+import { Avatar, Badge, Button, Card, EmptyState, Modal } from '@/components/ui'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { monthlyBudget } from '@/domain/engine'
 import { diffDays, vnd } from '@/domain/format'
+import type { Contribution } from '@/domain/types'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { beep, haptic } from '@/lib/fx'
@@ -49,13 +50,39 @@ export default function HomePage() {
   const nav = useNavigate()
   const [topUp, setTopUp] = useState(false)
   const [genderDialogOpen, setGenderDialogOpen] = useState(false)
+  const [depositAlertDismissed, setDepositAlertDismissed] = useState(false)
 
   const t = confirmedTotals(state.contributions)
   const actual = actualShares(state.contributions)
   const reveal = state.reveals.find((r) => r.date === today)
   const cs = reveal ? state.contributions.filter((c) => c.revealId === reveal.id) : []
-  const anyConfirmed = cs.some((c) => c.status === 'confirmed')
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
+  const extraPending = state.contributions.filter((c) => !c.revealId && c.status === 'pending')
+
+  const myDailyC = cs.find((x) => x.member === myMemberId)
+  const myDailyBy = myDailyC?.confirmedBy ?? (myDailyC?.status === 'confirmed' ? ['a', 'b'] : [])
+  const partnerDailyC = cs.find((x) => x.member === partnerMemberId)
+  const partnerDailyBy = partnerDailyC?.confirmedBy ?? (partnerDailyC?.status === 'confirmed' ? ['a', 'b'] : [])
+
+  // Show popup notification to 2nd user (or whenever today's reveal exists and this user hasn't reported their deposit yet)
+  const showSecondUserDepositModal =
+    !!reveal &&
+    !depositAlertDismissed &&
+    (!myDailyBy.includes(myMemberId) || (partnerDailyBy.includes(partnerMemberId) && !partnerDailyBy.includes(myMemberId)))
+
+  const handleConfirmContrib = async (c: Contribution) => {
+    const out = await run(repo.confirmContribution(c.id, myMemberId))
+    if (!out) return
+    const updated = out.contributions.find((x) => x.id === c.id)
+    if (updated?.status === 'confirmed') {
+      celebrate(['🪙', '💧', '✨', '🎉'])
+      toast(`Đã duyệt hoàn tất (2/2)! Khoản ${vnd(c.amount)} của ${j.members[c.member].name} đã vào quỹ heo đất! 🐷🎉`)
+    } else if (c.member === myMemberId) {
+      toast(`Đã báo nạp ${vnd(c.amount)} (1/2)! Chờ ${partnerMember?.name} xác nhận chéo nhé ⏳`)
+    } else {
+      toast(`Đã xác nhận cho ${partnerMember?.name} (1/2)! ⏳`)
+    }
+  }
 
   // Monthly contribution progress (%) to pour dual-color water into the translucent 3D pig on HomePage!
   const curMonthKey = today.slice(0, 7)
@@ -225,10 +252,10 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="text-base">🎲</span>
-                <h2 className="text-[15px] font-black text-[#1e1b4b]">Số tiền bỏ heo hôm nay</h2>
+                <h2 className="text-[15px] font-black text-[#1e1b4b]">Quỹ hôm nay (2 người duyệt chéo)</h2>
               </div>
               <Badge tone={allDone ? 'ok' : 'warn'}>
-                {allDone ? 'Đã bỏ đủ 2 người ✅' : 'Chờ bỏ heo ⏳'}
+                {allDone ? 'Đã duyệt đủ 2/2 ✅' : 'Chờ xác nhận chéo ⏳'}
               </Badge>
             </div>
 
@@ -236,8 +263,10 @@ export default function HomePage() {
             <div className="mt-3 grid grid-cols-2 gap-2.5">
               {/* My Card */}
               {(() => {
-                const myC = cs.find((x) => x.member === myMemberId)
+                const myC = myDailyC
+                const cBy = myDailyBy
                 const done = myC?.status === 'confirmed'
+                const iConfirmed = cBy.includes(myMemberId)
                 return (
                   <div
                     className={`rounded-2xl border-2 p-3 text-center transition-all ${
@@ -262,27 +291,28 @@ export default function HomePage() {
                     >
                       +{vnd(reveal.amounts[myMemberId])}
                     </p>
+                    <p className="mt-0.5 text-[10px] font-extrabold text-slate-500">
+                      Duyệt: {done ? '2/2 ✅' : `${cBy.length}/2`}
+                    </p>
                     {done ? (
-                      <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">
-                        Đã bỏ heo ✅
+                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">
+                        Đã vào quỹ (2/2) ✅
                       </span>
+                    ) : iConfirmed ? (
+                      <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1.5 text-[10.5px] font-black text-amber-800">
+                        ⏳ Đã báo nạp (1/2) · Chờ {partnerMember?.name} duyệt
+                      </div>
                     ) : (
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (myC) {
-                            await run(repo.confirmContribution(myC.id))
-                            celebrate(['🪙', '💧', '✨'])
-                            toast(`Đã lưu: ${myMember?.name} bỏ ${vnd(myC.amount)} vào heo! 🎉`)
-                          }
-                        }}
-                        className={`mt-2 w-full cursor-pointer rounded-xl border-0 py-2 text-xs font-black text-white shadow-md transition-transform active:scale-95 ${
+                        onClick={() => myC && handleConfirmContrib(myC)}
+                        className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-2 text-xs font-black text-white shadow-md transition-transform active:scale-95 ${
                           isMyMale
                             ? 'bg-gradient-to-r from-sky-500 to-blue-600'
                             : 'bg-gradient-to-r from-pink-500 to-rose-600'
                         }`}
                       >
-                        Xác nhận phần tôi ✅
+                        💸 Tôi đã nạp ({cBy.length}/2)
                       </button>
                     )}
                   </div>
@@ -291,8 +321,11 @@ export default function HomePage() {
 
               {/* Partner Card */}
               {(() => {
-                const partnerC = cs.find((x) => x.member === partnerMemberId)
+                const partnerC = partnerDailyC
+                const cBy = partnerDailyBy
                 const done = partnerC?.status === 'confirmed'
+                const partnerReported = cBy.includes(partnerMemberId)
+                const iApprovedPartner = cBy.includes(myMemberId)
                 return (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-3 text-center">
                     <div className="flex items-center justify-center gap-1.5 min-w-0">
@@ -304,28 +337,76 @@ export default function HomePage() {
                     <p className="mt-1.5 text-[17px] font-black tabular-nums text-slate-700">
                       +{vnd(reveal.amounts[partnerMemberId])}
                     </p>
+                    <p className="mt-0.5 text-[10px] font-extrabold text-slate-500">
+                      Duyệt: {done ? '2/2 ✅' : `${cBy.length}/2`}
+                    </p>
                     {done ? (
-                      <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">
-                        Đã bỏ heo ✅
+                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">
+                        Đã vào quỹ (2/2) ✅
                       </span>
+                    ) : iApprovedPartner ? (
+                      <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1.5 text-[10.5px] font-black text-amber-800">
+                        ⏳ Bạn đã duyệt (1/2) · Chờ {partnerMember?.name} nạp
+                      </div>
                     ) : (
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (partnerC) {
-                            await run(repo.confirmContribution(partnerC.id))
-                            toast(`Đã xác nhận giúp ${partnerMember?.name}! 🎉`)
-                          }
-                        }}
-                        className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-white py-2 text-[11px] font-extrabold text-slate-600 transition-transform active:scale-95"
+                        onClick={() => partnerC && handleConfirmContrib(partnerC)}
+                        className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-2 text-[11px] font-black transition-transform active:scale-95 ${
+                          partnerReported
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md animate-pulse'
+                            : 'border border-slate-200 bg-white text-slate-600'
+                        }`}
                       >
-                        ⏳ Chờ · Xác nhận giúp
+                        {partnerReported
+                          ? `✅ Duyệt ${partnerMember?.name} đã nạp (2/2)`
+                          : `✅ Xác nhận cho ${partnerMember?.name}`}
                       </button>
                     )}
                   </div>
                 )
               })()}
             </div>
+
+            {/* Extra Pending Top-Ups needing 2-person cross-confirmation */}
+            {extraPending.length > 0 && (
+              <div className="mt-3 space-y-2 rounded-2xl border border-amber-200 bg-amber-50/80 p-2.5">
+                <p className="text-[11px] font-black text-amber-900">
+                  ⏳ Khoản nạp thêm chờ xác nhận chéo ({extraPending.length}):
+                </p>
+                {extraPending.map((c) => {
+                  const cBy = c.confirmedBy ?? []
+                  const iConfirmed = cBy.includes(myMemberId)
+                  const owner = j.members[c.member]
+                  const other = j.members[c.member === 'a' ? 'b' : 'a']
+                  return (
+                    <div key={c.id} className="flex items-center justify-between gap-2 rounded-xl bg-white p-2 shadow-sm">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-black text-[#1e1b4b]">
+                          {owner.name} nạp +{vnd(c.amount)} ({cBy.length}/2)
+                        </p>
+                        <p className="truncate text-[10px] font-bold text-slate-500">
+                          {c.notes || 'Khoản nạp thêm'}
+                        </p>
+                      </div>
+                      {iConfirmed ? (
+                        <span className="shrink-0 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-800">
+                          Chờ {other.name} duyệt
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmContrib(c)}
+                          className="shrink-0 cursor-pointer rounded-xl border-0 bg-emerald-600 px-2.5 py-1.5 text-[11px] font-black text-white shadow-sm active:scale-95"
+                        >
+                          ✅ Duyệt (2/2)
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             <div className="mt-2.5 flex items-center justify-between pt-1">
               <button
@@ -335,25 +416,9 @@ export default function HomePage() {
               >
                 🎰 Xem lồng quay 3D
               </button>
-              {!anyConfirmed ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await run(repo.resetTodayReveal())
-                    toast('Đã đặt lại! Hãy mở lại số tiền mới nhé 🎲')
-                    nav('/reveal')
-                  }}
-                  className="cursor-pointer border-0 bg-transparent text-xs font-extrabold text-rose-500 hover:underline"
-                >
-                  🎲 Quay lại số khác
-                </button>
-              ) : (
-                !allDone && (
-                  <span className="text-[11px] font-bold text-amber-600">
-                    🔒 Đã khoá kết quả hôm nay
-                  </span>
-                )
-              )}
+              <span className="text-[11px] font-bold text-slate-400">
+                🔒 1 ngày quay random 1 lần · Duyệt chéo 2/2
+              </span>
             </div>
           </div>
         )}
@@ -489,6 +554,61 @@ export default function HomePage() {
 
       <TopUpDialog open={topUp} onClose={() => setTopUp(false)} />
       <GenderSelectDialog open={genderDialogOpen} onClose={() => setGenderDialogOpen(false)} />
+
+      {/* Deposit Alert Popup for 2nd User / Unconfirmed Daily Amount */}
+      <Modal
+        open={showSecondUserDepositModal}
+        onClose={() => setDepositAlertDismissed(true)}
+        title="🔔 Thông báo số tiền phải nạp hôm nay"
+      >
+        {reveal && (
+          <div className="mt-2 text-center">
+            <p className="text-xs font-bold text-slate-600">
+              Hôm nay <b>{j.members[reveal.initiatedBy].name}</b> đã quay random số tiền cho hai bạn!
+            </p>
+            <div className="mt-3 rounded-2xl border-2 border-indigo-300 bg-indigo-50/90 p-3.5">
+              <p className="text-xs font-black text-indigo-950">
+                Số tiền BẠN ({myMember?.name}) cần nạp hôm nay:
+              </p>
+              <p className="mt-1 text-3xl font-black text-indigo-700 tabular-nums">
+                +{vnd(reveal.amounts[myMemberId])}
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-slate-500">
+                Phần của {partnerMember?.name}: <b>+{vnd(reveal.amounts[partnerMemberId])}</b>
+              </p>
+            </div>
+
+            <p className="mt-2.5 text-[11px] font-extrabold text-amber-800 bg-amber-50 rounded-xl p-2 border border-amber-200">
+              🔒 Quy tắc quỹ chung: Khi nạp tiền phải được <b>cả 2 người xác nhận chéo của nhau (2/2)</b> mới được tính là đã duyệt vào heo đất!
+            </p>
+
+            <div className="mt-3.5 space-y-2">
+              {myDailyC && myDailyC.status !== 'confirmed' && !myDailyBy.includes(myMemberId) && (
+                <Button
+                  variant="violet"
+                  onClick={() => handleConfirmContrib(myDailyC)}
+                >
+                  💸 Tôi đã nạp {vnd(reveal.amounts[myMemberId])} (Báo cho {partnerMember?.name} duyệt)
+                </Button>
+              )}
+              {partnerDailyC &&
+                partnerDailyC.status !== 'confirmed' &&
+                partnerDailyBy.includes(partnerMemberId) &&
+                !partnerDailyBy.includes(myMemberId) && (
+                  <Button
+                    variant="pink"
+                    onClick={() => handleConfirmContrib(partnerDailyC)}
+                  >
+                    ✅ Duyệt xác nhận {partnerMember?.name} đã nạp {vnd(reveal.amounts[partnerMemberId])} (2/2)
+                  </Button>
+                )}
+              <Button variant="ghost" size="sm" onClick={() => setDepositAlertDismissed(true)}>
+                Đã hiểu, đóng thông báo
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

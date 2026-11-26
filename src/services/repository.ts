@@ -33,7 +33,7 @@ export interface Repository {
   revealToday(by: MemberId, forceReroll?: boolean): Promise<{ state: AppState; reveal: Reveal; created: boolean }>
   resetTodayReveal(): Promise<AppState>
   clearDataKeepConfig(): Promise<AppState>
-  confirmContribution(id: string): Promise<AppState>
+  confirmContribution(id: string, by?: MemberId): Promise<AppState>
   addContribution(member: MemberId, amount: number, notes: string): Promise<AppState>
   voidContribution(id: string): Promise<AppState>
   startChallenge(id: string): Promise<AppState>

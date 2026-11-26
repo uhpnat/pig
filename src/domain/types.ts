@@ -83,6 +83,8 @@ export interface Contribution {
   notes: string
   createdAt: string
   confirmedAt: string | null
+  /** Both 'a' and 'b' must confirm a contribution before status becomes 'confirmed'. */
+  confirmedBy?: MemberId[]
 }
 
 export type ActivityType = 'reveal' | 'contribution' | 'confirmation' | 'milestone' | 'challenge' | 'settings' | 'system'
