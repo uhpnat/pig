@@ -78,17 +78,10 @@ export default function RevealPage() {
     <div
       className="relative min-h-[100dvh] pb-10"
       style={{
-        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
-        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+        paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
         background: 'linear-gradient(180deg, #5b3dc8 0%, #8e6ee8 45%, #fde8f1 100%)',
       }}
     >
-      {/* Extended purple galaxy bleed above the viewport to cover iPhone notch */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 -top-24 z-0 h-28"
-        style={{ background: '#5b3dc8' }}
-      />
       {/* Top Floating Controls */}
       <div className="relative z-10 flex items-center justify-between px-4">
         <button

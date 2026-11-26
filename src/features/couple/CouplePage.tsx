@@ -101,12 +101,10 @@ export default function CouplePage() {
     <div
       className="relative min-h-[100dvh] pb-8"
       style={{
-        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
         paddingTop: 'env(safe-area-inset-top, 0px)',
         background: 'linear-gradient(180deg, #fde8f1 0%, #fff9fb 40%, #fdf2f7 100%)',
       }}
     >
-      <div aria-hidden className="pointer-events-none fixed inset-x-0 -top-24 z-0 h-28" style={{ background: '#fde8f1' }} />
       {/* Top Bar matching the mockup */}
       <div className="relative z-10 flex items-center justify-center px-4 pb-2 pt-3.5">
         <h1 className="text-[22px] font-black tracking-tight text-[#1e1b4b]">

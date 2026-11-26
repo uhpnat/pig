@@ -42,12 +42,10 @@ export default function PigPage() {
     <div
       className="relative flex min-h-[100dvh] flex-col justify-between overflow-hidden px-5 pb-12"
       style={{
-        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
-        paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
         background: 'linear-gradient(180deg, #dbeafe 0%, #eff6ff 45%, #f5f3ff 78%, #dcfce7 100%)',
       }}
     >
-      <div aria-hidden className="pointer-events-none fixed inset-x-0 -top-24 z-0 h-28" style={{ background: '#dbeafe' }} />
       <div>
         {/* Top Back Arrow */}
         <button

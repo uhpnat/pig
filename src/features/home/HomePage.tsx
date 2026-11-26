@@ -56,17 +56,10 @@ export default function HomePage() {
     <div
       className="relative min-h-[100dvh] pb-8"
       style={{
-        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
-        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+        paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
         background: 'linear-gradient(180deg, #86c5ff 0%, #b8deff 26%, #e6f5d0 52%, #fdf2e9 72%, #fce8ef 100%)',
       }}
     >
-      {/* Extended sky bleed above the viewport to cover iPhone notch & rubber-band overscroll */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 -top-24 z-0 h-28"
-        style={{ background: '#86c5ff' }}
-      />
       {/* 1. Top Row: Avatars + Plus button on left, Bell on right */}
       <header className="relative z-10 flex items-center justify-between px-4">
         <div className="flex items-center">

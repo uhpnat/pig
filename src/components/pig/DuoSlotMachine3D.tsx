@@ -32,14 +32,14 @@ export function DuoSlotMachine3D({
   const bulbs = [0, 1, 2, 3, 4, 5, 6, 7]
 
   return (
-    <div className="relative mx-auto mt-1 w-full max-w-[360px] select-none px-2 pt-10 pb-2">
+    <div className="relative mx-auto mt-1 w-full max-w-[330px] select-none px-4 pt-9 pb-2">
       {/* Ambient glowing aura behind the 3D machine */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-8 top-10 bottom-4 rounded-full bg-gradient-to-b from-[#f472b6]/40 via-[#a855f7]/35 to-[#fde047]/35 blur-2xl"
+        className="pointer-events-none absolute inset-x-6 top-10 bottom-4 rounded-full bg-gradient-to-b from-[#f472b6]/40 via-[#a855f7]/35 to-[#fde047]/35 blur-2xl"
       />
 
-      {/* TOP MASCOT: Cutout 3D Pig sitting on top of the Slot Machine Crown */}
+      {/* TOP MASCOT: Cutout 3D Pig sitting centered on top of the Slot Machine Crown */}
       <motion.div
         className="pointer-events-none relative z-20 -mb-7 flex justify-center"
         animate={
@@ -59,8 +59,8 @@ export function DuoSlotMachine3D({
         />
       </motion.div>
 
-      {/* MAIN 3D ARCADE CABINET + RIGHT-HAND 3D LEVER */}
-      <div className="relative flex items-center justify-center">
+      {/* MAIN 3D ARCADE CABINET (Strictly centered!) + ABSOLUTE RIGHT-HAND 3D LEVER */}
+      <div className="relative mx-auto w-full">
         {/* 3D Slot Machine Body */}
         <motion.div
           animate={
@@ -172,16 +172,16 @@ export function DuoSlotMachine3D({
           </div>
         </motion.div>
 
-        {/* RIGHT-SIDE 3D GOLDEN SLOT LEVER (Pullable!) */}
+        {/* RIGHT-SIDE 3D GOLDEN SLOT LEVER (Absolutely anchored to the right edge so the machine stays 100% centered!) */}
         <button
           type="button"
           onClick={onPullLever}
           disabled={rolling}
           aria-label="Kéo cần gạt quay số"
-          className="relative -ml-1.5 flex h-28 w-8 cursor-pointer flex-col items-center justify-start border-0 bg-transparent p-0 focus:outline-none"
+          className=" absolute -right-5 top-1/2 z-20 flex h-28 w-7 -translate-y-1/2 cursor-pointer flex-col items-center justify-start border-0 bg-transparent p-0 focus:outline-none"
         >
-          {/* Lever Mount Hinge */}
-          <span className="absolute bottom-6 left-0 h-7 w-3.5 rounded-r-lg border border-[#fde047] bg-gradient-to-b from-[#c084fc] to-[#6b21a8] shadow-md" />
+          {/* Lever Mount Hinge attached to the right wall of the cabinet */}
+          <span className="absolute bottom-6 left-0 h-7 w-3 rounded-r-lg border border-[#fde047] bg-gradient-to-b from-[#c084fc] to-[#6b21a8] shadow-md" />
           {/* Animated Arm + 3D Red/Gold Ball */}
           <motion.div
             animate={
@@ -190,16 +190,16 @@ export function DuoSlotMachine3D({
                 : { y: [0, -3, 0] }
             }
             transition={{ duration: rolling ? 0.55 : 2.2, repeat: rolling ? 0 : Infinity }}
-            className="flex flex-col items-center"
+            className="ml-1.5 flex flex-col items-center"
           >
             {/* 3D Glossy Ball Handle */}
             <span
-              className="grid h-8 w-8 place-items-center rounded-full border-2 border-white shadow-[0_6px_14px_rgba(225,29,72,.5)]"
+              className="grid h-7 w-7 place-items-center rounded-full border-2 border-white shadow-[0_6px_14px_rgba(225,29,72,.5)]"
               style={{
                 background: 'radial-gradient(circle at 35% 30%, #ffe4e6 0%, #fb7185 35%, #e11d48 100%)',
               }}
             >
-              <span className="h-2 w-2 -translate-x-1 -translate-y-1 rounded-full bg-white/80" />
+              <span className="h-1.5 w-1.5 -translate-x-0.5 -translate-y-0.5 rounded-full bg-white/80" />
             </span>
             {/* Metallic Lever Shaft */}
             <span className="-mt-1 h-14 w-2 rounded-full bg-gradient-to-r from-[#fef08a] via-[#f59e0b] to-[#b45309] shadow" />

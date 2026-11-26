@@ -20,13 +20,16 @@ export function AppFrame({ nav }: { nav: boolean }) {
         paddingBottom: nav ? 'calc(88px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)',
       }}
     >
-      {/* Top Safe-Area Notch Bleed Cover so iPhone notch / Dynamic Island never shows a white gap */}
+      {/* Soft translucent top safe-area blur (no hard solid bar or border line!) */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-20"
+        className="pointer-events-none fixed inset-x-0 top-0 z-30"
         style={{
-          height: 'env(safe-area-inset-top, 0px)',
-          background: 'inherit',
+          height: 'calc(env(safe-area-inset-top, 0px) + 18px)',
+          backdropFilter: 'blur(12px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+          maskImage: 'linear-gradient(180deg, #000 0%, #000 45%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 45%, transparent 100%)',
         }}
       />
       {!online && (
