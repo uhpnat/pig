@@ -114,13 +114,13 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* 3. HERO: CHỦ ĐẠO LÀ CON HEO ĐẤT 3D MỚI VỚI NƯỚC ĐA MÀU SO SÁNH ĐÓNG GÓP */}
+      {/* 3. HERO: CHỦ ĐẠO LÀ CON HEO ĐẤT 3D MỚI TO LỚN & NỔI BẬT NHẤT MÀN HÌNH */}
       <div className="relative mt-0.5">
         <Interactive3DStage
           spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
           alt={`${j.pig.name} – ${pigStage(progress).label}`}
           theme="meadow"
-          spriteHeight={255}
+          spriteHeight={330}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
           membersShare={{

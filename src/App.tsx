@@ -72,13 +72,13 @@ export default function App() {
         <Routes location={loc} key={loc.pathname}>
           <Route element={<FullLayout />}>
             <Route path="/welcome" element={<WelcomeGate />} />
-            <Route path="/pig" element={<PigGate />} />
             <Route path="/reveal" element={<Gate><Page><RevealPage /></Page></Gate>} />
             <Route path="/stats" element={<Gate><Page><Suspense fallback={<div className="p-8 text-center font-black text-vio">Đang tải biểu đồ…</div>}><StatsPage /></Suspense></Page></Gate>} />
             <Route path="/notifications" element={<Gate><Page><NotificationsPage /></Page></Gate>} />
           </Route>
           <Route element={<TabLayout />}>
             <Route path="/" element={<Gate><Page><HomePage /></Page></Gate>} />
+            <Route path="/pig" element={<PigGate />} />
             <Route path="/journal" element={<Gate><Page><JournalPage /></Page></Gate>} />
             <Route path="/challenges" element={<Gate><Page><ChallengesPage /></Page></Gate>} />
             <Route path="/couple" element={<Gate><Page><CouplePage /></Page></Gate>} />
