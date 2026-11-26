@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 function FluffyCloud({ className = '', scale = 1 }: { className?: string; scale?: number }) {
   return (
@@ -76,114 +76,6 @@ function GrassyHillsSVG({ variant = 'green' }: { variant?: 'green' | 'pink' }) {
   )
 }
 
-interface InternalCoinSpec {
-  id: number
-  /** Horizontal center inside the pig body (11%..89%) */
-  xPct: number
-  /** Bottom offset from base of pig body (2%..87%) */
-  yBottomPct: number
-  /** Tilt angle in degrees */
-  rot: number
-  /** Size multiplier */
-  scale: number
-  /** Visual variant: gold (classic gold coin) or gem-tinted */
-  tone: 'gold' | 'male' | 'female'
-}
-
-/** Deterministic pseudo-random helper so internal coins stay stable across renders */
-function seededRand(seed: number) {
-  const x = Math.sin(seed * 9999.91) * 10000
-  return x - Math.floor(x)
-}
-
-/** Pre-compute 76 interlocking 3D coins stacked organically from bottom (2%) to top (88%) of the pig's belly */
-const VAULT_COINS: Omit<InternalCoinSpec, 'tone'>[] = (() => {
-  const rows = 10
-  const cols = 8
-  const list: Omit<InternalCoinSpec, 'tone'>[] = []
-  let id = 0
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      id++
-      const r1 = seededRand(id * 3 + 1)
-      const r2 = seededRand(id * 7 + 2)
-      const r3 = seededRand(id * 13 + 5)
-      // Stagger odd rows like real stacked coins inside a jar
-      const rowOffset = r % 2 === 1 ? 4.8 : 0
-      const baseX = 11 + c * 9.8 + rowOffset + (r1 - 0.5) * 4.2
-      const baseY = 2.5 + r * 8.4 + (r2 - 0.5) * 2.6
-      list.push({
-        id,
-        xPct: Math.max(8, Math.min(91, baseX)),
-        yBottomPct: Math.max(2, Math.min(89, baseY)),
-        rot: Math.round((r3 - 0.5) * 44),
-        scale: Number((0.88 + seededRand(id * 19) * 0.24).toFixed(2)),
-      })
-    }
-  }
-  return list
-})()
-
-/** Crisp 3D Metallic Gold Coin SVG (with optional Sky-Blue / Rose-Pink gem emblem for Nam / Nữ) */
-function Coin3DBadge({
-  size = 24,
-  tone = 'gold',
-  className = '',
-}: {
-  size?: number
-  tone?: 'gold' | 'male' | 'female'
-  className?: string
-}) {
-  const rimColor = tone === 'male' ? '#0284c7' : tone === 'female' ? '#e11d48' : '#b45309'
-  const innerRing = tone === 'male' ? '#38bdf8' : tone === 'female' ? '#fb7185' : '#fef08a'
-  const coreBg =
-    tone === 'male'
-      ? 'linear-gradient(135deg, #fde047 0%, #f59e0b 58%, #38bdf8 100%)'
-      : tone === 'female'
-        ? 'linear-gradient(135deg, #fde047 0%, #f59e0b 58%, #fb7185 100%)'
-        : 'linear-gradient(135deg, #fef08a 0%, #facc15 45%, #d97706 100%)'
-
-  return (
-    <div
-      aria-hidden
-      className={`relative inline-flex select-none items-center justify-center rounded-full ${className}`}
-      style={{
-        width: size,
-        height: size,
-        background: coreBg,
-        border: `2px solid ${innerRing}`,
-        boxShadow: `0 2.5px 0 ${rimColor}, 0 4px 8px rgba(30,27,75,0.24), inset 0 1.5px 2px rgba(255,255,255,0.9)`,
-      }}
-    >
-      {/* Inner embossed ring */}
-      <div
-        className="flex items-center justify-center rounded-full"
-        style={{
-          width: size * 0.7,
-          height: size * 0.7,
-          border: `1px dashed ${tone === 'male' ? 'rgba(2,132,199,0.55)' : tone === 'female' ? 'rgba(225,29,72,0.55)' : 'rgba(180,83,9,0.55)'}`,
-        }}
-      >
-        <span
-          className="font-black leading-none"
-          style={{
-            fontSize: Math.max(8, Math.round(size * 0.42)),
-            color: tone === 'male' ? '#0369a1' : tone === 'female' ? '#be123c' : '#92400e',
-            textShadow: '0 1px 0 rgba(255,255,255,0.75)',
-          }}
-        >
-          ₫
-        </span>
-      </div>
-      {/* Glossy diagonal highlight */}
-      <div
-        className="pointer-events-none absolute left-[15%] top-[10%] rounded-full bg-white/75"
-        style={{ width: size * 0.28, height: size * 0.14, transform: 'rotate(-28deg)' }}
-      />
-    </div>
-  )
-}
-
 export interface MembersShareData {
   a: { name: string; avatar: string; amount: number; pct: number; gender?: 'male' | 'female' }
   b: { name: string; avatar: string; amount: number; pct: number; gender?: 'male' | 'female' }
@@ -200,17 +92,17 @@ interface StageProps {
   liquidFillPct?: number
   liquidLabel?: string
   membersShare?: MembersShareData
-  /** Increment or change this token whenever a deposit is fully confirmed (2/2) to trigger a coin shower into the pig! */
+  /** Increment or change this token whenever a deposit is fully confirmed (2/2) to trigger a glowing energy-orb absorption into the pig! */
   coinBurstKey?: number
 }
 
-interface FlyingCoinParticle {
+interface EnergyOrbParticle {
   id: number
   startX: number
   startY: number
   midX: number
   delay: number
-  tone: 'gold' | 'male' | 'female'
+  tone: 'male' | 'female' | 'gold'
   size: number
 }
 
@@ -227,10 +119,9 @@ export function Interactive3DStage({
   coinBurstKey,
 }: StageProps) {
   const [jumping, setJumping] = useState(false)
-  const [droppingCoin, setDroppingCoin] = useState(false)
   const [quoteIdx, setQuoteIdx] = useState(0)
   const [bursts, setBursts] = useState<{ id: number; x: number; emoji: string }[]>([])
-  const [flyingCoins, setFlyingCoins] = useState<FlyingCoinParticle[]>([])
+  const [energyOrbs, setEnergyOrbs] = useState<EnergyOrbParticle[]>([])
   const lastBurstKeyRef = useRef<number | undefined>(coinBurstKey)
 
   const mx = useMotionValue(0)
@@ -253,44 +144,43 @@ export function Interactive3DStage({
     my.set(0)
   }
 
-  // Launch a multi-coin shower flying from the screen into the pig's back coin slot!
-  const launchCoinShower = (count = 12) => {
+  // Launch luminous light orbs (Sky Blue & Rose Pink) flying into the pig's heart when a 2/2 confirmation finishes!
+  const launchEnergyAbsorption = (count = 10) => {
     const now = Date.now()
-    const tones: ('gold' | 'male' | 'female')[] = ['gold', 'male', 'gold', 'female', 'gold']
-    const batch: FlyingCoinParticle[] = Array.from({ length: count }, (_, i) => {
-      const angleSpread = (i - (count - 1) / 2) * 26
+    const tones: ('male' | 'female' | 'gold')[] = ['male', 'female', 'gold', 'male', 'female']
+    const batch: EnergyOrbParticle[] = Array.from({ length: count }, (_, i) => {
+      const spread = (i - (count - 1) / 2) * 28
       return {
         id: now + i,
-        startX: angleSpread + (Math.random() * 18 - 9),
-        startY: -45 - (i % 3) * 18,
-        midX: angleSpread * 0.45,
-        delay: i * 0.055,
+        startX: spread,
+        startY: -40 - (i % 3) * 16,
+        midX: spread * 0.4,
+        delay: i * 0.05,
         tone: tones[i % tones.length],
-        size: 24 + (i % 3) * 4,
+        size: 16 + (i % 3) * 4,
       }
     })
-    setFlyingCoins(batch)
+    setEnergyOrbs(batch)
     setJumping(true)
-    setTimeout(() => setJumping(false), 750)
+    setTimeout(() => setJumping(false), 700)
     setTimeout(() => {
-      setFlyingCoins((curr) => curr.filter((c) => !batch.some((b) => b.id === c.id)))
-    }, 1500)
+      setEnergyOrbs((curr) => curr.filter((c) => !batch.some((b) => b.id === c.id)))
+    }, 1400)
   }
 
-  // Trigger coin shower automatically when coinBurstKey increments (e.g. when 2/2 confirmation completes!)
   useEffect(() => {
     if (typeof coinBurstKey === 'number' && coinBurstKey > 0 && coinBurstKey !== lastBurstKeyRef.current) {
       lastBurstKeyRef.current = coinBurstKey
-      launchCoinShower(14)
+      launchEnergyAbsorption(12)
     }
   }, [coinBurstKey])
 
   const triggerJump = () => {
     setJumping(true)
-    setDroppingCoin(true)
     onPoke?.()
     setQuoteIdx((q) => q + 1)
-    const emojis = theme === 'romantic' ? ['💗', '💕', '✨', '💖'] : ['🪙', '✨', '💗', '💰']
+    launchEnergyAbsorption(4)
+    const emojis = theme === 'romantic' ? ['💗', '💕', '✨', '💖'] : ['✨', '💙', '💗', '⭐']
     const now = Date.now()
     setBursts((b) => [
       ...b.slice(-8),
@@ -302,19 +192,11 @@ export function Interactive3DStage({
     ])
     setTimeout(() => {
       setJumping(false)
-      setDroppingCoin(false)
     }, 680)
   }
 
-  const hasCoinFill = typeof liquidFillPct === 'number'
-  const clampedFill = hasCoinFill ? Math.max(0, Math.min(100, liquidFillPct)) : 100
-  // Accurate vertical mapping: 0% = 0% (100% transparent empty pig); >0% maps linearly across the pig's belly (4% paws to 92% back)
-  const visualFill =
-    clampedFill <= 0
-      ? 0
-      : clampedFill >= 100
-        ? 95
-        : Number((5 + (clampedFill / 100) * 87).toFixed(2))
+  const hasGauge = typeof liquidFillPct === 'number'
+  const clampedFill = hasGauge ? Math.max(0, Math.min(100, liquidFillPct)) : 100
 
   // Identify Male (Chàng / Sky Blue) vs Female (Nàng / Rose Pink)
   const isBMale = membersShare?.b?.gender === 'male' || membersShare?.a?.gender === 'female'
@@ -328,38 +210,39 @@ export function Interactive3DStage({
   const totalShare = rawPctMale + rawPctFemale
   const pctMale = totalShare > 0 ? (rawPctMale / totalShare) * 100 : 50
   const pctFemale = totalShare > 0 ? (rawPctFemale / totalShare) * 100 : 50
-  // Horizontal split across the pig's physical body width (8% left edge to 92% right edge)
-  const splitBodyX =
-    pctMale <= 0.5
-      ? 0
-      : pctMale >= 99.5
-        ? 100
-        : Number((8 + (pctMale / 100) * 84).toFixed(2))
 
-  // Filter & colorize the 3D coins visible inside the transparent piggy bank up to `visualFill%`
-  const visibleCoins = useMemo(() => {
-    if (visualFill <= 0) return []
-    return VAULT_COINS.filter((c) => c.yBottomPct <= visualFill + 1.5).map((c) => {
-      // Coins on Nam's side get subtle Sky-Blue gem rims mixed with pure gold; Nữ's side gets Rose-Pink gem rims mixed with pure gold
-      const isLeft = c.xPct <= splitBodyX
-      const tone: 'gold' | 'male' | 'female' =
-        c.id % 3 === 0 ? 'gold' : isLeft ? 'male' : 'female'
-      return { ...c, tone }
-    })
-  }, [visualFill, splitBodyX])
+  /**
+   * 2-LAYER STACKED VERTICAL LIQUID CRYSTAL GAUGE (Horizontal Layers = 100% immune to pig ear/snout shape distortion!):
+   * - The pig's physical body inside the 440x420 sprite spans from bottom 4% (paws) to 92% (top of head/ears) = 88% usable height.
+   * - Total filled height inside the pig = `visualTotalFill%`.
+   * - Layer 1 (Bottom Layer - Sky Blue 💙 for Nam): occupies `pctMale%` of the filled height.
+   * - Layer 2 (Top Layer - Rose Pink 💗 for Nữ): sits directly on top of Layer 1, occupying `pctFemale%` of the filled height.
+   * - Together, Layer 1 + Layer 2 reach the exact total `%` savings mark (`clampedFill%`), while each person's layer thickness shows their exact contribution share!
+   */
+  const BODY_BASE_PCT = 4
+  const BODY_SPAN_PCT = 88
+  const visualTotalSpan = clampedFill <= 0 ? 0 : (clampedFill / 100) * BODY_SPAN_PCT
+  const visualMaleSpan = (visualTotalSpan * pctMale) / 100
+  const visualFemaleSpan = (visualTotalSpan * pctFemale) / 100
 
-  // Dynamic Pig Quotes reflecting coin accumulation
+  const totalTopY = clampedFill <= 0 ? 0 : Number((BODY_BASE_PCT + visualTotalSpan).toFixed(2))
+  const maleTopY = clampedFill <= 0 || pctMale <= 0 ? 0 : Number((BODY_BASE_PCT + visualMaleSpan).toFixed(2))
+
+  // Overall progress contribution of each person out of the 100% pig capacity (e.g. Total 60% = Nam 36% + Nữ 24%)
+  const overallMalePct = (clampedFill * pctMale) / 100
+  const overallFemalePct = (clampedFill * pctFemale) / 100
+
+  // Dynamic Pig Quotes
   const quotes = [
     clampedFill <= 0
-      ? `🐷 Bụng heo pha lê đang trống nè! Xác nhận đủ 2/2 để đồng xu đầu tiên bay vào heo nha 🪙`
+      ? `🐷 Heo pha lê đang ở mức 0%! Duyệt đủ 2/2 để nạp tầng năng lượng đầu tiên nha ✨`
       : pctMale > pctFemale
-        ? `🪙 ${nameMale} đang góp ${pctMale.toFixed(0)}% kho xu · ${nameFemale} (${pctFemale.toFixed(0)}%) cố lên nè! 💕`
+        ? `👑 Tầng Xanh của ${nameMale} (${pctMale.toFixed(0)}%) đang dày hơn Tầng Hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) nè!`
         : pctFemale > pctMale
-          ? `🪙 ${nameFemale} đang góp ${pctFemale.toFixed(0)}% kho xu · ${nameMale} (${pctMale.toFixed(0)}%) đuổi theo nha! 💕`
-          : `⚖️ Kho xu của hai bạn đang cân tài cân sức (${pctMale.toFixed(0)}%) · Tuyệt vời quá! 🪙`,
-    `🪙 Bụng heo đã đầy ${clampedFill.toFixed(0)}% xu vàng rồi đó! Chạm vào heo nghe tiếng xu leng keng nha ✨`,
-    `✨ Xu xanh của ${nameMale} 💙 lấp lánh bên xu hồng của ${nameFemale} 💗`,
-    `🏡 Tích tiểu thành đại, mỗi ngày bỏ ống một ít là bụng heo đầy ắp xu vàng thôi!`,
+          ? `👑 Tầng Hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) đang dày hơn Tầng Xanh của ${nameMale} (${pctMale.toFixed(0)}%) nè!`
+          : `⚖️ Hai tầng Xanh – Hồng đang dày bằng nhau (${pctMale.toFixed(0)}% / ${pctFemale.toFixed(0)}%) · Quá ăn ý! 💗`,
+    `📊 Đã tích góp ${clampedFill.toFixed(0)}% (${nameMale} ${overallMalePct.toFixed(0)}% + ${nameFemale} ${overallFemalePct.toFixed(0)}%)`,
+    `✨ Chạm vào heo pha lê để khuấy động hai tầng năng lượng Xanh & Hồng nha!`,
   ]
   const currentQuote = quotes[quoteIdx % quotes.length]
 
@@ -375,7 +258,7 @@ export function Interactive3DStage({
         aria-label={`${alt} – chạm để tương tác 3D`}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && triggerJump()}
         className="relative w-full cursor-pointer select-none overflow-hidden"
-        style={{ height: spriteHeight + 64, perspective: 900 }}
+        style={{ height: spriteHeight + 68, perspective: 900 }}
       >
         {/* LAYER 1: Ambient Radiant Halo & Drifting Clouds */}
         <motion.div style={{ x: bgShiftX }} className="pointer-events-none absolute inset-0">
@@ -386,7 +269,7 @@ export function Interactive3DStage({
                 width: spriteHeight * 1.05,
                 height: spriteHeight * 0.9,
                 background:
-                  'radial-gradient(circle, rgba(255,255,255,0.88) 0%, rgba(250,204,21,0.28) 45%, rgba(244,63,94,0.22) 80%, transparent 100%)',
+                  'radial-gradient(circle, rgba(255,255,255,0.88) 0%, rgba(56,189,248,0.28) 45%, rgba(244,63,94,0.25) 80%, transparent 100%)',
               }}
             />
           </div>
@@ -409,23 +292,6 @@ export function Interactive3DStage({
               </motion.div>
             </>
           )}
-
-          {!reducedMotion &&
-            (theme === 'romantic'
-              ? ['💗', '💕', '💖', '✨']
-              : ['✨', '🪙', '💗', '✨']
-            ).map((em, idx) => (
-              <motion.span
-                key={idx}
-                aria-hidden
-                className="absolute text-base drop-shadow"
-                style={{ left: `${10 + idx * 26}%`, top: `${24 + (idx % 2) * 18}%` }}
-                animate={{ y: [0, -12, 0], scale: [0.9, 1.12, 0.9], opacity: [0.5, 0.95, 0.5] }}
-                transition={{ duration: 2.8 + idx * 0.5, repeat: Infinity, delay: idx * 0.4 }}
-              >
-                {em}
-              </motion.span>
-            ))}
         </motion.div>
 
         {/* Floating Animated Speech Bubble ("Heo Đất Nói") */}
@@ -433,59 +299,55 @@ export function Interactive3DStage({
           initial={{ scale: 0.92, opacity: 0, y: -4 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           key={currentQuote}
-          className="pointer-events-none absolute inset-x-0 top-1.5 z-20 flex justify-center px-4"
+          className="pointer-events-none absolute inset-x-0 top-1 z-20 flex justify-center px-4"
         >
-          <div className="relative flex max-w-[350px] items-center gap-1.5 rounded-full border border-white/90 bg-white/95 px-3.5 py-1.5 text-center text-[11.5px] font-black text-[#1e1b4b] shadow-[0_6px_18px_rgba(30,27,75,.12)] backdrop-blur-md">
+          <div className="relative flex max-w-[355px] items-center gap-1.5 rounded-full border border-white/90 bg-white/95 px-3.5 py-1.5 text-center text-[11.5px] font-black text-[#1e1b4b] shadow-[0_6px_18px_rgba(30,27,75,.12)] backdrop-blur-md">
             <span className="truncate">{currentQuote}</span>
             <div className="absolute -bottom-1.5 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b border-r border-white bg-white" />
           </div>
         </motion.div>
 
-        {/* Single Tap Coin Drop into Pig's Slot */}
+        {/* LUMINOUS ENERGY ORB SHOWER: When 2/2 confirmation completes, glowing Blue & Pink energy pearls fly into the pig! */}
         <AnimatePresence>
-          {droppingCoin && (
-            <motion.div
-              initial={{ y: -8, scale: 0.7, opacity: 0, rotateY: 0 }}
-              animate={{ y: spriteHeight * 0.28, scale: [1.15, 0.85], opacity: [1, 1, 0], rotateY: 360 }}
-              exit={{ scale: 0.2, opacity: 0 }}
-              transition={{ duration: 0.48, ease: 'easeIn' }}
-              className="pointer-events-none absolute inset-x-0 top-7 z-30 flex justify-center"
-            >
-              <Coin3DBadge size={32} tone="gold" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* CELEBRATION COIN SHOWER: Multiple 3D Coins Flying into the Piggy Bank when 2/2 confirmed! */}
-        <AnimatePresence>
-          {flyingCoins.map((fc) => (
-            <motion.div
-              key={fc.id}
-              initial={{
-                x: fc.startX,
-                y: fc.startY,
-                scale: 0.4,
-                opacity: 0,
-                rotate: -45,
-              }}
-              animate={{
-                x: [fc.startX, fc.midX, 0],
-                y: [fc.startY, 12, spriteHeight * 0.34],
-                scale: [0.5, 1.25, 0.55],
-                opacity: [0, 1, 1, 0],
-                rotate: [0, 180, 360],
-              }}
-              exit={{ opacity: 0, scale: 0.2 }}
-              transition={{
-                duration: 0.82,
-                delay: fc.delay,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="pointer-events-none absolute left-1/2 top-8 z-40 -ml-3.5"
-            >
-              <Coin3DBadge size={fc.size} tone={fc.tone} />
-            </motion.div>
-          ))}
+          {energyOrbs.map((orb) => {
+            const bg =
+              orb.tone === 'male'
+                ? 'radial-gradient(circle at 30% 30%, #ffffff 0%, #38bdf8 45%, #0284c7 100%)'
+                : orb.tone === 'female'
+                  ? 'radial-gradient(circle at 30% 30%, #ffffff 0%, #fb7185 45%, #e11d48 100%)'
+                  : 'radial-gradient(circle at 30% 30%, #ffffff 0%, #fde047 45%, #f59e0b 100%)'
+            const glow =
+              orb.tone === 'male'
+                ? '0 0 14px rgba(56,189,248,0.9)'
+                : orb.tone === 'female'
+                  ? '0 0 14px rgba(244,63,94,0.9)'
+                  : '0 0 14px rgba(250,204,21,0.9)'
+            return (
+              <motion.div
+                key={orb.id}
+                initial={{ x: orb.startX, y: orb.startY, scale: 0.3, opacity: 0 }}
+                animate={{
+                  x: [orb.startX, orb.midX, 0],
+                  y: [orb.startY, 15, spriteHeight * 0.42],
+                  scale: [0.4, 1.2, 0.3],
+                  opacity: [0, 1, 1, 0],
+                }}
+                exit={{ opacity: 0, scale: 0.1 }}
+                transition={{
+                  duration: 0.78,
+                  delay: orb.delay,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                style={{
+                  width: orb.size,
+                  height: orb.size,
+                  background: bg,
+                  boxShadow: glow,
+                }}
+                className="pointer-events-none absolute left-1/2 top-8 z-40 -ml-2 rounded-full border border-white/80"
+              />
+            )
+          })}
         </AnimatePresence>
 
         {/* LAYER 2: 3D Ground & Podium Pedestal */}
@@ -506,7 +368,7 @@ export function Interactive3DStage({
               width: Math.min(320, spriteHeight * 0.78),
               height: 26,
               background:
-                'radial-gradient(ellipse at center, rgba(30,27,75,0.34) 0%, rgba(245,158,11,0.28) 48%, rgba(244,63,94,0.22) 78%, transparent 100%)',
+                'radial-gradient(ellipse at center, rgba(30,27,75,0.34) 0%, rgba(56,189,248,0.26) 48%, rgba(244,63,94,0.22) 78%, transparent 100%)',
               filter: 'blur(2px)',
             }}
             animate={
@@ -520,7 +382,7 @@ export function Interactive3DStage({
           />
         </div>
 
-        {/* LAYER 4: 3D Transparent Crystal Piggy Bank Filled with Visible 3D Coins */}
+        {/* LAYER 4: 3D Piggy Bank + Dual-Layer Stacked Liquid Crystal Gauge + External Ruler & Member Callouts */}
         <div className="absolute inset-x-0 bottom-3.5 flex justify-center">
           <motion.div
             style={{
@@ -533,15 +395,15 @@ export function Interactive3DStage({
                 ? undefined
                 : jumping
                   ? {
-                      y: [0, -28, 3, 0],
-                      scaleX: [1, 0.92, 1.08, 1],
-                      scaleY: [1, 1.08, 0.92, 1],
-                      rotateZ: [0, -4, 4, 0],
+                      y: [0, -26, 3, 0],
+                      scaleX: [1, 0.93, 1.06, 1],
+                      scaleY: [1, 1.07, 0.93, 1],
+                      rotateZ: [0, -3, 3, 0],
                     }
                   : {
-                      y: [0, -6, 0],
-                      scaleX: [1, 1.015, 1],
-                      scaleY: [1, 0.985, 1],
+                      y: [0, -5, 0],
+                      scaleX: [1, 1.012, 1],
+                      scaleY: [1, 0.988, 1],
                     }
             }
             transition={
@@ -549,9 +411,9 @@ export function Interactive3DStage({
                 ? { duration: 0.6, ease: 'easeOut' }
                 : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }
             }
-            className="relative"
+            className="relative flex items-center justify-center"
           >
-            {!hasCoinFill ? (
+            {!hasGauge ? (
               <img
                 src={spriteSrc}
                 alt={alt}
@@ -570,130 +432,216 @@ export function Interactive3DStage({
                   height: spriteHeight,
                   width: spriteHeight,
                   maxWidth: '92vw',
-                  filter:
-                    'drop-shadow(0 0 20px rgba(250, 204, 21, 0.35)) drop-shadow(0 0 20px rgba(244, 63, 94, 0.28)) drop-shadow(0 12px 20px rgba(30, 27, 75, 0.24))',
                 }}
               >
-                {/* 4A. Translucent Frosted Crystal Glass Piggy Shell (Back glass wall) */}
-                <img
-                  src={spriteSrc}
-                  alt={alt}
-                  style={{
-                    height: '100%',
-                    width: '100%',
-                    opacity: 0.42,
-                    filter: 'saturate(0.18) brightness(1.24) contrast(1.12)',
-                  }}
-                  className="block select-none object-contain"
-                  draggable={false}
-                />
-
-                {/* 4B. TRANSPARENT BELLY VAULT: Visible 3D Gold Coins stacked inside the pig's silhouette */}
+                {/* 4A. PIG SPRITE CONTAINER WITH MASKED 2-LAYER STACKED LIQUID CRYSTAL */}
                 <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 overflow-hidden"
+                  className="relative h-full w-full"
                   style={{
-                    WebkitMaskImage: `url(${spriteSrc})`,
-                    maskImage: `url(${spriteSrc})`,
-                    WebkitMaskSize: 'contain',
-                    maskSize: 'contain',
-                    WebkitMaskRepeat: 'no-repeat',
-                    maskRepeat: 'no-repeat',
-                    WebkitMaskPosition: 'center',
-                    maskPosition: 'center',
+                    filter:
+                      'drop-shadow(0 0 18px rgba(56, 189, 248, 0.34)) drop-shadow(0 0 18px rgba(244, 63, 94, 0.32)) drop-shadow(0 12px 20px rgba(30, 27, 75, 0.22))',
                   }}
                 >
-                  {/* Golden warm ambient glow at the bottom of the coin pile */}
-                  {visualFill > 0 && (
-                    <motion.div
-                      className="absolute inset-x-0 bottom-0"
-                      initial={{ height: '0%' }}
-                      animate={{ height: `${visualFill}%` }}
-                      transition={{ duration: 0.85, ease: 'easeOut' }}
-                      style={{
-                        background:
-                          'linear-gradient(90deg, rgba(56,189,248,0.28) 0%, rgba(250,204,21,0.38) 50%, rgba(251,113,133,0.28) 100%)',
-                      }}
-                    />
-                  )}
-
-                  {/* Stacked 3D Coins inside the Transparent Piggy Bank */}
-                  <AnimatePresence initial={false}>
-                    {visibleCoins.map((c) => {
-                      const coinPx = Math.round(spriteHeight * 0.095 * c.scale)
-                      return (
-                        <motion.div
-                          key={c.id}
-                          initial={{ y: -90, opacity: 0, scale: 0.4 }}
-                          animate={{ y: 0, opacity: 1, scale: 1, rotate: c.rot }}
-                          exit={{ opacity: 0, scale: 0.3 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 260,
-                            damping: 20,
-                            delay: Math.min(0.45, (c.id % 12) * 0.03),
-                          }}
-                          className="absolute -translate-x-1/2"
-                          style={{
-                            left: `${c.xPct}%`,
-                            bottom: `${c.yBottomPct}%`,
-                          }}
-                        >
-                          <Coin3DBadge size={coinPx} tone={c.tone} />
-                        </motion.div>
-                      )
-                    })}
-                  </AnimatePresence>
-
-                  {/* Twinkling Gold Sparkles inside the coin pile */}
-                  {!reducedMotion &&
-                    visualFill > 12 &&
-                    [22, 42, 60, 76].map((leftPct, sIdx) => (
-                      <motion.span
-                        key={sIdx}
-                        className="pointer-events-none absolute text-[11px] drop-shadow-[0_0_6px_#fef08a]"
-                        style={{
-                          left: `${leftPct}%`,
-                          bottom: `${Math.min(visualFill - 4, 10 + sIdx * 18)}%`,
-                        }}
-                        animate={{
-                          scale: [0.7, 1.25, 0.7],
-                          opacity: [0.3, 1, 0.3],
-                        }}
-                        transition={{
-                          duration: 1.6 + sIdx * 0.3,
-                          repeat: Infinity,
-                          delay: sIdx * 0.35,
-                        }}
-                      >
-                        ✨
-                      </motion.span>
-                    ))}
-
-                  {/* 4C. Crystal Glass Pig Front Shell & Facial Contour Overlay so eyes/snout/ears & glass reflection shine over the coins */}
+                  {/* Translucent Frosted Crystal Glass Piggy Shell (Unfilled top stays clear crystal) */}
                   <img
                     src={spriteSrc}
-                    alt=""
+                    alt={alt}
                     style={{
                       height: '100%',
                       width: '100%',
-                      opacity: 0.32,
-                      mixBlendMode: 'multiply',
-                      filter: 'contrast(1.22) brightness(1.06)',
+                      opacity: 0.38,
+                      filter: 'saturate(0.15) brightness(1.25) contrast(1.14)',
                     }}
-                    className="pointer-events-none absolute inset-0 block select-none object-contain"
+                    className="block select-none object-contain"
                     draggable={false}
                   />
 
-                  {/* Specular crystal glass sheen across entire body */}
+                  {/* MASKED INTERIOR: 2 Stacked Horizontal Liquid-Crystal Layers (Bottom = Nam Sky Blue, Top = Nữ Rose Pink) */}
                   <div
-                    className="pointer-events-none absolute inset-0"
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 overflow-hidden"
                     style={{
-                      background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.52) 0%, rgba(255,255,255,0.05) 36%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.28) 100%)',
+                      WebkitMaskImage: `url(${spriteSrc})`,
+                      maskImage: `url(${spriteSrc})`,
+                      WebkitMaskSize: 'contain',
+                      maskSize: 'contain',
+                      WebkitMaskRepeat: 'no-repeat',
+                      maskRepeat: 'no-repeat',
+                      WebkitMaskPosition: 'center',
+                      maskPosition: 'center',
                     }}
-                  />
+                  >
+                    {/* Internal 25% / 50% / 75% Graduation Ruler Lines etched inside the crystal pig */}
+                    {[25, 50, 75].map((mark) => {
+                      const markBottom = BODY_BASE_PCT + (mark / 100) * BODY_SPAN_PCT
+                      return (
+                        <div
+                          key={mark}
+                          className="absolute inset-x-[14%] border-b border-dashed border-white/45"
+                          style={{ bottom: `${markBottom}%` }}
+                        />
+                      )
+                    })}
+
+                    {/* LAYER 1 (BOTTOM): 👦 NAM'S SKY-BLUE LIQUID CRYSTAL LAYER (0 -> maleTopY%) */}
+                    {clampedFill > 0 && visualMaleSpan > 0 && (
+                      <motion.div
+                        className="absolute inset-x-0 bottom-0 overflow-hidden"
+                        initial={{ height: '0%' }}
+                        animate={{ height: `${maleTopY}%` }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                        style={{
+                          background:
+                            'linear-gradient(180deg, rgba(56,189,248,0.95) 0%, rgba(14,165,233,0.92) 45%, rgba(2,132,199,0.96) 100%)',
+                          boxShadow: 'inset 0 3px 10px rgba(255,255,255,0.65)',
+                        }}
+                      >
+                        {/* Gentle wave ripple along the top of Nam's Blue layer */}
+                        <motion.svg
+                          viewBox="0 0 800 22"
+                          preserveAspectRatio="none"
+                          className="absolute left-0 top-0 h-[12px] w-[200%]"
+                          animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
+                          transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
+                        >
+                          <path
+                            d="M 0 11 Q 50 1 100 11 T 200 11 T 300 11 T 400 11 T 500 11 T 600 11 T 700 11 T 800 11 L 800 22 L 0 22 Z"
+                            fill="rgba(255, 255, 255, 0.35)"
+                          />
+                        </motion.svg>
+                      </motion.div>
+                    )}
+
+                    {/* LAYER 2 (TOP, STACKED ON NAM): 👧 NỮ'S ROSE-PINK LIQUID CRYSTAL LAYER (maleTopY% -> totalTopY%) */}
+                    {clampedFill > 0 && visualFemaleSpan > 0 && (
+                      <motion.div
+                        className="absolute inset-x-0 overflow-hidden"
+                        initial={{ bottom: '0%', height: '0%' }}
+                        animate={{
+                          bottom: `${maleTopY}%`,
+                          height: `${Math.max(0, totalTopY - maleTopY)}%`,
+                        }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                        style={{
+                          background:
+                            'linear-gradient(180deg, rgba(251,113,133,0.95) 0%, rgba(244,63,94,0.92) 48%, rgba(225,29,72,0.96) 100%)',
+                          boxShadow:
+                            'inset 0 3px 10px rgba(255,255,255,0.75), 0 2px 8px rgba(255,255,255,0.6)',
+                        }}
+                      >
+                        {/* Gentle wave ripple along the top meniscus of Nữ's Pink layer */}
+                        <motion.svg
+                          viewBox="0 0 800 22"
+                          preserveAspectRatio="none"
+                          className="absolute left-0 top-0 h-[12px] w-[200%]"
+                          animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
+                          transition={{ duration: 2.1, repeat: Infinity, ease: 'linear' }}
+                        >
+                          <path
+                            d="M 0 11 Q 50 1 100 11 T 200 11 T 300 11 T 400 11 T 500 11 T 600 11 T 700 11 T 800 11 L 800 22 L 0 22 Z"
+                            fill="rgba(255, 255, 255, 0.55)"
+                          />
+                        </motion.svg>
+                      </motion.div>
+                    )}
+
+                    {/* Glowing White-Gold Boundary Line separating Nam's Blue Layer and Nữ's Pink Layer */}
+                    {clampedFill > 0 && visualMaleSpan > 0.5 && visualFemaleSpan > 0.5 && (
+                      <motion.div
+                        className="pointer-events-none absolute inset-x-0 h-[2.5px] bg-white/95 shadow-[0_0_8px_#ffffff]"
+                        animate={{ bottom: `${maleTopY}%` }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                      />
+                    )}
+
+                    {/* Top Total % Meniscus Glow Line at totalTopY% */}
+                    {clampedFill > 0 && clampedFill < 99.5 && (
+                      <motion.div
+                        className="pointer-events-none absolute inset-x-0 h-[3px] bg-gradient-to-r from-white/70 via-yellow-200 to-white/70 shadow-[0_0_10px_#fef08a]"
+                        animate={{ bottom: `${totalTopY}%` }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                      />
+                    )}
+
+                    {/* Subtle 3D Pig Facial & Contour Detail Overlay so eyes/snout/ears stay crisp */}
+                    <img
+                      src={spriteSrc}
+                      alt=""
+                      style={{
+                        height: '100%',
+                        width: '100%',
+                        opacity: 0.32,
+                        mixBlendMode: 'multiply',
+                        filter: 'contrast(1.24) brightness(1.05)',
+                      }}
+                      className="pointer-events-none absolute inset-0 block select-none object-contain"
+                      draggable={false}
+                    />
+
+                    {/* Specular crystal glass sheen across entire body */}
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0.22) 100%)',
+                      }}
+                    />
+                  </div>
                 </div>
+
+                {/* 4B. EXTERNAL GRADUATED % RULER & FLOATING MEMBER LAYER CALLOUT PILLS (Instant visual clarity!) */}
+                {/* Right-side Vertical Glass Gauge Scale (0% .. 50% .. 100%) */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-11 bottom-[4%] top-[8%] flex flex-col items-start justify-between py-0.5"
+                >
+                  {[100, 75, 50, 25, 0].map((m) => (
+                    <div key={m} className="flex items-center gap-1">
+                      <span className="h-[1.5px] w-2 rounded-full bg-slate-400/70" />
+                      <span className="text-[9.5px] font-black tabular-nums text-slate-600/90 drop-shadow-[0_1px_0_rgba(255,255,255,0.9)]">
+                        {m}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Floating Total % Pointer Pill on the Left pointing to the current top meniscus (`totalTopY%`) */}
+                <motion.div
+                  aria-hidden
+                  animate={{
+                    bottom: `${Math.max(6, Math.min(88, clampedFill <= 0 ? 6 : totalTopY - 3))}%`,
+                  }}
+                  transition={{ duration: 0.9, ease: 'easeOut' }}
+                  className="pointer-events-none absolute -left-12 z-20 flex items-center gap-1"
+                >
+                  <div className="rounded-full border-2 border-white bg-gradient-to-r from-indigo-600 to-purple-600 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-white shadow-[0_4px_12px_rgba(79,70,229,0.35)]">
+                    {clampedFill.toFixed(0)}%
+                  </div>
+                  <span className="h-[2px] w-2.5 rounded-full bg-indigo-600" />
+                </motion.div>
+
+                {/* On-Pig Layer Badges showing each person's exact layer inside the pig when filled > 0% */}
+                {clampedFill > 0 && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 bottom-[6%] z-20 flex flex-col items-center gap-1"
+                  >
+                    {/* Top Layer Badge: Nữ (Rose Pink) */}
+                    {pctFemale > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-white/95 bg-rose-500/92 px-2.5 py-0.5 text-[10px] font-black text-white shadow-[0_3px_10px_rgba(225,29,72,0.35)] backdrop-blur-sm">
+                        <span>👧 {nameFemale}:</span>
+                        <span className="tabular-nums">{pctFemale.toFixed(0)}%</span>
+                      </div>
+                    )}
+                    {/* Bottom Layer Badge: Nam (Sky Blue) */}
+                    {pctMale > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-white/95 bg-sky-600/92 px-2.5 py-0.5 text-[10px] font-black text-white shadow-[0_3px_10px_rgba(2,132,199,0.35)] backdrop-blur-sm">
+                        <span>👦 {nameMale}:</span>
+                        <span className="tabular-nums">{pctMale.toFixed(0)}%</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
