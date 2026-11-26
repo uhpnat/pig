@@ -26,23 +26,23 @@ export default function RevealPage() {
 
   const start = async (forceReroll = false) => {
     if (rolling) return
+    const scale = (j.goal / Math.max(1, j.months * 30)) * 2
+    const randomTick = () => ({
+      a: Math.max(10_000, Math.round((Math.random() * scale * 0.7) / 10_000) * 10_000),
+      b: Math.max(10_000, Math.round((Math.random() * scale * 0.5) / 10_000) * 10_000),
+    })
+    // Seed initial rolling numbers BEFORE setting rolling=true so it never flashes "+0đ" on the first frame!
+    setTicker(randomTick())
     setRolling(true)
     haptic(state.settings, 40)
-    if (forceReroll) {
-      await run(repo.resetTodayReveal())
-    }
     const t0 = Date.now()
     const dur = motionOff ? 300 : 2800
-    const scale = (j.goal / Math.max(1, j.months * 30)) * 2
     timer.current = setInterval(() => {
-      setTicker({
-        a: Math.round((Math.random() * scale * 0.7) / 1000) * 1000,
-        b: Math.round((Math.random() * scale * 0.3) / 1000) * 1000,
-      })
+      setTicker(randomTick())
       beep(state.settings, 'tick')
     }, 80)
     if (!motionOff) celebrate(['🪙'])
-    const out = await run(repo.revealToday(by))
+    const out = await run(repo.revealToday(by, forceReroll))
     const wait = Math.max(0, dur - (Date.now() - t0))
     setTimeout(() => {
       clearInterval(timer.current)

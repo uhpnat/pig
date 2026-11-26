@@ -135,7 +135,7 @@ function doPost(e) {
     var appSheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
     var existingJson = appSheet.getRange('C2').getValue();
     var existing = existingJson ? JSON.parse(existingJson) : null;
-    var state = existing ? mergeAppState(existing, incoming) : incoming;
+    var state = (payload.forceReplace || !existing) ? incoming : mergeAppState(existing, incoming);
 
     // 1. Lưu JSON chuẩn đã merge vào AppState
     appSheet.clearContents();

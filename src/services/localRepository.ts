@@ -129,7 +129,7 @@ export class LocalRepository implements Repository {
     return null
   }
 
-  private async pushToSheet(state: AppState, explicit = false): Promise<void> {
+  private async pushToSheet(state: AppState, explicit = false, forceReplace = false): Promise<void> {
     if (typeof fetch === 'undefined') return
     const url = this.endpointUrl()
     if (!url) {
@@ -150,7 +150,7 @@ export class LocalRepository implements Repository {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': appsScriptUrl ? 'text/plain;charset=utf-8' : 'application/json' },
-        body: JSON.stringify({ spreadsheetId, passcode, state }),
+        body: JSON.stringify({ spreadsheetId, passcode, forceReplace, state }),
       })
       const text = await res.text()
       if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
@@ -164,8 +164,7 @@ export class LocalRepository implements Repository {
         throw new Error(data?.error || `HTTP ${res.status}`)
       }
       this.syncStatus = { syncing: false, lastSyncedAt: data.syncedAt || new Date().toISOString(), lastError: null }
-      // If server returned a merged state (when both partners acted concurrently), adopt it immediately
-      if (data?.state) {
+      if (data?.state && !forceReplace) {
         const merged = mergeStates(read(), data.state as AppState)
         localStorage.setItem(KEY, JSON.stringify(merged))
         this.bc?.postMessage('changed')
@@ -297,13 +296,22 @@ export class LocalRepository implements Repository {
   saveJourney(j: Parameters<Repository['saveJourney']>[0]) { return this.mutate((s, ) => A.saveJourney(s, j)) }
   updateJourney(p: Parameters<Repository['updateJourney']>[0]) { return this.mutate((s) => A.updateJourney(s, p)) }
 
-  async revealToday(by: Parameters<Repository['revealToday']>[0]) {
-    // Pull latest from Sheet right before revealing so if partner just revealed 1 second ago, we reuse their reveal!
-    await this.pullFromSheet(false).catch(() => null)
-    const cur = read()
+  async revealToday(by: Parameters<Repository['revealToday']>[0], forceReroll = false) {
+    if (!forceReroll) {
+      await this.pullFromSheet(false).catch(() => null)
+    }
+    let cur = read()
     const tz = cur.journey?.timezone
-    const out = A.revealToday(cur, todayIn(tz), by, secureRand)
-    if (out.created) this.commit(out.state)
+    const today = todayIn(tz)
+    if (forceReroll) {
+      cur = A.resetTodayReveal(cur, today)
+    }
+    const out = A.revealToday(cur, today, by, secureRand)
+    if (out.created) {
+      localStorage.setItem(KEY, JSON.stringify(out.state))
+      this.bc?.postMessage('changed')
+      void this.pushToSheet(out.state, true, forceReroll)
+    }
     return out
   }
 
@@ -313,7 +321,16 @@ export class LocalRepository implements Repository {
     const next = A.resetTodayReveal(cur, todayIn(tz))
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
-    await this.pushToSheet(next, true)
+    await this.pushToSheet(next, true, true)
+    return next
+  }
+
+  async clearDataKeepConfig() {
+    const cur = read()
+    const next = A.clearSavingsDataKeepConfig(cur)
+    localStorage.setItem(KEY, JSON.stringify(next))
+    this.bc?.postMessage('changed')
+    await this.pushToSheet(next, true, true)
     return next
   }
 

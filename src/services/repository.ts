@@ -29,9 +29,10 @@ export interface Repository {
   saveDraft(draft: DraftSetup | null): Promise<AppState>
   saveJourney(journey: Journey): Promise<AppState>
   updateJourney(patch: Partial<Journey>): Promise<AppState>
-  /** Idempotent. Returns the stored reveal; never rerolls. */
-  revealToday(by: MemberId): Promise<{ state: AppState; reveal: Reveal; created: boolean }>
+  /** Idempotent unless forceReroll=true. */
+  revealToday(by: MemberId, forceReroll?: boolean): Promise<{ state: AppState; reveal: Reveal; created: boolean }>
   resetTodayReveal(): Promise<AppState>
+  clearDataKeepConfig(): Promise<AppState>
   confirmContribution(id: string): Promise<AppState>
   addContribution(member: MemberId, amount: number, notes: string): Promise<AppState>
   voidContribution(id: string): Promise<AppState>

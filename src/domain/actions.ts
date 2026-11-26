@@ -264,4 +264,28 @@ export function resetTodayReveal(state: AppState, date: string, now = new Date()
   return s
 }
 
+/**
+ * Clears all savings transactions (reveals, contributions, activity, challenges, milestones, notifications)
+ * while preserving the initial journey configuration (journey name, goal, duration, members, incomes, avatars, pig config, settings).
+ */
+export function clearSavingsDataKeepConfig(state: AppState, now = new Date().toISOString()): AppState {
+  const s = clone(state)
+  s.reveals = []
+  s.contributions = []
+  s.activity = []
+  s.notifications = []
+  s.challengeStatus = {}
+  s.completedAt = {}
+  s.milestonesReached = []
+  if (s.journey) {
+    pushActivity(s, {
+      at: now,
+      type: 'system',
+      title: `🌱 Đã làm mới toàn bộ dữ liệu tiết kiệm của “${s.journey.name}” (giữ nguyên cấu hình ban đầu)`,
+      status: 'done',
+    })
+  }
+  return s
+}
+
 export { plannedShares, fmtDate }

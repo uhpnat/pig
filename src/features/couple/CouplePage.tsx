@@ -13,7 +13,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { MoneyBagSticker, PartySticker, TargetSticker } from '@/components/Stickers'
-import { Avatar, Button, Card, ConfirmDialog, Modal, ProgressBar, Toggle } from '@/components/ui'
+import { Avatar, Button, Card, ConfirmDialog, Field, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
 import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
 import { actualShares } from '@/domain/stats'
@@ -32,6 +32,9 @@ export default function CouplePage() {
   const [edit, setEdit] = useState(false)
   const [install, setInstall] = useState(false)
   const [del, setDel] = useState(false)
+  const [clearKeepCfgOpen, setClearKeepCfgOpen] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
+  const [confirmErr, setConfirmErr] = useState('')
   const [planOpen, setPlanOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -203,6 +206,26 @@ export default function CouplePage() {
         <div className="mt-4">
           <GoogleSheetsCard />
         </div>
+
+        {/* Quick Data Reset Action Card (Keep Initial Config) */}
+        <div className="mt-3.5 rounded-[26px] border-2 border-white bg-white/95 p-4 shadow-[0_10px_24px_rgba(143,124,240,.12)]">
+          <p className="text-[14px] font-black text-[#172554]">🧹 Làm mới dữ liệu tiết kiệm</p>
+          <p className="mt-0.5 text-xs font-bold text-[#64748b]">
+            Xoá lịch sử mở số, các khoản đã góp & nhật ký để bắt đầu lại từ 0đ nhưng vẫn giữ nguyên cấu hình hành trình, thu nhập & heo đất ban đầu.
+          </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-3 !text-[#e11d48] !shadow-[inset_0_0_0_2px_#fecdd3]"
+            onClick={() => {
+              setConfirmText('')
+              setConfirmErr('')
+              setClearKeepCfgOpen(true)
+            }}
+          >
+            🔄 Xoá dữ liệu tiết kiệm (Giữ lại cấu hình)
+          </Button>
+        </div>
       </div>
 
       {/* Modal 1: Mục tiêu & Kế hoạch */}
@@ -294,11 +317,24 @@ export default function CouplePage() {
               <Download size={16} className="mr-1 inline" /> Xuất dữ liệu dự phòng (.json)
             </Button>
             <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSettingsOpen(false)
+                setConfirmText('')
+                setConfirmErr('')
+                setClearKeepCfgOpen(true)
+              }}
+              className="!text-[#e11d48] !shadow-[inset_0_0_0_2px_#fecdd3]"
+            >
+              🔄 Xoá dữ liệu tiết kiệm (Giữ cấu hình ban đầu)
+            </Button>
+            <Button
               size="sm"
               onClick={() => { setSettingsOpen(false); setDel(true) }}
               className="!bg-none !bg-[#e5484d] !shadow-none"
             >
-              🗑️ Xoá hành trình
+              🗑️ Xoá hoàn toàn hành trình (Tạo lại từ đầu)
             </Button>
           </div>
 
@@ -363,6 +399,60 @@ export default function CouplePage() {
 
       <EditRulesDialog open={edit} onClose={() => setEdit(false)} />
       <InstallGuide open={install} onClose={() => setInstall(false)} />
+
+      {/* Modal xác nhận gõ "xác nhận xoá" để xoá dữ liệu tiết kiệm nhưng giữ nguyên cấu hình ban đầu */}
+      <Modal
+        open={clearKeepCfgOpen}
+        onClose={() => setClearKeepCfgOpen(false)}
+        title="Xoá toàn bộ dữ liệu tiết kiệm?"
+      >
+        <div className="mt-3 space-y-3 text-sm">
+          <div className="rounded-2xl bg-[#fff1f2] p-3.5 text-xs font-bold leading-relaxed text-[#be123c]">
+            ⚠️ Hành động này sẽ xoá toàn bộ <b>lịch sử mở số tiền, các khoản đã góp, nhật ký và tiến độ thử thách</b> trên cả ứng dụng và Google Sheet để đưa số dư heo đất về <b>0đ</b>.
+            <br />
+            <br />
+            ✅ <b>Được giữ nguyên:</b> Tên hành trình ({j.name}), mục tiêu ({vnd(j.goal)}), thời hạn, thông tin & thu nhập của {j.members.a.name} & {j.members.b.name}, cùng cấu hình bé heo 3D.
+          </div>
+
+          <Field
+            label='Nhập chữ "xác nhận xoá" để tiếp tục'
+            value={confirmText}
+            onChange={(e) => {
+              setConfirmText(e.target.value)
+              setConfirmErr('')
+            }}
+            placeholder="xác nhận xoá"
+            error={confirmErr}
+            autoFocus
+          />
+
+          <div className="mt-4 grid grid-cols-2 gap-3 pt-1">
+            <Button variant="ghost" size="sm" onClick={() => setClearKeepCfgOpen(false)}>
+              Huỷ bỏ
+            </Button>
+            <Button
+              size="sm"
+              className="!bg-none !bg-[#e11d48]"
+              onClick={async () => {
+                const normalized = confirmText.trim().toLowerCase()
+                if (normalized !== 'xác nhận xoá' && normalized !== 'xac nhan xoa') {
+                  setConfirmErr('Vui lòng gõ đúng chữ "xác nhận xoá"')
+                  return
+                }
+                const out = await run(repo.clearDataKeepConfig())
+                if (out) {
+                  setClearKeepCfgOpen(false)
+                  setConfirmText('')
+                  toast('Đã xoá dữ liệu tiết kiệm & giữ nguyên cấu hình ban đầu! 🌱')
+                }
+              }}
+            >
+              Xác nhận xoá
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <ConfirmDialog
         open={del}
         danger
