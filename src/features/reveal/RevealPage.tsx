@@ -105,8 +105,8 @@ export default function RevealPage() {
           alt="Hôm nay là ngày cùng nhau thử thách!"
           className="mx-auto block max-h-[260px] w-full select-none object-cover"
           style={{
-            maskImage: 'linear-gradient(180deg, transparent 0%, #000 10%, #000 85%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 10%, #000 85%, transparent 100%)',
+            maskImage: 'linear-gradient(180deg, #000 0%, #000 86%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 86%, transparent 100%)',
           }}
           animate={
             motionOff

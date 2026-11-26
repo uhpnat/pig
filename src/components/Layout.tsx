@@ -1,6 +1,7 @@
 import { Clock, Heart, Home, Trophy, WifiOff } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { FxHost, ToastHost } from '@/components/FxHost'
+import { PullToRefresh } from '@/components/PullToRefresh'
 import { useOnline } from '@/hooks/useStore'
 
 const TABS = [
@@ -19,7 +20,9 @@ export function AppFrame({ nav }: { nav: boolean }) {
           <WifiOff size={14} /> Đang ngoại tuyến – dữ liệu vẫn được lưu trên máy này
         </div>
       )}
-      <main id="main"><Outlet /></main>
+      <PullToRefresh>
+        <main id="main"><Outlet /></main>
+      </PullToRefresh>
       {nav && (
         <nav
           aria-label="Điều hướng chính"

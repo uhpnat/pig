@@ -135,8 +135,8 @@ export default function OnboardingPage() {
                   alt="Bắt đầu hành trình tiết kiệm cùng nhau"
                   className="block w-full select-none object-cover"
                   style={{
-                    maskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
+                    maskImage: 'linear-gradient(180deg, #000 0%, #000 88%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 88%, transparent 100%)',
                   }}
                 />
               </div>

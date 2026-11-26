@@ -32,8 +32,7 @@ body {
     radial-gradient(circle at 92% 20%, #dff0ff 0%, transparent 48%),
     linear-gradient(165deg, var(--bg1) 0%, var(--bg2) 100%);
   background-attachment: fixed;
-  padding-top: env(safe-area-inset-top, 0px);
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: contain;
 }
 
 @layer components {

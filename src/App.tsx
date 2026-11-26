@@ -17,7 +17,7 @@ const StatsPage = lazy(() => import('@/features/stats/StatsPage'))
 
 function Page({ children }: { children: ReactNode }) {
   const { motionOff } = useStore()
-  return <motion.div initial={motionOff ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>{children}</motion.div>
+  return <motion.div initial={motionOff ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>{children}</motion.div>
 }
 
 /** Redirects to onboarding / pig creation until the journey is fully set up. */

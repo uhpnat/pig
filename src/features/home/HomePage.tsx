@@ -46,11 +46,12 @@ export default function HomePage() {
     <div
       className="min-h-screen pb-8"
       style={{
-        background: 'linear-gradient(180deg, #8cc8ff 0%, #bce0ff 22%, #e6f5d0 48%, #fdf2e9 70%, #fce8ef 100%)',
+        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(180deg, #86c5ff 0%, #b8deff 26%, #e6f5d0 52%, #fdf2e9 72%, #fce8ef 100%)',
       }}
     >
       {/* 1. Top Row: Avatars + Plus button on left, Bell on right */}
-      <header className="flex items-center justify-between px-4 pt-3.5">
+      <header className="flex items-center justify-between px-4">
         <div className="flex items-center">
           <Avatar value={j.members.a.avatar} size={46} className="z-10 shadow-md" />
           <Avatar value={j.members.b.avatar} size={46} className="-ml-2.5 z-20 shadow-md" />
@@ -92,10 +93,10 @@ export default function HomePage() {
           alt={j.pig.name}
           className="mx-auto block max-h-[250px] w-full select-none object-cover"
           style={{
-            maskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 88%, transparent 100%)',
+            maskImage: 'linear-gradient(180deg, #000 0%, #000 88%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 88%, transparent 100%)',
           }}
-          animate={motionOff ? undefined : { y: [0, -4, 0] }}
+          animate={motionOff ? undefined : { y: [0, -3, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         />
 
