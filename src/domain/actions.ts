@@ -253,4 +253,15 @@ export function regenerateInvite(state: AppState, now = new Date().toISOString()
   return s
 }
 
+/** Resets today's daily reveal & its linked contributions so the couple can re-roll today if needed. */
+export function resetTodayReveal(state: AppState, date: string, now = new Date().toISOString()): AppState {
+  const s = clone(state)
+  const removedIds = new Set(s.reveals.filter((r) => r.date === date).map((r) => r.id))
+  if (!removedIds.size) return state
+  s.reveals = s.reveals.filter((r) => r.date !== date)
+  s.contributions = s.contributions.filter((c) => !(c.revealId && removedIds.has(c.revealId)))
+  pushActivity(s, { at: now, type: 'system', title: `🔄 Đã đặt lại lượt mở số ngày ${fmtDate(date)}`, status: 'done' })
+  return s
+}
+
 export { plannedShares, fmtDate }

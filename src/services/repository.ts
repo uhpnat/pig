@@ -31,6 +31,7 @@ export interface Repository {
   updateJourney(patch: Partial<Journey>): Promise<AppState>
   /** Idempotent. Returns the stored reveal; never rerolls. */
   revealToday(by: MemberId): Promise<{ state: AppState; reveal: Reveal; created: boolean }>
+  resetTodayReveal(): Promise<AppState>
   confirmContribution(id: string): Promise<AppState>
   addContribution(member: MemberId, amount: number, notes: string): Promise<AppState>
   voidContribution(id: string): Promise<AppState>

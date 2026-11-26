@@ -204,13 +204,14 @@ export class LocalRepository implements Repository {
       }
       this.syncStatus = { syncing: false, lastSyncedAt: data.updatedAt || new Date().toISOString(), lastError: null }
       if (data?.state) {
-        const cur = read()
         const remoteState: AppState = {
           ...A.createInitialState(),
           ...data.state,
           settings: { ...A.DEFAULT_SETTINGS, ...data.state.settings },
         }
-        const merged = cur.journey ? mergeStates(cur, remoteState) : remoteState
+        // When user explicitly pulls (e.g. Pull-to-Refresh or "Tải từ Sheet"), trust Google Sheet as source of truth so deleted rows stay deleted!
+        const cur = read()
+        const merged = explicit || !cur.journey ? remoteState : mergeStates(cur, remoteState)
         localStorage.setItem(KEY, JSON.stringify(merged))
         this.bc?.postMessage('changed')
         this.notify(merged)
@@ -304,6 +305,16 @@ export class LocalRepository implements Repository {
     const out = A.revealToday(cur, todayIn(tz), by, secureRand)
     if (out.created) this.commit(out.state)
     return out
+  }
+
+  async resetTodayReveal() {
+    const cur = read()
+    const tz = cur.journey?.timezone
+    const next = A.resetTodayReveal(cur, todayIn(tz))
+    localStorage.setItem(KEY, JSON.stringify(next))
+    this.bc?.postMessage('changed')
+    await this.pushToSheet(next, true)
+    return next
   }
 
   confirmContribution(id: string) { return this.mutate((s) => A.confirmContribution(s, id)) }

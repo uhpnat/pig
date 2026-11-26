@@ -255,6 +255,18 @@ export default function RevealPage() {
             >
               Tuyệt vời! 🎉
             </Button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (confirm('Bạn muốn xoá kết quả hôm nay để quay số lại từ đầu?')) {
+                  await run(repo.resetTodayReveal())
+                  toast('Đã đặt lại lượt mở số hôm nay! 🎲')
+                }
+              }}
+              className="muted mt-3 block w-full cursor-pointer border-0 bg-transparent text-center !text-xs underline"
+            >
+              🔄 Quay lại số tiền hôm nay (Reset kết quả ngày này)
+            </button>
           </>
         )}
       </div>
