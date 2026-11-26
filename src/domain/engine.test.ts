@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it } from 'vitest'
-import { confirmContribution, createInitialState, revealToday, saveJourney, addContribution } from './actions'
+import { confirmContribution, createInitialState, revealToday, saveJourney, addContribution, resetTodayReveal } from './actions'
 import { generateDailyAmounts, monthlyBudget, plannedShares, previewPlan, seededRand } from './engine'
 import { defaultJourney, buildDemoState } from './seed'
 import { confirmedTotals, currentStreak, progressPct } from './stats'
@@ -81,6 +81,13 @@ describe('idempotency and confirmation', () => {
   it('manual top-up validates the amount', () => {
     const s = saveJourney(createInitialState(), J())
     expect(() => addContribution(s, 'a', -5, '', '2026-03-02')).toThrow()
+  })
+  it('disallows resetting today reveal once at least one person has confirmed', () => {
+    let s = saveJourney(createInitialState(), J())
+    s = revealToday(s, '2026-03-02', 'a', seededRand(1)).state
+    const a = s.contributions.find((c) => c.member === 'a')!
+    s = confirmContribution(s, a.id)
+    expect(() => resetTodayReveal(s, '2026-03-02')).toThrow(/ALREADY_CONFIRMED|xác nhận/)
   })
 })
 

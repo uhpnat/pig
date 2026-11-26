@@ -152,6 +152,7 @@ export type DomainErrorCode =
   | 'NOT_FOUND'
   | 'INVALID'
   | 'OUT_OF_RANGE'
+  | 'ALREADY_CONFIRMED'
 
 export class DomainError extends Error {
   code: DomainErrorCode

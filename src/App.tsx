@@ -40,16 +40,16 @@ function WelcomeGate() {
   return <Page><OnboardingPage /></Page>
 }
 
-const ROUTE_TOP_COLOR: Record<string, string> = {
-  '/': '#86c5ff',
-  '/reveal': '#5b3dc8',
-  '/pig': '#dbeafe',
-  '/couple': '#fde8f1',
-  '/welcome': '#f3e8ff',
-  '/journal': '#e0f2fe',
-  '/challenges': '#ede9fe',
-  '/stats': '#e0f2fe',
-  '/notifications': '#fce7f3',
+export const ROUTE_THEME: Record<string, { top: string; bottom: string }> = {
+  '/': { top: '#86c5ff', bottom: '#fce8ef' },
+  '/reveal': { top: '#5b3dc8', bottom: '#fde8f1' },
+  '/pig': { top: '#dbeafe', bottom: '#dcfce7' },
+  '/couple': { top: '#fde8f1', bottom: '#fdf2f7' },
+  '/welcome': { top: '#f3e8ff', bottom: '#ffeef5' },
+  '/journal': { top: '#e0f2fe', bottom: '#ffeef5' },
+  '/challenges': { top: '#ede9fe', bottom: '#ffeef5' },
+  '/stats': { top: '#e0f2fe', bottom: '#ffeef5' },
+  '/notifications': { top: '#fce7f3', bottom: '#ffeef5' },
 }
 
 export default function App() {
@@ -58,9 +58,13 @@ export default function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
-    const topColor = ROUTE_TOP_COLOR[loc.pathname] || '#f5efff'
-    const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', topColor)
+    const theme = ROUTE_THEME[loc.pathname] || { top: '#86c5ff', bottom: '#f5efff' }
+    document.documentElement.style.setProperty('--page-top-color', theme.top)
+    document.documentElement.style.setProperty('--page-bottom-color', theme.bottom)
+    document.documentElement.style.backgroundColor = theme.top
+    document.body.style.backgroundColor = theme.bottom
+    const metas = document.querySelectorAll('meta[name="theme-color"]')
+    metas.forEach((m) => m.setAttribute('content', theme.top))
   }, [loc.pathname])
   return (
     <PasscodeGate>

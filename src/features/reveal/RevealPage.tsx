@@ -30,11 +30,16 @@ export default function RevealPage() {
   }, [reveal?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cs = reveal ? state.contributions.filter((c) => c.revealId === reveal.id) : []
+  const anyConfirmed = cs.some((c) => c.status === 'confirmed')
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
   const sound = state.settings.sound
 
   const start = async (forceReroll = false) => {
     if (rolling) return
+    if (forceReroll && anyConfirmed) {
+      toast('Đã có người xác nhận bỏ heo hôm nay rồi, không thể quay lại nữa nhé! 🔒🐷', 'error')
+      return
+    }
     setResultModalOpen(false)
     const scale = (j.goal / Math.max(1, j.months * 30)) * 2
     const randomTick = () => ({
@@ -130,7 +135,13 @@ export default function RevealPage() {
           revealed={!!reveal && !rolling}
           amounts={displayAmounts}
           reducedMotion={motionOff}
-          onPullLever={() => start(!!reveal)}
+          onPullLever={() => {
+            if (anyConfirmed) {
+              toast('Đã có người xác nhận bỏ heo hôm nay rồi, không thể quay lại nữa nhé! 🔒🐷', 'error')
+              return
+            }
+            start(!!reveal)
+          }}
         />
       </div>
 
@@ -174,9 +185,15 @@ export default function RevealPage() {
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
-              <Button variant="ghost" size="sm" disabled={rolling} onClick={() => start(true)}>
-                🎲 Random lại
-              </Button>
+              {anyConfirmed ? (
+                <div className="flex items-center justify-center gap-1 rounded-2xl bg-amber-50 px-2 py-2 text-[11px] font-black text-amber-800 border border-amber-200">
+                  🔒 Đã khoá (có người xác nhận)
+                </div>
+              ) : (
+                <Button variant="ghost" size="sm" disabled={rolling} onClick={() => start(true)}>
+                  🎲 Random lại
+                </Button>
+              )}
               <Button variant="violet" size="sm" onClick={() => setResultModalOpen(true)}>
                 <Sparkles size={15} className="mr-1 inline" /> Xem & Xác nhận
               </Button>
@@ -251,10 +268,18 @@ export default function RevealPage() {
               </div>
             )}
 
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <Button variant="ghost" size="sm" onClick={() => start(true)}>
-                🎲 Random lại số tiền
-              </Button>
+            {anyConfirmed && (
+              <p className="mt-2 text-center text-xs font-extrabold text-amber-700">
+                🔒 Đã có người xác nhận bỏ heo – số tiền hôm nay đã được khoá cố định.
+              </p>
+            )}
+
+            <div className={`mt-4 grid ${anyConfirmed ? 'grid-cols-1' : 'grid-cols-2'} gap-2.5`}>
+              {!anyConfirmed && (
+                <Button variant="ghost" size="sm" onClick={() => start(true)}>
+                  🎲 Random lại số tiền
+                </Button>
+              )}
               <Button
                 variant="violet"
                 size="sm"

@@ -18,14 +18,27 @@
   box-sizing: border-box;
 }
 
-html,
-body,
+html {
+  min-height: 100dvh;
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  background-color: var(--page-top-color, #86c5ff);
+}
+
+body {
+  min-height: 100dvh;
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  background-color: var(--page-bottom-color, #ffeef5);
+}
+
 #root {
   min-height: 100dvh;
   touch-action: pan-x pan-y;
   -webkit-user-select: none;
   user-select: none;
-  background-color: #f5efff;
 }
 
 input,

@@ -80,6 +80,7 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
           height: visible ? `${Math.max(pull, refreshing ? 54 : 0)}px` : '0px',
           opacity: visible ? Math.min(1, progress * 1.25) : 0,
           transition: active.current ? 'none' : 'height 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
         }}
         className="pointer-events-none flex w-full items-center justify-center overflow-hidden"
       >

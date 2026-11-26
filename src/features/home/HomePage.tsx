@@ -34,6 +34,7 @@ export default function HomePage() {
   const actual = actualShares(state.contributions)
   const reveal = state.reveals.find((r) => r.date === today)
   const cs = reveal ? state.contributions.filter((c) => c.revealId === reveal.id) : []
+  const anyConfirmed = cs.some((c) => c.status === 'confirmed')
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
 
   // Monthly contribution progress (%) to pour water/color into the translucent 3D pig!
@@ -259,22 +260,29 @@ export default function HomePage() {
                   )
                 })}
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <div className={`mt-3 grid ${anyConfirmed ? 'grid-cols-1' : 'grid-cols-2'} gap-2.5`}>
                 <Button variant="violet" size="sm" onClick={() => nav('/reveal')}>
                   {allDone ? 'Xem chi tiết' : 'Vào xác nhận góp'}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    await run(repo.resetTodayReveal())
-                    toast('Đã đặt lại! Hãy bấm mở số tiền mới nhé 🎲')
-                    nav('/reveal')
-                  }}
-                >
-                  🎲 Random lại số tiền
-                </Button>
+                {!anyConfirmed && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      await run(repo.resetTodayReveal())
+                      toast('Đã đặt lại! Hãy bấm mở số tiền mới nhé 🎲')
+                      nav('/reveal')
+                    }}
+                  >
+                    🎲 Random lại số tiền
+                  </Button>
+                )}
               </div>
+              {anyConfirmed && !allDone && (
+                <p className="mt-2 text-center text-[11px] font-extrabold text-amber-700">
+                  🔒 Đã có người xác nhận – số tiền hôm nay đã được khoá
+                </p>
+              )}
             </Card>
           )}
         </div>

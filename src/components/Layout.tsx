@@ -16,8 +16,16 @@ export function AppFrame({ nav }: { nav: boolean }) {
   return (
     <div
       className="mx-auto min-h-[100dvh] w-full max-w-[440px]"
-
     >
+      {/* Top notch bleed bar: fills iOS notch / status bar with current route's header color */}
+      <div
+        aria-hidden
+        className="fixed inset-x-0 top-0 z-40 pointer-events-none transition-colors duration-200"
+        style={{
+          height: 'env(safe-area-inset-top, 0px)',
+          backgroundColor: 'var(--page-top-color, #86c5ff)',
+        }}
+      />
       {!online && (
         <div role="status" className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3b2a6b] px-3 py-1.5 text-xs font-extrabold text-white">
           <WifiOff size={14} /> Đang ngoại tuyến – dữ liệu vẫn được lưu trên máy này
