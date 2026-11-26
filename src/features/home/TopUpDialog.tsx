@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Avatar, Button, Chip, Modal, MoneyInput, Field } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import type { MemberId } from '@/domain/types'
@@ -7,11 +7,15 @@ import { useJourney, useStore } from '@/hooks/useStore'
 /** Manual extra deposit. It becomes savings only after confirmation when the journey requires it. */
 export function TopUpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const j = useJourney()
-  const { repo, run, toast, celebrate } = useStore()
-  const [who, setWho] = useState<MemberId>('a')
+  const { repo, run, toast, celebrate, myMemberId } = useStore()
+  const [who, setWho] = useState<MemberId>(myMemberId || 'a')
   const [amount, setAmount] = useState(0)
   const [note, setNote] = useState('')
   const [err, setErr] = useState('')
+
+  useEffect(() => {
+    if (open) setWho(myMemberId || 'a')
+  }, [open, myMemberId])
 
   const submit = async () => {
     if (amount < 1000) return setErr('Nhập ít nhất 1.000đ')

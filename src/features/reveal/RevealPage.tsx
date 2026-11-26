@@ -11,14 +11,18 @@ import { beep, haptic } from '@/lib/fx'
 
 export default function RevealPage() {
   const j = useJourney()
-  const { state, repo, run, today, goalReached, motionOff, celebrate, toast } = useStore()
+  const { state, repo, run, today, goalReached, motionOff, celebrate, toast, myMemberId } = useStore()
   const nav = useNavigate()
   const reveal = state.reveals.find((r) => r.date === today)
   const [rolling, setRolling] = useState(false)
   const [resultModalOpen, setResultModalOpen] = useState(false)
-  const [by, setBy] = useState<MemberId>('a')
+  const [by, setBy] = useState<MemberId>(myMemberId || 'a')
   const [ticker, setTicker] = useState<Record<MemberId, number>>({ a: 0, b: 0 })
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+
+  useEffect(() => {
+    setBy(myMemberId || 'a')
+  }, [myMemberId])
 
   useEffect(() => () => clearInterval(timer.current), [])
 
@@ -233,10 +237,11 @@ export default function RevealPage() {
                       <Avatar value={j.members[k].avatar} size={56} />
                     </div>
                     <p
-                      className="mt-1 text-xs font-black"
+                      className="mt-1 text-xs font-black flex items-center justify-center gap-1"
                       style={{ color: idx === 0 ? '#2563eb' : '#ec4899' }}
                     >
                       {j.members[k].name}
+                      {k === myMemberId && <span className="rounded-full bg-indigo-100 text-indigo-700 px-1.5 py-0.2 text-[10px] font-black">(Bạn)</span>}
                     </p>
                     <p
                       className="mt-0.5 text-[18px] font-black tabular-nums"
@@ -260,8 +265,15 @@ export default function RevealPage() {
               <div className="mt-3 grid gap-2">
                 {cs.map((c) =>
                   c.status === 'confirmed' ? null : (
-                    <Button key={c.id} size="sm" onClick={() => confirm(c.id)}>
-                      ✅ {j.members[c.member].name} xác nhận đã góp {vnd(c.amount)}
+                    <Button
+                      key={c.id}
+                      size="sm"
+                      variant={c.member === myMemberId ? 'violet' : undefined}
+                      onClick={() => confirm(c.id)}
+                    >
+                      {c.member === myMemberId
+                        ? `✅ Xác nhận phần của bạn (${vnd(c.amount)})`
+                        : `✅ Xác nhận giúp ${j.members[c.member].name} (${vnd(c.amount)})`}
                     </Button>
                   ),
                 )}

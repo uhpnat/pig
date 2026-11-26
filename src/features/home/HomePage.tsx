@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Plus, PlusCircle, Sparkles } from 'lucide-react'
+import { BarChart3, Bell, PlusCircle, Sparkles } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -7,6 +7,7 @@ import { AnimatedNumber } from '@/components/AnimatedNumber'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { GiftBoxSticker } from '@/components/Stickers'
 import { Avatar, Badge, Button, Card, EmptyState } from '@/components/ui'
+import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { monthlyBudget } from '@/domain/engine'
 import { diffDays, vnd } from '@/domain/format'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
@@ -27,9 +28,10 @@ const fmtM = (n: number) => `${(n / 1e6).toFixed(1)}M`
 
 export default function HomePage() {
   const j = useJourney()
-  const { state, repo, run, toast, confirmed, pending, progress, today, unread, goalReached, motionOff } = useStore()
+  const { state, repo, run, toast, confirmed, pending, progress, today, unread, goalReached, motionOff, myMemberId, myMember, partnerMemberId, partnerMember } = useStore()
   const nav = useNavigate()
   const [topUp, setTopUp] = useState(false)
+  const [genderDialogOpen, setGenderDialogOpen] = useState(false)
 
   const t = confirmedTotals(state.contributions)
   const actual = actualShares(state.contributions)
@@ -73,22 +75,27 @@ export default function HomePage() {
         background: 'linear-gradient(180deg, #86c5ff 0%, #b8deff 26%, #e6f5d0 52%, #fdf2e9 72%, #fce8ef 100%)',
       }}
     >
-      {/* 1. Top Bar: Avatars with Love Line on left, Notification Bell on right */}
+      {/* 1. Top Bar: Avatars on left, Device Member on center, Notification Bell on right */}
       <header className="relative z-10 flex items-center justify-between px-4">
         <div className="flex items-center">
-          <Avatar value={j.members.a.avatar} size={44} className="z-10 shadow-md ring-2 ring-white" />
-          <span className="relative z-20 -mx-1.5 grid h-6 w-6 place-items-center rounded-full bg-pink-500 text-[11px] text-white shadow-sm">
+          <Avatar value={j.members.a.avatar} size={40} className="z-10 shadow-md ring-2 ring-white" />
+          <span className="relative z-20 -mx-1.5 grid h-5 w-5 place-items-center rounded-full bg-pink-500 text-[10px] text-white shadow-sm">
             💖
           </span>
-          <Avatar value={j.members.b.avatar} size={44} className="z-10 shadow-md ring-2 ring-white" />
-          <Link
-            to="/couple"
-            aria-label="Của chúng mình"
-            className="ml-2 grid h-9 w-9 place-items-center rounded-full border-2 border-white/80 bg-white/40 text-white shadow-sm backdrop-blur-sm no-underline transition-transform active:scale-95"
-          >
-            <Plus size={18} strokeWidth={2.75} />
-          </Link>
+          <Avatar value={j.members.b.avatar} size={40} className="z-10 shadow-md ring-2 ring-white" />
         </div>
+
+        {/* Device Member Switcher Pill */}
+        <button
+          type="button"
+          onClick={() => setGenderDialogOpen(true)}
+          className="flex items-center gap-1.5 rounded-full border border-white/90 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-md transition-transform active:scale-95"
+        >
+          <span className="text-xs font-black text-[#1e1b4b]">
+            Máy của {myMember?.name} {myMember?.gender === 'male' ? '👦' : '👧'}
+          </span>
+          <span className="text-[10px] font-bold text-indigo-600 underline">Đổi</span>
+        </button>
 
         <Link
           to="/notifications"
@@ -120,7 +127,7 @@ export default function HomePage() {
           spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
           alt={`${j.pig.name} – ${pigStage(progress).label}`}
           theme="meadow"
-          spriteHeight={310}
+          spriteHeight={375}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
           membersShare={{
@@ -241,30 +248,82 @@ export default function HomePage() {
           ) : (
             <Card className="!mt-0">
               <div className="flex items-center justify-between">
-                <h2 className="h3 text-[#1e1b4b]">🎲 Kết quả mở số hôm nay</h2>
+                <h2 className="h3 text-[#1e1b4b]">🎲 Số tiền hôm nay</h2>
                 <Badge tone={allDone ? 'ok' : 'warn'}>
-                  {allDone ? 'Đã xác nhận đủ ✅' : 'Chờ xác nhận ⏳'}
+                  {allDone ? 'Đã bỏ đủ ✅' : 'Chờ bỏ heo ⏳'}
                 </Badge>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2.5 text-center">
-                {(['a', 'b'] as const).map((k) => {
-                  const c = cs.find((x) => x.member === k)
+              {/* 2 Member Today Cards: Distinct for You vs Partner */}
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                {/* My Card (Active Device Member) */}
+                {(() => {
+                  const myC = cs.find((x) => x.member === myMemberId)
                   return (
-                    <div key={k} className="rounded-2xl bg-[#fdf2f7] p-2.5 shadow-sm">
-                      <Avatar value={j.members[k].avatar} size={42} className="mx-auto" />
-                      <p className="mt-1 text-base font-black text-[#e11d48]">+{vnd(reveal.amounts[k])}</p>
-                      <p className="text-xs font-bold text-[#64748b]">
-                        {j.members[k].name} {c?.status === 'confirmed' ? '✅' : '⏳'}
-                      </p>
+                    <div className="rounded-2xl border-2 border-indigo-300 bg-indigo-50/80 p-3 text-center shadow-sm">
+                      <div className="flex items-center justify-center gap-1.5 min-w-0">
+                        <Avatar value={myMember?.avatar || 'boy'} size={30} />
+                        <span className="text-xs font-black text-indigo-950 truncate">{myMember?.name} (Bạn)</span>
+                      </div>
+                      <p className="mt-1 text-[17px] font-black text-indigo-700">+{vnd(reveal.amounts[myMemberId])}</p>
+                      {myC?.status === 'confirmed' ? (
+                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">
+                          Đã bỏ heo ✅
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (myC) {
+                              await run(repo.confirmContribution(myC.id))
+                              toast(`Đã xác nhận ${myMember?.name} bỏ ${vnd(myC.amount)} vào heo! 🎉`)
+                            }
+                          }}
+                          className="mt-2 w-full rounded-xl bg-indigo-600 py-1.5 text-xs font-black text-white shadow-md transition-transform active:scale-95"
+                        >
+                          Xác nhận phần tôi ✅
+                        </button>
+                      )}
                     </div>
                   )
-                })}
+                })()}
+
+                {/* Partner Card */}
+                {(() => {
+                  const partnerC = cs.find((x) => x.member === partnerMemberId)
+                  return (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5 min-w-0">
+                        <Avatar value={partnerMember?.avatar || 'girl'} size={30} />
+                        <span className="text-xs font-black text-slate-800 truncate">{partnerMember?.name}</span>
+                      </div>
+                      <p className="mt-1 text-[17px] font-black text-slate-700">+{vnd(reveal.amounts[partnerMemberId])}</p>
+                      {partnerC?.status === 'confirmed' ? (
+                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">
+                          Đã bỏ heo ✅
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (partnerC) {
+                              await run(repo.confirmContribution(partnerC.id))
+                              toast(`Đã xác nhận giúp ${partnerMember?.name}! 🎉`)
+                            }
+                          }}
+                          className="mt-2 w-full rounded-xl bg-slate-200 py-1.5 text-[11px] font-bold text-slate-600 transition-transform active:scale-95"
+                        >
+                          Xác nhận giúp
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
-              <div className={`mt-3 grid ${anyConfirmed ? 'grid-cols-1' : 'grid-cols-2'} gap-2.5`}>
-                <Button variant="violet" size="sm" onClick={() => nav('/reveal')}>
-                  {allDone ? 'Xem chi tiết' : 'Vào xác nhận góp'}
+              <div className="mt-3 flex items-center justify-between pt-1">
+                <Button variant="ghost" size="sm" onClick={() => nav('/reveal')}>
+                  🎰 Lồng quay số
                 </Button>
                 {!anyConfirmed && (
                   <Button
@@ -272,11 +331,11 @@ export default function HomePage() {
                     size="sm"
                     onClick={async () => {
                       await run(repo.resetTodayReveal())
-                      toast('Đã đặt lại! Hãy bấm mở số tiền mới nhé 🎲')
+                      toast('Đã đặt lại! Hãy mở lại số tiền nhé 🎲')
                       nav('/reveal')
                     }}
                   >
-                    🎲 Random lại số tiền
+                    🎲 Quay lại
                   </Button>
                 )}
               </div>
@@ -327,6 +386,7 @@ export default function HomePage() {
       </div>
 
       <TopUpDialog open={topUp} onClose={() => setTopUp(false)} />
+      <GenderSelectDialog open={genderDialogOpen} onClose={() => setGenderDialogOpen(false)} />
     </div>
   )
 }

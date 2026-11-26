@@ -3,7 +3,7 @@ import { allChallenges } from '@/domain/challenges'
 import { isGoalReached } from '@/domain/actions'
 import { todayIn } from '@/domain/format'
 import { confirmedTotals, pendingTotals, progressPct } from '@/domain/stats'
-import type { AppState, Journey } from '@/domain/types'
+import type { AppState, Journey, Member, MemberId } from '@/domain/types'
 import { DomainError } from '@/domain/types'
 import { applyTheme, beep, haptic, prefersReducedMotion } from '@/lib/fx'
 import { fireBrowserNotification, shouldNotifyEvent } from '@/lib/pushNotify'
@@ -19,6 +19,11 @@ interface StoreValue {
   loading: boolean
   today: string
   journey: Journey | null
+  myMemberId: MemberId
+  myMember: Member | null
+  partnerMemberId: MemberId
+  partnerMember: Member | null
+  setMyMemberId: (id: MemberId) => void
   progress: number
   confirmed: ReturnType<typeof confirmedTotals>
   pending: ReturnType<typeof pendingTotals>
@@ -36,11 +41,27 @@ interface StoreValue {
 
 const Ctx = createContext<StoreValue | null>(null)
 
+const DEVICE_ROLE_KEY = 'piggy_my_member'
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState | null>(null)
   const [today, setToday] = useState(() => todayIn())
   const [toasts, setToasts] = useState<Toast[]>([])
   const [fx, setFx] = useState<Fx | null>(null)
+  const [myMemberId, setMyMemberIdState] = useState<MemberId>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(DEVICE_ROLE_KEY)
+      if (saved === 'a' || saved === 'b') return saved
+    }
+    return 'a'
+  })
+
+  const setMyMemberId = useCallback((id: MemberId) => {
+    setMyMemberIdState(id)
+    try {
+      localStorage.setItem(DEVICE_ROLE_KEY, id)
+    } catch {}
+  }, [])
   const seq = useRef(0)
   const seenNotifIds = useRef<Set<string> | null>(null)
 
@@ -102,8 +123,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!state) return null
     const j = state.journey
     const confirmed = confirmedTotals(state.contributions)
+    const partnerMemberId: MemberId = myMemberId === 'a' ? 'b' : 'a'
+    const myMember = j ? j.members[myMemberId] : null
+    const partnerMember = j ? j.members[partnerMemberId] : null
+
     return {
       state, repo: repository, loading: false, today, journey: j,
+      myMemberId, myMember, partnerMemberId, partnerMember, setMyMemberId,
       progress: j ? progressPct(j, state.contributions) : 0,
       confirmed, pending: pendingTotals(state.contributions),
       goalReached: !!j && isGoalReached(state) && confirmed.total >= j.goal,
@@ -111,7 +137,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       motionOff: prefersReducedMotion(state.settings),
       toasts, fx, toast, celebrate, run, syncState: setState,
     }
-  }, [state, today, toasts, fx, toast, celebrate, run])
+  }, [state, today, toasts, fx, toast, celebrate, run, myMemberId, setMyMemberId])
 
   if (!value) return <div className="grid h-screen place-items-center text-xl font-black text-vio">🐷 Đang tải…</div>
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
