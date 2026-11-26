@@ -41,11 +41,11 @@ function WelcomeGate() {
 }
 
 export const ROUTE_THEME: Record<string, { top: string; bottom: string }> = {
-  '/': { top: '#86c5ff', bottom: '#fce8ef' },
+  '/': { top: '#b8e1ff', bottom: '#fde8f1' },
   '/reveal': { top: '#5b3dc8', bottom: '#fde8f1' },
-  '/pig': { top: '#dbeafe', bottom: '#dcfce7' },
+  '/pig': { top: '#dbeafe', bottom: '#fce7f3' },
   '/couple': { top: '#fde8f1', bottom: '#fdf2f7' },
-  '/welcome': { top: '#f3e8ff', bottom: '#ffeef5' },
+  '/welcome': { top: '#f3e8ff', bottom: '#fff7fa' },
   '/journal': { top: '#e0f2fe', bottom: '#ffeef5' },
   '/challenges': { top: '#ede9fe', bottom: '#ffeef5' },
   '/stats': { top: '#e0f2fe', bottom: '#ffeef5' },
@@ -58,7 +58,7 @@ export default function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
-    const theme = ROUTE_THEME[loc.pathname] || { top: '#86c5ff', bottom: '#f5efff' }
+    const theme = ROUTE_THEME[loc.pathname] || { top: '#b8e1ff', bottom: '#f5efff' }
     document.documentElement.style.setProperty('--page-top-color', theme.top)
     document.documentElement.style.setProperty('--page-bottom-color', theme.bottom)
     document.documentElement.style.backgroundColor = theme.top

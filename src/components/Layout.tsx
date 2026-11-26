@@ -22,10 +22,10 @@ export function AppFrame({ nav }: { nav: boolean }) {
       {/* Top notch bleed bar: fills iOS notch / status bar with current route's header color */}
       <div
         aria-hidden
-        className="fixed inset-x-0 top-0 z-40 pointer-events-none transition-colors duration-200"
+        className="fixed inset-x-0 top-0 z-40 pointer-events-none"
         style={{
           height: 'env(safe-area-inset-top, 0px)',
-          backgroundColor: 'var(--page-top-color, #86c5ff)',
+          backgroundColor: 'var(--page-top-color, #b8e1ff)',
         }}
       />
       {!online && (

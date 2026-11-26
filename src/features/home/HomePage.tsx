@@ -91,7 +91,7 @@ export default function HomePage() {
       style={{
         paddingTop: 'calc(10px + env(safe-area-inset-top, 0px))',
         background:
-          'linear-gradient(180deg, #b8e1ff 0%, #dff2ff 24%, #eef9e3 48%, #fff6f8 74%, #fde8f1 100%)',
+          'linear-gradient(180deg, #b8e1ff 0px, #b8e1ff 76px, #dff2ff 26%, #eef9e3 50%, #fff6f8 75%, #fde8f1 100%)',
       }}
     >
       {/* 1. Sleek Top Navigation Bar */}
@@ -154,7 +154,7 @@ export default function HomePage() {
           spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
           alt={`${j.pig.name} – ${stage.label}`}
           theme="meadow"
-          spriteHeight={355}
+          spriteHeight={250}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
           membersShare={{

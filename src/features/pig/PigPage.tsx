@@ -131,7 +131,7 @@ export default function PigPage() {
       className="relative min-h-[100dvh] pb-[calc(104px+env(safe-area-inset-bottom))]"
       style={{
         paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(180deg, #dbeafe 0%, #eff6ff 38%, #f5f3ff 72%, #fce7f3 100%)',
+        background: 'linear-gradient(180deg, #dbeafe 0px, #dbeafe 76px, #eff6ff 38%, #f5f3ff 72%, #fce7f3 100%)',
       }}
     >
       {/* 1. Header Bar */}
@@ -171,7 +171,7 @@ export default function PigPage() {
           spriteSrc={current.sprite}
           alt={pig.name}
           theme="pastel"
-          spriteHeight={270}
+          spriteHeight={250}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
           membersShare={{
