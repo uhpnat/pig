@@ -73,16 +73,16 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
       onTouchCancel={onTouchEnd}
       className="relative min-h-screen"
     >
-      {/* Floating cute piggy refresh indicator */}
+      {/* Floating cute piggy refresh indicator (Fixed overlay so it NEVER pushes <main> down below the iOS notch!) */}
       <div
         aria-live="polite"
         style={{
+          top: 'env(safe-area-inset-top, 0px)',
           height: visible ? `${Math.max(pull, refreshing ? 54 : 0)}px` : '0px',
           opacity: visible ? Math.min(1, progress * 1.25) : 0,
           transition: active.current ? 'none' : 'height 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease',
-          paddingTop: 'env(safe-area-inset-top, 0px)',
         }}
-        className="pointer-events-none flex w-full items-center justify-center overflow-hidden"
+        className="pointer-events-none fixed inset-x-0 z-50 flex w-full items-center justify-center overflow-hidden"
       >
         <div className="flex items-center gap-2 rounded-full border-2 border-white bg-white/95 px-4 py-1.5 text-xs font-black text-[#172554] shadow-[0_8px_20px_rgba(143,124,240,.25)]">
           <span

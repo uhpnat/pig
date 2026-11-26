@@ -19,17 +19,29 @@ export function AppFrame({ nav }: { nav: boolean }) {
     <div
       className="mx-auto min-h-[100dvh] w-full max-w-[440px]"
     >
-      {/* Top notch bleed bar: fills iOS notch / status bar with current route's header color */}
+      {/* Fixed top & bottom backdrop layers so iOS notch (safe-area-inset-top) and home bar always match the active page */}
       <div
         aria-hidden
-        className="fixed inset-x-0 top-0 z-40 pointer-events-none"
+        className="pointer-events-none fixed inset-x-0 top-0 -z-10"
         style={{
-          height: 'env(safe-area-inset-top, 0px)',
+          height: 'calc(88px + env(safe-area-inset-top, 0px))',
           backgroundColor: 'var(--page-top-color, #b8e1ff)',
         }}
       />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 bottom-0 -z-10"
+        style={{
+          height: 'calc(88px + env(safe-area-inset-bottom, 0px))',
+          backgroundColor: 'var(--page-bottom-color, #fde8f1)',
+        }}
+      />
       {!online && (
-        <div role="status" className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3b2a6b] px-3 py-1.5 text-xs font-extrabold text-white">
+        <div
+          role="status"
+          className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3b2a6b] px-3 py-1.5 text-xs font-extrabold text-white"
+          style={{ paddingTop: 'calc(6px + env(safe-area-inset-top, 0px))' }}
+        >
           <WifiOff size={14} /> Đang ngoại tuyến – dữ liệu vẫn được lưu trên máy này
         </div>
       )}

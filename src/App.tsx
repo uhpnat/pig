@@ -62,7 +62,7 @@ export default function App() {
     document.documentElement.style.setProperty('--page-top-color', theme.top)
     document.documentElement.style.setProperty('--page-bottom-color', theme.bottom)
     document.documentElement.style.backgroundColor = theme.top
-    document.body.style.backgroundColor = theme.bottom
+    document.body.style.backgroundColor = theme.top
     const metas = document.querySelectorAll('meta[name="theme-color"]')
     metas.forEach((m) => m.setAttribute('content', theme.top))
   }, [loc.pathname])
