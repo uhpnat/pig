@@ -83,8 +83,10 @@ export default function RevealPage() {
 
   return (
     <div
-      className="relative flex h-[100dvh] flex-col justify-between overflow-hidden px-4"
+      className="fixed inset-0 z-10 flex flex-col justify-between overflow-hidden px-4"
       style={{
+        touchAction: 'none',
+        overscrollBehavior: 'none',
         paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
         background: 'linear-gradient(180deg, #5b3dc8 0%, #8e6ee8 52%, #fde8f1 100%)',
