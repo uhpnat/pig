@@ -9,13 +9,29 @@ import type { Activity, AppNotification, AppState, Contribution, Reveal } from '
  * - Challenges & Milestones: union of completed / active statuses.
  */
 export function mergeStates(local: AppState, remote: AppState): AppState {
-  // Choose the most complete journey config
-  const journey =
+  // Choose the most complete journey config, ensuring member gender is never lost during remote sync
+  let baseJourney =
     remote.journey?.setupDone && !local.journey?.setupDone
       ? remote.journey
       : local.journey?.setupDone && !remote.journey?.setupDone
         ? local.journey
         : remote.journey || local.journey
+
+  const journey = baseJourney
+    ? {
+        ...baseJourney,
+        members: {
+          a: {
+            ...baseJourney.members.a,
+            gender: local.journey?.members?.a?.gender || remote.journey?.members?.a?.gender || baseJourney.members.a.gender,
+          },
+          b: {
+            ...baseJourney.members.b,
+            gender: local.journey?.members?.b?.gender || remote.journey?.members?.b?.gender || baseJourney.members.b.gender,
+          },
+        },
+      }
+    : null
 
   // 1. Merge daily reveals by date (LATEST createdAt wins so when a user re-rolls today's reveal, the new random amount wins across devices!)
   const revealByDate = new Map<string, Reveal>()

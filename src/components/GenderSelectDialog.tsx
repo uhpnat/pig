@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { Avatar, Button, Modal } from '@/components/ui'
 import type { Gender } from '@/domain/types'
 import { useStore } from '@/hooks/useStore'
+
+const CONFIG_KEY = 'piggy_gender_configured'
 
 interface Props {
   open?: boolean
@@ -13,9 +14,18 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
   const { state, repo, run, toast } = useStore()
   const j = state.journey
 
-  // If manualOpen is provided, obey it.
-  // Otherwise, automatically open if journey exists, setup is done, and either member's gender is not set!
-  const needsConfig = !!(j && j.setupDone && (!j.members.a.gender || !j.members.b.gender))
+  const [dismissed, setDismissed] = useState(false)
+
+  // Only auto-open if journey exists, setup is done, gender is missing, and user hasn't already dismissed/configured it
+  const isAlreadyConfigured = typeof window !== 'undefined' && localStorage.getItem(CONFIG_KEY) === 'true'
+  const needsConfig = !!(
+    j &&
+    j.setupDone &&
+    (!j.members.a.gender || !j.members.b.gender) &&
+    !isAlreadyConfigured &&
+    !dismissed
+  )
+
   const isOpen = manualOpen !== undefined ? manualOpen : needsConfig
 
   const [genA, setGenA] = useState<Gender>('male')
@@ -30,12 +40,29 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
 
   if (!j) return null
 
-  const handleSelectPreset = (a: Gender, b: Gender) => {
-    setGenA(a)
-    setGenB(b)
+  const handleSetA = (gender: Gender) => {
+    setGenA(gender)
+    setGenB(gender === 'male' ? 'female' : 'male')
+  }
+
+  const handleSetB = (gender: Gender) => {
+    setGenB(gender)
+    setGenA(gender === 'male' ? 'female' : 'male')
+  }
+
+  const handleDismiss = () => {
+    setDismissed(true)
+    try {
+      localStorage.setItem(CONFIG_KEY, 'true')
+    } catch {}
+    onClose?.()
   }
 
   const save = async () => {
+    try {
+      localStorage.setItem(CONFIG_KEY, 'true')
+    } catch {}
+    setDismissed(true)
     const updated = await run(
       repo.updateJourney({
         members: {
@@ -46,154 +73,101 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
     )
     if (updated) {
       toast('Đã lưu vai trò Nam & Nữ của hai bạn! 💖')
-      onClose?.()
     }
+    onClose?.()
   }
 
   return (
     <Modal
       open={isOpen}
-      onClose={() => {
-        // Only allow close if already configured or if manually opened
-        if (!needsConfig || manualOpen) onClose?.()
-      }}
-      title="💕 Ai là Chàng, ai là Nàng?"
+      onClose={handleDismiss}
+      title="👫 Vai trò của hai bạn"
     >
-      <div className="mt-2 text-center">
-        <p className="text-xs font-bold text-[#64748b] leading-relaxed">
-          Hãy chọn ai là <b>Nam 👦 (Chàng 💙)</b> và ai là <b>Nữ 👧 (Nàng 💗)</b> để heo đất hiển thị màu nước và lời nhắn chính xác nhất nhé!
-          <br />
-          <span className="text-[#a855f7] font-extrabold">(Lưu 1 lần duy nhất, lần sau không hỏi lại)</span>
+      <div className="mt-1 text-center">
+        <p className="text-xs font-semibold text-slate-500 leading-relaxed">
+          Chỉ cần chọn Nam hoặc Nữ cho từng bạn để hiển thị màu nước và mascot phù hợp nhất nhé!
         </p>
 
-        {/* 2 Quick Preset Choices */}
-        <div className="mt-4 grid gap-2.5">
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleSelectPreset('male', 'female')}
-            className={`flex items-center justify-between rounded-2xl border-2 p-3 text-left transition-all ${
-              genA === 'male' && genB === 'female'
-                ? 'border-[#38bdf8] bg-sky-50 shadow-md ring-2 ring-sky-300'
-                : 'border-slate-200 bg-white hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Avatar value={j.members.a.avatar} size={42} />
-              <div>
-                <p className="text-sm font-black text-[#1e1b4b]">{j.members.a.name}</p>
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-500 px-2 py-0.5 text-[11px] font-black text-white">
-                  👦 Nam (Chàng)
-                </span>
+        {/* 2 Clean Member Rows */}
+        <div className="mt-4 space-y-3 text-left">
+          {/* Member A */}
+          <div className="flex items-center justify-between rounded-2xl bg-slate-50/90 p-3.5 border border-slate-200">
+            <div className="flex items-center gap-3 min-w-0 pr-2">
+              <Avatar value={j.members.a.avatar} size={42} className="shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-black text-[#1e1b4b] truncate">{j.members.a.name}</p>
+                <p className="text-[11px] font-bold text-slate-400">Bạn thứ nhất</p>
               </div>
             </div>
-            <div className="text-center font-bold text-slate-300">💖</div>
-            <div className="flex items-center gap-3 text-right">
-              <div>
-                <p className="text-sm font-black text-[#1e1b4b]">{j.members.b.name}</p>
-                <span className="inline-flex items-center gap-1 rounded-full bg-pink-500 px-2 py-0.5 text-[11px] font-black text-white">
-                  👧 Nữ (Nàng)
-                </span>
-              </div>
-              <Avatar value={j.members.b.avatar} size={42} />
+            <div className="flex shrink-0 gap-1.5 bg-white p-1 rounded-xl border border-slate-200/80 shadow-sm">
+              <button
+                type="button"
+                onClick={() => handleSetA('male')}
+                className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
+                  genA === 'male'
+                    ? 'bg-sky-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                👦 Nam
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetA('female')}
+                className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
+                  genA === 'female'
+                    ? 'bg-pink-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                👧 Nữ
+              </button>
             </div>
-          </motion.button>
+          </div>
 
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleSelectPreset('female', 'male')}
-            className={`flex items-center justify-between rounded-2xl border-2 p-3 text-left transition-all ${
-              genA === 'female' && genB === 'male'
-                ? 'border-[#ff7aa2] bg-pink-50 shadow-md ring-2 ring-pink-300'
-                : 'border-slate-200 bg-white hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Avatar value={j.members.a.avatar} size={42} />
-              <div>
-                <p className="text-sm font-black text-[#1e1b4b]">{j.members.a.name}</p>
-                <span className="inline-flex items-center gap-1 rounded-full bg-pink-500 px-2 py-0.5 text-[11px] font-black text-white">
-                  👧 Nữ (Nàng)
-                </span>
+          {/* Member B */}
+          <div className="flex items-center justify-between rounded-2xl bg-slate-50/90 p-3.5 border border-slate-200">
+            <div className="flex items-center gap-3 min-w-0 pr-2">
+              <Avatar value={j.members.b.avatar} size={42} className="shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-black text-[#1e1b4b] truncate">{j.members.b.name}</p>
+                <p className="text-[11px] font-bold text-slate-400">Bạn thứ hai</p>
               </div>
             </div>
-            <div className="text-center font-bold text-slate-300">💖</div>
-            <div className="flex items-center gap-3 text-right">
-              <div>
-                <p className="text-sm font-black text-[#1e1b4b]">{j.members.b.name}</p>
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-500 px-2 py-0.5 text-[11px] font-black text-white">
-                  👦 Nam (Chàng)
-                </span>
-              </div>
-              <Avatar value={j.members.b.avatar} size={42} />
-            </div>
-          </motion.button>
-        </div>
-
-        {/* Custom Individual Pickers */}
-        <div className="mt-4 rounded-2xl bg-slate-50 p-3 border border-slate-200/80 text-left">
-          <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider text-center">
-            Hoặc tự chọn chi tiết từng người
-          </p>
-          <div className="mt-2.5 grid grid-cols-2 gap-3">
-            {/* Member A */}
-            <div className="rounded-xl bg-white p-2.5 border border-slate-200 text-center shadow-sm">
-              <Avatar value={j.members.a.avatar} size={36} className="mx-auto" />
-              <p className="mt-1 text-xs font-black text-[#1e1b4b] truncate">{j.members.a.name}</p>
-              <div className="mt-2 grid grid-cols-2 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setGenA('male')}
-                  className={`rounded-lg py-1 text-xs font-black transition-colors ${
-                    genA === 'male' ? 'bg-sky-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  👦 Nam
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGenA('female')}
-                  className={`rounded-lg py-1 text-xs font-black transition-colors ${
-                    genA === 'female' ? 'bg-pink-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  👧 Nữ
-                </button>
-              </div>
-            </div>
-
-            {/* Member B */}
-            <div className="rounded-xl bg-white p-2.5 border border-slate-200 text-center shadow-sm">
-              <Avatar value={j.members.b.avatar} size={36} className="mx-auto" />
-              <p className="mt-1 text-xs font-black text-[#1e1b4b] truncate">{j.members.b.name}</p>
-              <div className="mt-2 grid grid-cols-2 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setGenB('male')}
-                  className={`rounded-lg py-1 text-xs font-black transition-colors ${
-                    genB === 'male' ? 'bg-sky-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  👦 Nam
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGenB('female')}
-                  className={`rounded-lg py-1 text-xs font-black transition-colors ${
-                    genB === 'female' ? 'bg-pink-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  👧 Nữ
-                </button>
-              </div>
+            <div className="flex shrink-0 gap-1.5 bg-white p-1 rounded-xl border border-slate-200/80 shadow-sm">
+              <button
+                type="button"
+                onClick={() => handleSetB('male')}
+                className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
+                  genB === 'male'
+                    ? 'bg-sky-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                👦 Nam
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetB('female')}
+                className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
+                  genB === 'female'
+                    ? 'bg-pink-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                👧 Nữ
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="mt-5">
-          <Button variant="violet" className="w-full !py-3.5 !text-[16px]" onClick={save}>
-            Lưu vai trò & Tiếp tục 💗
+        {/* Action Buttons */}
+        <div className="mt-5 space-y-2">
+          <Button variant="violet" className="w-full !py-3.5 !text-[15px]" onClick={save}>
+            Lưu vai trò 💕
+          </Button>
+          <Button variant="ghost" size="sm" className="w-full !text-slate-400 text-xs" onClick={handleDismiss}>
+            Để sau
           </Button>
         </div>
       </div>

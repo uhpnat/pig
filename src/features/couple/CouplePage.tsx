@@ -19,6 +19,7 @@ import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
 import { actualShares } from '@/domain/stats'
 import { useChallenges, useJourney, useStore } from '@/hooks/useStore'
 import { IMG } from '@/lib/assets'
+import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { EditRulesDialog } from './EditRulesDialog'
 import { GoogleSheetsCard } from './GoogleSheetsCard'
 import { InstallGuide } from './InstallGuide'
@@ -38,6 +39,7 @@ export default function CouplePage() {
   const [planOpen, setPlanOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [genderDialogOpen, setGenderDialogOpen] = useState(false)
 
   const done = useChallenges().filter((c) => c.status === 'completed')
   const s = state.settings
@@ -87,6 +89,13 @@ export default function CouplePage() {
       label: 'Cài đặt chung',
       sub: 'Âm thanh, giao diện, Google Sheets, cài app',
       onClick: () => setSettingsOpen(true),
+    },
+    {
+      icon: <span className="text-[20px] leading-none">👫</span>,
+      bg: 'bg-[#fce7f3]',
+      label: 'Vai trò Chàng & Nàng',
+      sub: `${j.members.a.name}: ${j.members.a.gender === 'male' ? 'Nam 👦' : 'Nữ 👧'} · ${j.members.b.name}: ${j.members.b.gender === 'male' ? 'Nam 👦' : 'Nữ 👧'}`,
+      onClick: () => setGenderDialogOpen(true),
     },
     {
       icon: <UserPlus size={20} className="text-[#ea580c]" />,
@@ -470,6 +479,8 @@ export default function CouplePage() {
           if (await run(repo.reset())) nav('/welcome')
         }}
       />
+
+      <GenderSelectDialog open={genderDialogOpen} onClose={() => setGenderDialogOpen(false)} />
     </div>
   )
 }
