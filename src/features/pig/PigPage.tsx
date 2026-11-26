@@ -1,40 +1,33 @@
+import { ChevronLeft, ChevronRight, Pencil, User } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PIG_BACKGROUNDS, PIG_STYLES } from '@/components/pig/Pig'
-import { Button, Card, Chip, Field } from '@/components/ui'
+import { Button } from '@/components/ui'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { IMG } from '@/lib/assets'
 import type { PigConfig } from '@/domain/types'
 
-const STYLE_IMG: Record<PigConfig['style'], string> = {
-  crown: IMG.big,
-  baby: IMG.t0,
-  round: IMG.t1,
-  glasses: IMG.t2,
-  hat: IMG.t1,
-  hoodie: IMG.t3,
-}
-
-const STYLE_THUMB: Record<PigConfig['style'], string> = {
-  crown: IMG.t0,
-  baby: IMG.t0,
-  round: IMG.t1,
-  glasses: IMG.t2,
-  hat: IMG.t1,
-  hoodie: IMG.t3,
-}
+const PIG_AVATARS: { id: PigConfig['style']; label: string; thumb: string; big: string }[] = [
+  { id: 'crown', label: 'Heo vương miện', thumb: IMG.t0, big: IMG.big },
+  { id: 'round', label: 'Heo kính râm', thumb: IMG.t1, big: IMG.t1 },
+  { id: 'glasses', label: 'Heo kính cận', thumb: IMG.t2, big: IMG.t2 },
+  { id: 'hoodie', label: 'Heo áo hoodie', thumb: IMG.t3, big: IMG.t3 },
+]
 
 export default function PigPage() {
   const j = useJourney()
-  const { repo, run, celebrate } = useStore()
+  const { repo, run, celebrate, toast } = useStore()
   const nav = useNavigate()
   const [pig, setPig] = useState<PigConfig>(j.pig)
-  const [err, setErr] = useState('')
-  const set = (p: Partial<PigConfig>) => setPig((x) => ({ ...x, ...p }))
-  const bg = PIG_BACKGROUNDS.find((b) => b.id === pig.background) || PIG_BACKGROUNDS[0]
+  const idx = Math.max(0, PIG_AVATARS.findIndex((a) => a.id === pig.style))
+  const current = PIG_AVATARS[idx] || PIG_AVATARS[0]
+
+  const cycle = (dir: -1 | 1) => {
+    const nextIdx = (idx + dir + PIG_AVATARS.length) % PIG_AVATARS.length
+    setPig((p) => ({ ...p, style: PIG_AVATARS[nextIdx].id }))
+  }
 
   const save = async () => {
-    if (!pig.name.trim()) return setErr('Hãy đặt tên cho heo')
+    if (!pig.name.trim()) return toast('Hãy đặt tên cho heo nhé!', 'error')
     const ok = j.setupDone
       ? await run(repo.updateJourney({ pig: { ...pig, name: pig.name.trim() } }))
       : await run(repo.saveJourney({ ...j, pig: { ...pig, name: pig.name.trim() }, setupDone: true }))
@@ -45,67 +38,121 @@ export default function PigPage() {
   }
 
   return (
-    <div className="px-4 pb-24 pt-4">
-      <h1 className="h1 text-center text-[#1e1b4b]">Tạo heo của bạn</h1>
-      <p className="muted mt-1 text-center">Chọn kiểu heo 3D và đặt tên cho bé heo nhé!</p>
+    <div
+      className="relative flex min-h-screen flex-col justify-between overflow-hidden px-5 pb-12 pt-4"
+      style={{
+        background: 'linear-gradient(180deg, #dbeafe 0%, #eff6ff 45%, #f5f3ff 78%, #dcfce7 100%)',
+      }}
+    >
+      <div>
+        {/* Top Back Arrow */}
+        <button
+          type="button"
+          aria-label="Quay lại"
+          onClick={() => nav(j.setupDone ? '/couple' : '/welcome')}
+          className="grid h-10 w-10 cursor-pointer place-items-center rounded-full border-0 bg-white/70 text-[#1e1b4b] shadow-sm"
+        >
+          <ChevronLeft size={22} strokeWidth={2.5} />
+        </button>
 
-      <div
-        className="mx-auto mt-4 grid h-[220px] w-[245px] place-items-center overflow-hidden rounded-[44px] border-[4px] border-white shadow-[0_16px_34px_rgba(110,120,220,.32)]"
-        style={{ background: bg.css }}
-      >
-        <img
-          src={STYLE_IMG[pig.style] || IMG.big}
-          alt={pig.name}
-          className="h-[88%] w-[88%] rounded-[32px] object-cover shadow-md transition-transform duration-300 hover:scale-105"
-        />
-      </div>
+        {/* Title & Subtitle */}
+        <h1 className="mt-2 text-center text-[26px] font-black tracking-tight text-[#172554]">
+          Tạo heo của bạn
+        </h1>
+        <p className="mt-1 text-center text-[14px] font-extrabold text-[#3b4b75]">
+          Chọn avatar và đặt tên cho heo nhé!
+        </p>
 
-      <div className="mt-4 flex flex-wrap justify-center gap-2.5" role="radiogroup" aria-label="Kiểu heo">
-        {PIG_STYLES.map((s) => (
+        {/* Big Rounded 3D Pig Preview Frame with Left/Right Arrows & Edit Badge */}
+        <div className="relative mx-auto mt-6 flex max-w-[320px] items-center justify-center">
           <button
-            key={s.id}
             type="button"
-            role="radio"
-            aria-checked={pig.style === s.id}
-            onClick={() => set({ style: s.id })}
-            className={`thumb flex flex-col items-center gap-1 !rounded-2xl p-1.5 transition-all ${
-              pig.style === s.id ? 'thumb-on scale-105' : 'opacity-85'
-            }`}
+            aria-label="Kiểu trước"
+            onClick={() => cycle(-1)}
+            className="absolute left-0 z-10 grid h-11 w-11 cursor-pointer place-items-center rounded-full border-0 bg-white/85 text-[#1e1b4b] shadow-md transition-transform active:scale-90"
           >
-            <img src={STYLE_THUMB[s.id]} alt={s.label} className="h-14 w-14 rounded-xl object-cover" />
-            <span className="px-1 text-[11px] font-extrabold text-[#1e1b4b]">{s.label}</span>
+            <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
-        ))}
+
+          <div className="relative h-[210px] w-[225px] overflow-hidden rounded-[46px] border-[4px] border-white bg-gradient-to-b from-[#cfe2ff] to-[#e9e4ff] shadow-[0_18px_36px_rgba(110,130,220,.32)]">
+            <img
+              src={current.big}
+              alt={current.label}
+              className="h-full w-full object-cover"
+            />
+          </div>
+
+          <label
+            htmlFor="pig-name-input"
+            aria-label="Sửa tên heo"
+            className="absolute bottom-2 right-12 z-20 grid h-11 w-11 cursor-pointer place-items-center rounded-full border-2 border-white bg-white text-[#1e1b4b] shadow-lg"
+          >
+            <Pencil size={18} strokeWidth={2.5} />
+          </label>
+
+          <button
+            type="button"
+            aria-label="Kiểu tiếp theo"
+            onClick={() => cycle(1)}
+            className="absolute right-0 z-10 grid h-11 w-11 cursor-pointer place-items-center rounded-full border-0 bg-white/85 text-[#1e1b4b] shadow-md transition-transform active:scale-90"
+          >
+            <ChevronRight size={22} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* 4 Circular Avatar Thumbnails matching 02_pig_customization.png */}
+        <div className="mt-6 flex items-center justify-center gap-3.5" role="radiogroup" aria-label="Chọn avatar heo">
+          {PIG_AVATARS.map((a) => {
+            const active = pig.style === a.id
+            return (
+              <button
+                key={a.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={a.label}
+                onClick={() => setPig((p) => ({ ...p, style: a.id }))}
+                className={`h-[70px] w-[70px] cursor-pointer overflow-hidden rounded-full border-[3.5px] bg-white p-0.5 transition-all ${
+                  active
+                    ? 'scale-105 border-[#d946ef] shadow-[0_8px_20px_rgba(217,70,239,.35)]'
+                    : 'border-white opacity-90 shadow-md'
+                }`}
+              >
+                <img src={a.thumb} alt={a.label} className="h-full w-full rounded-full object-cover" />
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Pill Input: User Icon + Pig Name + Heart */}
+        <div className="mx-auto mt-6 flex max-w-[340px] items-center gap-3 rounded-full border-2 border-white bg-white/95 px-5 py-3.5 shadow-[0_10px_24px_rgba(140,150,220,.2)]">
+          <User size={22} className="shrink-0 text-[#1e1b4b]" strokeWidth={2.3} />
+          <input
+            id="pig-name-input"
+            value={pig.name}
+            maxLength={24}
+            onChange={(e) => setPig((p) => ({ ...p, name: e.target.value }))}
+            placeholder="Heo Nhà Mình"
+            className="min-w-0 flex-1 border-0 bg-transparent text-[17px] font-black text-[#1e1b4b] outline-none"
+          />
+          <span className="shrink-0 text-lg text-[#64748b]" aria-hidden>
+            ♡
+          </span>
+        </div>
+
+        {/* Big Glossy Pink Button: Xác nhận */}
+        <div className="mx-auto mt-5 max-w-[340px]">
+          <Button onClick={save} className="!py-4 !text-[18px]">
+            Xác nhận
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <h2 className="h3 text-[#1e1b4b]">Phông nền</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {PIG_BACKGROUNDS.map((b) => (
-            <Chip key={b.id} on={pig.background === b.id} onClick={() => set({ background: b.id })}>
-              {b.label}
-            </Chip>
-          ))}
-        </div>
-        <Field
-          label="Tên heo đất"
-          value={pig.name}
-          maxLength={24}
-          error={err}
-          onChange={(e) => {
-            set({ name: e.target.value })
-            setErr('')
-          }}
-        />
-      </Card>
-      <Button className="mt-4" onClick={save}>
-        Xác nhận
-      </Button>
-      {j.setupDone && (
-        <Button variant="ghost" className="mt-2.5" onClick={() => nav(-1)}>
-          Quay lại
-        </Button>
-      )}
+      {/* Grassy Meadow Footer matching mockup */}
+      <div
+        aria-hidden
+        className="pointer-events-none -mx-5 -mb-12 mt-8 h-20 rounded-t-[50%] bg-gradient-to-b from-[#a3e635] to-[#65a30d] opacity-85 shadow-inner"
+      />
     </div>
   )
 }
