@@ -18,3 +18,24 @@ createRoot(document.getElementById('root')!).render(
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => undefined))
 }
+
+// Native-app lock: prevent iOS pinch-to-zoom, double-tap zoom, and long-press image save context menu
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'contextmenu',
+    (e) => {
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') e.preventDefault()
+    },
+    { passive: false },
+  )
+  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions)
+  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions)
+  document.addEventListener(
+    'touchmove',
+    (e) => {
+      if (e.touches.length > 1) e.preventDefault()
+    },
+    { passive: false },
+  )
+}
