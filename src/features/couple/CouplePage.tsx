@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Avatar, Button, Card, Chip, ConfirmDialog, Modal, ProgressBar, Toggle } from '@/components/ui'
+import { Avatar, Button, Card, ConfirmDialog, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
 import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
 import { actualShares } from '@/domain/stats'
