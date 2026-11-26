@@ -12,7 +12,6 @@ import NotificationsPage from '@/features/notifications/NotificationsPage'
 import OnboardingPage from '@/features/onboarding/OnboardingPage'
 import PigPage from '@/features/pig/PigPage'
 import RevealPage from '@/features/reveal/RevealPage'
-import { lazy, Suspense, type ReactNode } from 'react'
 
 const StatsPage = lazy(() => import('@/features/stats/StatsPage'))
 
