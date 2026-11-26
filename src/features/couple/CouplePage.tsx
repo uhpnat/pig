@@ -1,7 +1,18 @@
-import { Copy, Download, RefreshCw, Smartphone } from 'lucide-react'
+import {
+  ChevronRight,
+  Clock,
+  Copy,
+  Download,
+  Heart,
+  RefreshCw,
+  Settings,
+  Smartphone,
+  Target,
+  UserPlus,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Avatar, Button, Card, Chip, ConfirmDialog, ProgressBar, Toggle } from '@/components/ui'
+import { Avatar, Button, Card, Chip, ConfirmDialog, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
 import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
 import { actualShares } from '@/domain/stats'
@@ -20,105 +31,344 @@ export default function CouplePage() {
   const [edit, setEdit] = useState(false)
   const [install, setInstall] = useState(false)
   const [del, setDel] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
+
   const done = useChallenges().filter((c) => c.status === 'completed')
   const s = state.settings
-  const inc = incomeShares(j), plan = plannedShares(j), actual = actualShares(state.contributions)
+  const inc = incomeShares(j)
+  const plan = plannedShares(j)
+  const actual = actualShares(state.contributions)
   const changes = state.activity.filter((a) => a.type === 'settings').slice(0, 5)
 
   const copy = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); toast('Đã sao chép 📋') } catch { toast('Không sao chép được – hãy chép tay nhé', 'error') }
+    try {
+      await navigator.clipboard.writeText(text)
+      toast('Đã sao chép 📋')
+    } catch {
+      toast('Không sao chép được – hãy chép tay nhé', 'error')
+    }
   }
+
   const exportData = async () => {
     const blob = new Blob([await repo.exportData()], { type: 'application/json' })
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob); a.download = 'piggy-duo-export.json'; a.click(); URL.revokeObjectURL(a.href)
+    a.href = URL.createObjectURL(blob)
+    a.download = 'piggy-duo-export.json'
+    a.click()
+    URL.revokeObjectURL(a.href)
   }
+
   const set = (p: Parameters<typeof repo.updateSettings>[0]) => run(repo.updateSettings(p))
 
-  return (
-    <div className="px-4 pt-4">
-      <h1 className="h1">Của chúng mình ❤️</h1>
-      <div className="mt-3 overflow-hidden rounded-[34px] border-[3px] border-white shadow-[0_14px_30px_rgba(100,160,255,.3)]"><img src={IMG.duo} alt="Hai bạn và chú heo" className="block w-full" /></div>
-      <p className="mt-2.5 text-center font-extrabold">Cùng nhau, chúng ta có thể<br />đạt được nhiều hơn! 💕</p>
+  const menuRows = [
+    {
+      icon: <Target size={20} className="text-[#ef4444]" />,
+      bg: 'bg-[#fee2e2]',
+      label: 'Mục tiêu & Kế hoạch',
+      sub: `${vnd(j.goal)} · ${durationLabel(j.months)}`,
+      onClick: () => setPlanOpen(true),
+    },
+    {
+      icon: <Clock size={20} className="text-[#16a34a]" />,
+      bg: 'bg-[#dcfce7]',
+      label: 'Lịch sử góp tiền',
+      sub: `${state.contributions.filter((c) => c.status === 'confirmed').length} khoản đã xác nhận`,
+      onClick: () => nav('/journal'),
+    },
+    {
+      icon: <Settings size={20} className="text-[#4f46e5]" />,
+      bg: 'bg-[#e0e7ff]',
+      label: 'Cài đặt chung',
+      sub: 'Âm thanh, giao diện, Google Sheets, cài app',
+      onClick: () => setSettingsOpen(true),
+    },
+    {
+      icon: <UserPlus size={20} className="text-[#ea580c]" />,
+      bg: 'bg-[#ffedd5]',
+      label: 'Giới thiệu bạn bè & Mã đôi mình',
+      sub: 'Chia sẻ link kết nối & bảo mật 2 người',
+      onClick: () => setInviteOpen(true),
+    },
+  ]
 
-      <Card>
-        <div className="grid grid-cols-2 gap-3">
+  return (
+    <div className="min-h-screen pb-8">
+      {/* Top Bar matching the mockup */}
+      <div className="relative flex items-center justify-center px-4 pb-2 pt-4">
+        <h1 className="text-[22px] font-black tracking-tight text-[#1e1b4b]">
+          Của chúng mình <span className="text-[#ff4d79]">❤️</span>
+        </h1>
+        <button
+          type="button"
+          aria-label="Cài đặt chung"
+          onClick={() => setSettingsOpen(true)}
+          className="absolute right-4 top-3.5 grid h-10 w-10 cursor-pointer place-items-center rounded-full border-0 bg-white/80 text-[#1e1b4b] shadow-sm transition-transform active:scale-95"
+        >
+          <Settings size={20} />
+        </button>
+      </div>
+
+      {/* Full-bleed 3D Two Pigs Hero Banner */}
+      <div className="relative overflow-hidden">
+        <img
+          src={IMG.duo}
+          alt="Hai chú heo đất của đôi mình"
+          className="block w-full object-cover"
+        />
+      </div>
+
+      {/* Overlapping Soft Pastel Bottom Sheet */}
+      <div
+        className="relative -mt-7 rounded-t-[36px] px-4 pb-6 pt-5 shadow-[0_-10px_30px_rgba(255,140,180,.18)]"
+        style={{ background: 'linear-gradient(180deg, #fff9fb 0%, #fdf2f7 100%)' }}
+      >
+        {/* Couple Avatars Pill */}
+        <div className="mt-1 flex items-center justify-center gap-6">
           {(['a', 'b'] as const).map((k) => (
-            <div key={k} className="text-center">
-              <Avatar value={j.members[k].avatar} size={56} className="mx-auto" />
-              <p className="h3 mt-1">{j.members[k].name}</p>
-              <p className="muted !text-[11px]">{j.members[k].role === 'owner' ? 'Chủ hành trình' : 'Thành viên'} · từ {fmtDate(j.members[k].joinedAt)}</p>
-              <p className="muted">{vnd(j.members[k].income)}/tháng</p>
-              <p className="mt-1 text-sm font-black">{vnd(confirmed[k])}</p>
-              <ProgressBar value={actual[k] * 100} className="!mt-1 !h-2" label={`Thực góp ${j.members[k].name}`} />
-              <p className="muted mt-1 !text-[11px]">Thu nhập {pct(inc[k] * 100)} · Kế hoạch {pct(plan[k] * 100)} · Thực góp {pct(actual[k] * 100)}</p>
+            <div key={k} className="flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 shadow-sm">
+              <Avatar value={j.members[k].avatar} size={34} />
+              <div className="text-left">
+                <p className="text-xs font-black text-[#1e1b4b]">{j.members[k].name}</p>
+                <p className="text-[11px] font-bold text-[#ff5c85]">{vnd(confirmed[k])}</p>
+              </div>
             </div>
           ))}
         </div>
-      </Card>
 
-      <Card>
-        {[['Mục tiêu chung', vnd(j.goal)], ['Đã tiết kiệm', `${vnd(confirmed.total)} (${pct(progress)})`], ['Thời gian', `${durationLabel(j.months)} · ${fmtDate(j.startDate)} → ${fmtDate(j.endDate)}`], ['Cách chia', MODE[j.fairness]], ['Xác nhận khoản góp', j.requireConfirmation ? 'Bắt buộc' : 'Tự động']].map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-3 py-1 text-sm"><span className="muted">{k}</span><b className="text-right">{v}</b></div>
-        ))}
-      </Card>
-
-      <Card>
-        <h2 className="h3">🏆 Cột mốc & thành tựu chung</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {state.milestonesReached.map((m) => <span key={m} className="pill">🎯 {m}%</span>)}
-          {done.map(({ def }) => <span key={def.id} className="pill">{def.reward.icon} {def.title}</span>)}
-          {!state.milestonesReached.length && !done.length && <p className="muted">Chưa có thành tựu – cứ từ từ nhé 🐷</p>}
+        {/* Highlight Card: Tổng tiền 2 người đã góp */}
+        <div className="mt-4 flex items-center justify-between rounded-[26px] border border-white bg-white px-5 py-4 shadow-[0_10px_28px_rgba(143,124,240,.14)]">
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-[#fff3c4] to-[#fde08d] text-3xl shadow-inner">
+            💰
+          </div>
+          <div className="min-w-0 flex-1 px-3.5">
+            <p className="text-[13px] font-extrabold text-[#4b5563]">Tổng tiền 2 người đã góp</p>
+            <p className="mt-0.5 truncate text-[26px] font-black leading-tight tracking-tight text-[#1e1b4b]">
+              {vnd(confirmed.total)}
+            </p>
+            <p className="text-[11px] font-extrabold text-[#8f7cf0]">
+              Đạt {pct(progress)} mục tiêu ({vnd(j.goal)})
+            </p>
+          </div>
+          <div className="shrink-0 text-3xl" aria-hidden>
+            🎉
+          </div>
         </div>
-      </Card>
 
-      <GoogleSheetsCard />
+        {/* iOS-Style Grouped Menu Card */}
+        <div className="mt-4 overflow-hidden rounded-[28px] border border-white bg-white shadow-[0_12px_30px_rgba(143,124,240,.13)]">
+          {menuRows.map((row, idx) => (
+            <button
+              key={row.label}
+              type="button"
+              onClick={row.onClick}
+              className={`flex w-full cursor-pointer items-center gap-3.5 border-0 bg-transparent px-4 py-3.5 text-left transition-colors hover:bg-[#fdf2f7]/60 active:bg-[#fce7f3] ${
+                idx < menuRows.length - 1 ? 'border-b border-[#f3e8ff]' : ''
+              }`}
+              style={{ fontFamily: 'inherit' }}
+            >
+              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${row.bg}`}>
+                {row.icon}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-black text-[#1e1b4b]">{row.label}</span>
+                <span className="block truncate text-xs font-bold text-[#7d74a8]">{row.sub}</span>
+              </span>
+              <ChevronRight size={20} className="shrink-0 text-[#9ca3af]" />
+            </button>
+          ))}
+        </div>
 
-      <Card>
-        <h2 className="h3">💌 Mời người ấy</h2>
-        {state.invite ? (
-          <>
-            <div className="mt-2 flex items-center justify-between rounded-2xl bg-white/60 p-3">
-              <div><p className="muted !text-xs">Mã mời (hết hạn {fmtDateTime(state.invite.expiresAt, j.timezone)})</p><p className="text-2xl font-black tracking-[.2em]">{state.invite.code}</p></div>
+        {/* Google Sheets Sync Status Card */}
+        <div className="mt-4">
+          <GoogleSheetsCard />
+        </div>
+      </div>
+
+      {/* Modal 1: Mục tiêu & Kế hoạch */}
+      <Modal open={planOpen} onClose={() => setPlanOpen(false)} title="Mục tiêu & Kế hoạch 🎯">
+        <div className="mt-3 space-y-3">
+          <Card className="!mt-0">
+            <div className="grid grid-cols-2 gap-3">
+              {(['a', 'b'] as const).map((k) => (
+                <div key={k} className="text-center">
+                  <Avatar value={j.members[k].avatar} size={52} className="mx-auto" />
+                  <p className="h3 mt-1">{j.members[k].name}</p>
+                  <p className="muted !text-[11px]">Thu nhập: {vnd(j.members[k].income)}/tháng</p>
+                  <p className="mt-1 text-sm font-black text-pink">{vnd(confirmed[k])}</p>
+                  <ProgressBar value={actual[k] * 100} className="!mt-1.5 !h-2" />
+                  <p className="muted mt-1 !text-[11px]">
+                    Thu nhập {pct(inc[k] * 100)} · Kế hoạch {pct(plan[k] * 100)} · Thực góp {pct(actual[k] * 100)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="!mt-0">
+            {[
+              ['Tên hành trình', j.name],
+              ['Mục tiêu chung', vnd(j.goal)],
+              ['Đã tiết kiệm', `${vnd(confirmed.total)} (${pct(progress)})`],
+              ['Thời gian', `${durationLabel(j.months)} (${fmtDate(j.startDate)} → ${fmtDate(j.endDate)})`],
+              ['Cách chia mức góp', MODE[j.fairness]],
+              ['Xác nhận khoản góp', j.requireConfirmation ? 'Bắt buộc xác nhận' : 'Tự động'],
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3 py-1 text-sm">
+                <span className="muted">{k}</span>
+                <b className="text-right">{v}</b>
+              </div>
+            ))}
+          </Card>
+
+          { (state.milestonesReached.length > 0 || done.length > 0) && (
+            <Card className="!mt-0">
+              <h3 className="h3">🏆 Thành tựu đã đạt</h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {state.milestonesReached.map((m) => (
+                  <span key={m} className="pill">🎯 {m}%</span>
+                ))}
+                {done.map(({ def }) => (
+                  <span key={def.id} className="pill">{def.reward.icon} {def.title}</span>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <Button size="sm" onClick={() => { setPlanOpen(false); setEdit(true) }}>
+              ✏️ Sửa mục tiêu & thu nhập
+            </Button>
+            <Button size="sm" variant="violet" onClick={() => { setPlanOpen(false); nav('/pig') }}>
+              🐷 Đổi kiểu heo
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal 2: Cài đặt chung */}
+      <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Cài đặt chung ⚙️">
+        <div className="mt-3 space-y-2">
+          <Toggle
+            checked={j.revealEnabled}
+            onChange={(v) => run(repo.updateJourney({ revealEnabled: v }))}
+            label="Mở số tiền hằng ngày"
+            hint="Tắt nếu muốn tạm dừng nghi thức."
+          />
+          <Toggle checked={s.sound} onChange={(v) => set({ sound: v })} label="Âm thanh hiệu ứng" />
+          <Toggle checked={s.haptics} onChange={(v) => set({ haptics: v })} label="Rung phản hồi" />
+          <Toggle
+            checked={s.animations === 'auto'}
+            onChange={(v) => set({ animations: v ? 'auto' : 'off' })}
+            label="Hiệu ứng chuyển động"
+          />
+          <div>
+            <span className="label">Giao diện</span>
+            <div className="flex gap-2">
+              {([
+                ['auto', 'Theo máy'],
+                ['light', 'Sáng'],
+                ['dark', 'Tối'],
+              ] as const).map(([id, l]) => (
+                <Chip key={id} on={s.theme === id} onClick={() => set({ theme: id })}>
+                  {l}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2.5 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => { setSettingsOpen(false); nav('/notifications') }}>
+              🔔 Tuỳ chọn thông báo đẩy
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { setSettingsOpen(false); setInstall(true) }}>
+              <Smartphone size={16} className="mr-1 inline" /> Hướng dẫn cài app ra màn hình chính
+            </Button>
+            <Button variant="ghost" size="sm" onClick={exportData}>
+              <Download size={16} className="mr-1 inline" /> Xuất dữ liệu dự phòng (.json)
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => { setSettingsOpen(false); setDel(true) }}
+              className="!bg-none !bg-[#e5484d] !shadow-none"
+            >
+              🗑️ Xoá hành trình
+            </Button>
+          </div>
+
+          {changes.length > 0 && (
+            <div className="mt-3 rounded-2xl bg-white/60 p-3">
+              <p className="h3">📝 Lịch sử thay đổi quy tắc</p>
+              {changes.map((c) => (
+                <p key={c.id} className="muted mt-1 !text-xs">
+                  {fmtDateTime(c.at, j.timezone)} – {c.description}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Modal 3: Giới thiệu bạn bè & Mã đôi mình */}
+      <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="Kết nối đôi mình 💌">
+        <div className="mt-3 space-y-3 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-pink/15 text-pink">
+            <Heart size={28} />
+          </div>
+          <p className="muted text-xs leading-relaxed">
+            Gửi đường link hoặc mã mời dưới đây cho người ấy để cả hai cùng mở heo đất và đồng bộ trực tiếp trên Google Sheet.
+          </p>
+          {state.invite && (
+            <div className="flex items-center justify-between rounded-2xl bg-white/80 p-3.5 shadow-sm">
+              <div className="text-left">
+                <p className="muted !text-xs">Mã đôi mình</p>
+                <p className="text-2xl font-black tracking-[.2em] text-[#1e1b4b]">{state.invite.code}</p>
+              </div>
               <div className="flex gap-2">
-                <button type="button" aria-label="Sao chép mã" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow" onClick={() => copy(state.invite!.code)}><Copy size={18} /></button>
-                <button type="button" aria-label="Tạo mã mới" className="grid h-10 w-10 place-items-center rounded-full bg-white shadow" onClick={() => run(repo.regenerateInvite())}><RefreshCw size={18} /></button>
+                <button
+                  type="button"
+                  aria-label="Sao chép mã"
+                  className="grid h-10 w-10 place-items-center rounded-full bg-white shadow"
+                  onClick={() => copy(state.invite!.code)}
+                >
+                  <Copy size={18} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Tạo mã mới"
+                  className="grid h-10 w-10 place-items-center rounded-full bg-white shadow"
+                  onClick={() => run(repo.regenerateInvite())}
+                >
+                  <RefreshCw size={18} />
+                </button>
               </div>
             </div>
-            <p className="muted mt-2 !text-xs">Chế độ demo lưu dữ liệu trên máy này (đồng bộ giữa các tab). Để dùng trên 2 điện thoại, kết nối Supabase – xem README.</p>
-          </>
-        ) : <p className="muted mt-1">Chưa có mã mời.</p>}
-      </Card>
-
-      <Card>
-        <h2 className="h3">⚙️ Cài đặt</h2>
-        <div className="mt-2 grid gap-2.5">
-          <Button variant="ghost" size="sm" onClick={() => setEdit(true)}>✏️ Sửa mục tiêu, thu nhập & quy tắc</Button>
-          <Button variant="ghost" size="sm" onClick={() => nav('/pig')}>🐷 Tuỳ chỉnh heo</Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => {
+              copy(`${location.origin}${location.pathname}`)
+            }}
+          >
+            📋 Sao chép link ứng dụng ({location.origin}{location.pathname})
+          </Button>
         </div>
-        <Toggle checked={j.revealEnabled} onChange={(v) => run(repo.updateJourney({ revealEnabled: v }))} label="Mở số tiền hằng ngày" hint="Tắt nếu muốn tạm dừng nghi thức." />
-        <Toggle checked={s.sound} onChange={(v) => set({ sound: v })} label="Âm thanh" />
-        <Toggle checked={s.haptics} onChange={(v) => set({ haptics: v })} label="Rung phản hồi" hint="Nếu thiết bị hỗ trợ." />
-        <Toggle checked={s.animations === 'auto'} onChange={(v) => set({ animations: v ? 'auto' : 'off' })} label="Hiệu ứng chuyển động" hint="Tự tôn trọng cài đặt “giảm chuyển động” của hệ điều hành." />
-        <span className="label">Giao diện</span>
-        <div className="flex gap-2">{([['auto', 'Theo máy'], ['light', 'Sáng'], ['dark', 'Tối']] as const).map(([id, l]) => <Chip key={id} on={s.theme === id} onClick={() => set({ theme: id })}>{l}</Chip>)}</div>
-        <div className="mt-3 grid gap-2.5">
-          <Button variant="ghost" size="sm" onClick={() => nav('/notifications')}>🔔 Thông báo</Button>
-          <Button variant="ghost" size="sm" onClick={() => setInstall(true)}><Smartphone size={16} className="mr-1 inline" /> Cài đặt app</Button>
-          <Button variant="ghost" size="sm" onClick={exportData}><Download size={16} className="mr-1 inline" /> Xuất dữ liệu</Button>
-          <Button size="sm" onClick={() => setDel(true)} className="!bg-none !bg-[#e5484d] !shadow-none">🗑️ Xoá hành trình</Button>
-        </div>
-      </Card>
-
-      <Card>
-        <h2 className="h3">📝 Nhật ký thay đổi quy tắc</h2>
-        {changes.length ? changes.map((c) => <p key={c.id} className="muted mt-1.5 !text-xs">{fmtDateTime(c.at, j.timezone)} – {c.description}</p>) : <p className="muted mt-1">Chưa có thay đổi nào.</p>}
-      </Card>
-      <p className="muted mt-4 pb-2 text-center !text-[11px]">Piggy Duo chỉ ghi lại cam kết và khoản góp, không giữ hay chuyển tiền thật.</p>
+      </Modal>
 
       <EditRulesDialog open={edit} onClose={() => setEdit(false)} />
       <InstallGuide open={install} onClose={() => setInstall(false)} />
-      <ConfirmDialog open={del} danger title="Xoá toàn bộ hành trình?" message="Mọi khoản góp, nhật ký và thử thách trên máy này sẽ bị xoá và không thể hoàn tác. Hãy xuất dữ liệu trước nếu cần lưu lại." confirmLabel="Xoá hành trình" onClose={() => setDel(false)} onConfirm={async () => { if (await run(repo.reset())) nav('/welcome') }} />
+      <ConfirmDialog
+        open={del}
+        danger
+        title="Xoá toàn bộ hành trình?"
+        message="Mọi khoản góp, nhật ký và thử thách sẽ bị xoá và không thể hoàn tác. Hãy xuất dữ liệu trước nếu cần lưu lại."
+        confirmLabel="Xoá hành trình"
+        onClose={() => setDel(false)}
+        onConfirm={async () => {
+          if (await run(repo.reset())) nav('/welcome')
+        }}
+      />
     </div>
   )
 }

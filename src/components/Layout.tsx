@@ -1,12 +1,12 @@
-import { BookOpen, Heart, Home, Medal, WifiOff } from 'lucide-react'
+import { Clock, Heart, Home, Trophy, WifiOff } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { FxHost, ToastHost } from '@/components/FxHost'
 import { useOnline } from '@/hooks/useStore'
 
 const TABS = [
   { to: '/', label: 'Trang chủ', Icon: Home, end: true },
-  { to: '/journal', label: 'Nhật ký', Icon: BookOpen },
-  { to: '/challenges', label: 'Thử thách', Icon: Medal },
+  { to: '/journal', label: 'Nhật ký', Icon: Clock },
+  { to: '/challenges', label: 'Thử thách', Icon: Trophy },
   { to: '/couple', label: 'Của chúng mình', Icon: Heart },
 ]
 

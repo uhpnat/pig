@@ -2,7 +2,6 @@
 import { ChevronLeft, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Pig, type PigMood } from '@/components/pig/Pig'
 import { Avatar, Badge, Button, Chip, ProgressBar } from '@/components/ui'
 import { monthlyBudget } from '@/domain/engine'
 import { fmtLongDate, pct, vnd } from '@/domain/format'
@@ -66,7 +65,6 @@ export default function RevealPage() {
     else if (mates.every((c) => c.status === 'confirmed')) { celebrate(['🪙', '💗']); beep(state.settings, 'win') }
   }
 
-  const mood: PigMood = rolling ? 'eating' : allDone ? 'celebrating' : reveal ? 'happy' : 'idle'
   const budget = monthlyBudget(j)
   const monthUsed = state.reveals.filter((r) => r.date.slice(0, 7) === today.slice(0, 7)).reduce((s, r) => s + r.amounts.a + r.amounts.b, 0)
   const conf = confirmedTotals(cs)
@@ -84,10 +82,23 @@ export default function RevealPage() {
       </div>
 
       <div className="-mx-4 mt-1 grid place-items-center" style={{ minHeight: 200 }}>
-        {showResult || rolling ? (
-          <div className="py-4"><Pig config={j.pig} progress={progress} mood={mood} size={200} reducedMotion={motionOff} /></div>
+        {showResult ? (
+          <div className="py-3">
+            <img
+              src={IMG.big}
+              alt={j.pig.name}
+              className="h-44 w-44 rounded-[36px] border-4 border-white object-cover shadow-[0_14px_30px_rgba(60,30,120,.35)]"
+            />
+          </div>
         ) : (
-          <motion.img src={IMG.glob} alt="Máy xu của heo" className="w-full" style={{ maskImage: 'linear-gradient(#000 82%, transparent)' }} animate={motionOff ? undefined : { y: [0, -8, 0] }} transition={{ duration: 2.4, repeat: Infinity }} />
+          <motion.img
+            src={IMG.glob}
+            alt="Máy xu của heo"
+            className="w-full"
+            style={{ maskImage: 'linear-gradient(#000 82%, transparent)' }}
+            animate={motionOff ? undefined : rolling ? { scale: [1, 1.04, 0.97, 1], rotate: [-1.5, 1.5, -1.5] } : { y: [0, -8, 0] }}
+            transition={{ duration: rolling ? 0.45 : 2.4, repeat: Infinity }}
+          />
         )}
       </div>
 

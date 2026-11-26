@@ -68,10 +68,15 @@ export default function OnboardingPage() {
         <motion.div key={step} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
           {step === 0 && (
             <>
-              <div className="-mx-4 mt-2"><img src={IMG.ob} alt="Chú heo cùng những đồng xu" className="block w-full" style={{ maskImage: 'linear-gradient(#000 88%, transparent)' }} /></div>
-              <h1 className="h1 -mt-3 text-center">Bắt đầu hành trình tiết kiệm cùng nhau! 💗</h1>
-              <p className="muted mt-1.5 text-center">Cùng nuôi heo đất, đạt mục tiêu và biến ước mơ thành hiện thực.</p>
-              <Card>
+              <div className="-mx-4 -mt-3">
+                <img
+                  src={IMG.ob}
+                  alt="Bắt đầu hành trình tiết kiệm cùng nhau"
+                  className="block w-full"
+                  style={{ maskImage: 'linear-gradient(#000 88%, transparent)' }}
+                />
+              </div>
+              <Card className="!-mt-3">
                 <h2 className="h3">🗺️ Hành trình tiết kiệm</h2>
                 <Field label="Tên hành trình" placeholder="Heo Nhà Mình" error={errors.name?.message} {...register('name')} />
                 <Field label="Ngày bắt đầu" type="date" error={errors.startDate?.message} {...register('startDate')} />

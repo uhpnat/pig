@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   sound: false,
   haptics: true,
   animations: 'auto',
-  theme: 'auto',
+  theme: 'light',
   notifyReveal: true,
   notifyPartner: true,
   notifyRecap: true,
