@@ -64,6 +64,11 @@ function GrassyHillsSVG({ variant = 'green' }: { variant?: 'green' | 'pink' }) {
   )
 }
 
+export interface MembersShareData {
+  a: { name: string; avatar: string; amount: number; pct: number }
+  b: { name: string; avatar: string; amount: number; pct: number }
+}
+
 interface StageProps {
   spriteSrc: string
   alt: string
@@ -72,26 +77,26 @@ interface StageProps {
   reducedMotion?: boolean
   badge?: ReactNode
   onPoke?: () => void
-  /**
-   * 0..100: When provided, the 3D pig becomes a translucent crystal/glass piggy bank
-   * and liquid color + sloshing water waves + bubbles fill up inside the pig's body from bottom to top!
-   */
   liquidFillPct?: number
   liquidLabel?: string
+  membersShare?: MembersShareData
 }
 
 export function Interactive3DStage({
   spriteSrc,
   alt,
   theme = 'meadow',
-  spriteHeight = 205,
+  spriteHeight = 225,
   reducedMotion,
   badge,
   onPoke,
   liquidFillPct,
   liquidLabel,
+  membersShare,
 }: StageProps) {
   const [jumping, setJumping] = useState(false)
+  const [droppingCoin, setDroppingCoin] = useState(false)
+  const [quoteIdx, setQuoteIdx] = useState(0)
   const [bursts, setBursts] = useState<{ id: number; x: number; emoji: string }[]>([])
 
   const mx = useMotionValue(0)
@@ -116,7 +121,9 @@ export function Interactive3DStage({
 
   const triggerJump = () => {
     setJumping(true)
+    setDroppingCoin(true)
     onPoke?.()
+    setQuoteIdx((q) => q + 1)
     const emojis = theme === 'romantic' ? ['💗', '💕', '✨', '💖'] : ['💧', '🪙', '💗', '✨']
     const now = Date.now()
     setBursts((b) => [
@@ -127,13 +134,34 @@ export function Interactive3DStage({
         emoji: emojis[i % emojis.length],
       })),
     ])
-    setTimeout(() => setJumping(false), 650)
+    setTimeout(() => {
+      setJumping(false)
+      setDroppingCoin(false)
+    }, 700)
   }
 
   const hasLiquid = typeof liquidFillPct === 'number'
   const clampedFill = hasLiquid ? Math.max(0, Math.min(100, liquidFillPct)) : 100
-  // Visual fill maps 0% -> 4% (so a tiny puddle at the hooves is visible even at >0) and 100% -> 100%
   const visualFill = clampedFill <= 0 ? 0 : Math.max(8, Math.min(100, clampedFill))
+
+  // Calculate dual contributions: Member A (Sky Blue) vs Member B (Rose Pink)
+  const shareA = membersShare?.a?.pct ?? 50
+  const shareB = membersShare?.b?.pct ?? 50
+  const nameA = membersShare?.a?.name ?? 'Bạn'
+  const nameB = membersShare?.b?.name ?? 'Người ấy'
+
+  // Dynamic Pig Quotes reflecting who is contributing more or less
+  const quotes = [
+    shareA > shareB
+      ? `👑 ${nameA} đang dẫn đầu (${shareA.toFixed(0)}%) · ${nameB} cố lên nè! 💕`
+      : shareB > shareA
+        ? `👑 ${nameB} đang dẫn đầu (${shareB.toFixed(0)}%) · ${nameA} ơi đuổi theo nha! 💕`
+        : `⚖️ Hai bạn đang hòa nhau (${shareA.toFixed(0)}%) · Cùng cố gắng nhé! 💗`,
+    `🐷 Heo no ${clampedFill.toFixed(0)}% rồi đó! Chạm vào em để bỏ thêm xu nha 🪙`,
+    `✨ Tích tiểu thành đại, chẳng mấy chốc về chung một nhà! 🏡`,
+    `💧 Nước trong bụng em: Xanh (${nameA}) & Hồng (${nameB}) nè! 🌊`,
+  ]
+  const currentQuote = quotes[quoteIdx % quotes.length]
 
   return (
     <div
@@ -145,21 +173,21 @@ export function Interactive3DStage({
       aria-label={`${alt} – chạm để tương tác 3D`}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && triggerJump()}
       className="relative w-full cursor-pointer select-none overflow-hidden"
-      style={{ height: spriteHeight + 55, perspective: 900 }}
+      style={{ height: spriteHeight + 70, perspective: 900 }}
     >
       {/* LAYER 1: Drifting Clouds & Floating Ambient Particles */}
       <motion.div style={{ x: bgShiftX }} className="pointer-events-none absolute inset-0">
         {theme !== 'galaxy' && (
           <>
             <motion.div
-              className="absolute -left-4 top-3 w-36 opacity-90"
+              className="absolute -left-4 top-4 w-36 opacity-90"
               animate={reducedMotion ? undefined : { x: [0, 18, 0] }}
               transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
             >
               <FluffyCloud />
             </motion.div>
             <motion.div
-              className="absolute -right-6 top-6 w-40 opacity-85"
+              className="absolute -right-6 top-8 w-40 opacity-85"
               animate={reducedMotion ? undefined : { x: [0, -20, 0] }}
               transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
             >
@@ -171,15 +199,13 @@ export function Interactive3DStage({
         {!reducedMotion &&
           (theme === 'romantic'
             ? ['💗', '💕', '💖', '✨']
-            : theme === 'galaxy'
-              ? ['✨', '⭐', '🪙', '✨']
-              : ['✨', '🪙', '💗', '✨']
+            : ['✨', '🪙', '💗', '✨']
           ).map((em, idx) => (
             <motion.span
               key={idx}
               aria-hidden
               className="absolute text-lg drop-shadow"
-              style={{ left: `${12 + idx * 24}%`, top: `${18 + (idx % 2) * 16}%` }}
+              style={{ left: `${12 + idx * 24}%`, top: `${22 + (idx % 2) * 16}%` }}
               animate={{ y: [0, -14, 0], scale: [0.9, 1.15, 0.9], opacity: [0.55, 1, 0.55] }}
               transition={{ duration: 2.6 + idx * 0.5, repeat: Infinity, delay: idx * 0.4 }}
             >
@@ -187,6 +213,35 @@ export function Interactive3DStage({
             </motion.span>
           ))}
       </motion.div>
+
+      {/* Floating Animated Speech Bubble ("Heo Đất Nói") */}
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: -6 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        key={currentQuote}
+        className="pointer-events-none absolute inset-x-0 top-1.5 z-20 flex justify-center px-4"
+      >
+        <div className="relative flex max-w-[340px] items-center gap-1.5 rounded-full border-2 border-white bg-white/95 px-3.5 py-1.5 text-center text-xs font-black text-[#1e1b4b] shadow-[0_8px_20px_rgba(40,25,90,.15)] backdrop-blur-md">
+          <span className="truncate">{currentQuote}</span>
+          {/* Small cute speech triangle pointer */}
+          <div className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-white bg-white" />
+        </div>
+      </motion.div>
+
+      {/* Coin Dropping Animation into Pig's Slot */}
+      <AnimatePresence>
+        {droppingCoin && (
+          <motion.div
+            initial={{ y: 0, scale: 0.6, opacity: 0 }}
+            animate={{ y: spriteHeight * 0.28, scale: 1.2, opacity: 1 }}
+            exit={{ scale: 0.2, opacity: 0 }}
+            transition={{ duration: 0.38, ease: 'easeIn' }}
+            className="pointer-events-none absolute inset-x-0 top-7 z-30 flex justify-center text-3xl drop-shadow-[0_4px_12px_rgba(250,204,21,.6)]"
+          >
+            🪙
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* LAYER 2: 3D Ground */}
       {(theme === 'meadow' || theme === 'romantic') && (
@@ -210,7 +265,7 @@ export function Interactive3DStage({
         transition={{ duration: jumping ? 0.6 : 2.6, repeat: jumping ? 0 : Infinity, ease: 'easeInOut' }}
       />
 
-      {/* LAYER 4: Separated 3D Cutout Mascot (Translucent Glass + Sloshing Liquid Water Fill when hasLiquid=true) */}
+      {/* LAYER 4: Separated 3D Cutout Mascot (Dual Liquid Water Fill reflecting who contributed more/less) */}
       <div className="absolute inset-x-0 bottom-4 flex justify-center">
         <motion.div
           style={{
@@ -223,10 +278,10 @@ export function Interactive3DStage({
               ? undefined
               : jumping
                 ? {
-                    y: [0, -34, 4, 0],
-                    scaleX: [1, 0.92, 1.08, 1],
-                    scaleY: [1, 1.08, 0.92, 1],
-                    rotateZ: [0, -4, 4, 0],
+                    y: [0, -36, 4, 0],
+                    scaleX: [1, 0.9, 1.1, 1],
+                    scaleY: [1, 1.1, 0.9, 1],
+                    rotateZ: [0, -5, 5, 0],
                   }
                 : {
                     y: [0, -7, 0],
@@ -248,7 +303,7 @@ export function Interactive3DStage({
               style={{
                 height: spriteHeight,
                 width: 'auto',
-                filter: 'drop-shadow(0 14px 18px rgba(30, 27, 75, 0.26))',
+                filter: 'drop-shadow(0 14px 22px rgba(30, 27, 75, 0.28))',
               }}
               className="block select-none object-contain"
               draggable={false}
@@ -258,18 +313,18 @@ export function Interactive3DStage({
               className="relative select-none"
               style={{
                 height: spriteHeight,
-                filter: 'drop-shadow(0 14px 20px rgba(30, 27, 75, 0.28))',
+                filter: 'drop-shadow(0 14px 22px rgba(30, 27, 75, 0.28))',
               }}
             >
-              {/* 4A. Translucent Crystal Glass Piggy Shell (Unfilled portion looks like frosted clear crystal glass!) */}
+              {/* 4A. Translucent Crystal Glass Piggy Shell */}
               <img
                 src={spriteSrc}
                 alt={alt}
                 style={{
                   height: spriteHeight,
                   width: 'auto',
-                  opacity: 0.36,
-                  filter: 'saturate(0.15) brightness(1.22) contrast(1.12)',
+                  opacity: 0.38,
+                  filter: 'saturate(0.2) brightness(1.2) contrast(1.1)',
                 }}
                 className="block select-none object-contain"
                 draggable={false}
@@ -295,7 +350,7 @@ export function Interactive3DStage({
                 />
               </motion.div>
 
-              {/* 4C. Sloshing Liquid Water Waves & Rising Bubbles Masked Strictly to the Pig's Exact 3D Silhouette! */}
+              {/* 4C. DUAL SLOSHING WATER WAVES (Blue for Member A, Pink for Member B) */}
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -310,7 +365,7 @@ export function Interactive3DStage({
                   maskPosition: 'center',
                 }}
               >
-                {/* Glass rim specular reflection on top of the crystal pig */}
+                {/* Specular glass reflection on top */}
                 <div
                   className="absolute inset-0"
                   style={{
@@ -319,7 +374,7 @@ export function Interactive3DStage({
                   }}
                 />
 
-                {/* Rising Liquid Column */}
+                {/* Rising Dual-Color Liquid Column */}
                 {visualFill > 0 && (
                   <motion.div
                     className="absolute inset-x-0 bottom-0"
@@ -327,7 +382,7 @@ export function Interactive3DStage({
                     animate={{ height: `${visualFill}%` }}
                     transition={{ duration: 1.1, ease: 'easeOut' }}
                   >
-                    {/* Back Wave (slower, deeper rose-pink/gold water) */}
+                    {/* Back Wave (Dual tone: Sky Blue on left for Member A, Rose Pink on right for Member B) */}
                     <motion.svg
                       viewBox="0 0 400 28"
                       preserveAspectRatio="none"
@@ -335,13 +390,20 @@ export function Interactive3DStage({
                       animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
                       transition={{ duration: 3.4, repeat: Infinity, ease: 'linear' }}
                     >
+                      <defs>
+                        <linearGradient id="wave-grad-back" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.65" />
+                          <stop offset={`${Math.max(25, Math.min(75, shareA))}%`} stopColor="#a855f7" stopOpacity="0.6" />
+                          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.65" />
+                        </linearGradient>
+                      </defs>
                       <path
                         d="M0 14 Q 50 0 100 14 T 200 14 T 300 14 T 400 14 L 400 28 L 0 28 Z"
-                        fill="rgba(244, 63, 94, 0.55)"
+                        fill="url(#wave-grad-back)"
                       />
                     </motion.svg>
 
-                    {/* Front Sloshing Wave (brighter glossy water surface meniscus) */}
+                    {/* Front Sloshing Wave (glossy sparkling surface meniscus) */}
                     <motion.svg
                       viewBox="0 0 400 28"
                       preserveAspectRatio="none"
@@ -351,50 +413,67 @@ export function Interactive3DStage({
                     >
                       <path
                         d="M0 14 Q 50 28 100 14 T 200 14 T 300 14 T 400 14 L 400 28 L 0 28 Z"
-                        fill="rgba(255, 255, 255, 0.72)"
+                        fill="rgba(255, 255, 255, 0.75)"
                       />
                     </motion.svg>
 
-                    {/* Liquid body tint & Rising Bubbles inside the water */}
+                    {/* Dual Liquid Body Gradient (shows ratio of Member A vs Member B) */}
                     <div
                       className="relative h-full w-full overflow-hidden"
                       style={{
-                        background:
-                          'linear-gradient(180deg, rgba(255,110,160,0.28) 0%, rgba(255,61,119,0.22) 60%, rgba(250,204,21,0.25) 100%)',
+                        background: `linear-gradient(90deg, rgba(56,189,248,0.36) 0%, rgba(56,189,248,0.32) ${Math.max(15, shareA - 8)}%, rgba(244,63,94,0.32) ${Math.min(85, shareA + 8)}%, rgba(244,63,94,0.36) 100%)`,
                       }}
                     >
+                      {/* Dual rising bubbles: Sky Blue on left, Rose Pink on right */}
                       {!reducedMotion &&
-                        [18, 36, 54, 72, 84].map((leftPct, bIdx) => (
-                          <motion.span
-                            key={bIdx}
-                            className="absolute bottom-1 rounded-full bg-white/75 shadow-[0_0_6px_rgba(255,255,255,0.9)]"
-                            style={{
-                              left: `${leftPct}%`,
-                              width: 5 + (bIdx % 3) * 3,
-                              height: 5 + (bIdx % 3) * 3,
-                            }}
-                            animate={{
-                              y: [0, -spriteHeight * (visualFill / 100)],
-                              x: [0, bIdx % 2 === 0 ? 6 : -6, 0],
-                              opacity: [0, 0.9, 0],
-                            }}
-                            transition={{
-                              duration: 1.8 + bIdx * 0.35,
-                              repeat: Infinity,
-                              delay: bIdx * 0.4,
-                              ease: 'easeIn',
-                            }}
-                          />
-                        ))}
+                        [16, 32, 50, 68, 84].map((leftPct, bIdx) => {
+                          const isLeftA = leftPct < 50
+                          return (
+                            <motion.span
+                              key={bIdx}
+                              className={`absolute bottom-1 rounded-full shadow-[0_0_6px_rgba(255,255,255,0.9)] ${
+                                isLeftA ? 'bg-sky-200/90' : 'bg-pink-200/90'
+                              }`}
+                              style={{
+                                left: `${leftPct}%`,
+                                width: 5 + (bIdx % 3) * 3,
+                                height: 5 + (bIdx % 3) * 3,
+                              }}
+                              animate={{
+                                y: [0, -spriteHeight * (visualFill / 100)],
+                                x: [0, bIdx % 2 === 0 ? 5 : -5, 0],
+                                opacity: [0, 0.9, 0],
+                              }}
+                              transition={{
+                                duration: 1.8 + bIdx * 0.35,
+                                repeat: Infinity,
+                                delay: bIdx * 0.4,
+                                ease: 'easeIn',
+                              }}
+                            />
+                          )
+                        })}
                     </div>
                   </motion.div>
                 )}
 
-                {/* Floating Water Level Percentage Pill right on the pig's belly */}
-                <div className="absolute inset-x-0 bottom-3 flex justify-center">
-                  <span className="rounded-full border border-white/90 bg-white/85 px-2.5 py-0.5 text-[11px] font-black text-[#e11d48] shadow-md backdrop-blur-sm">
-                    💧 {liquidLabel ?? `Tháng này: ${clampedFill.toFixed(0)}%`}
-                  </span>
+                {/* Floating Dual Contribution Pill on the pig's belly showing who saved more */}
+                <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1.5 px-3">
+                  {membersShare ? (
+                    <div className="flex items-center gap-1.5 rounded-full border border-white/90 bg-white/90 px-3 py-1 shadow-md backdrop-blur-sm text-[11px] font-black">
+                      <span className={`flex items-center gap-0.5 ${shareA >= shareB ? 'text-sky-600 font-extrabold' : 'text-slate-600'}`}>
+                        {shareA > shareB && '👑'} {nameA}: {shareA.toFixed(0)}%
+                      </span>
+                      <span className="text-slate-400">·</span>
+                      <span className={`flex items-center gap-0.5 ${shareB >= shareA ? 'text-pink-600 font-extrabold' : 'text-slate-600'}`}>
+                        {shareB > shareA && '👑'} {nameB}: {shareB.toFixed(0)}%
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="rounded-full border border-white/90 bg-white/85 px-2.5 py-0.5 text-[11px] font-black text-[#e11d48] shadow-md backdrop-blur-sm">
+                      💧 {liquidLabel ?? `Tháng này: ${clampedFill.toFixed(0)}%`}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

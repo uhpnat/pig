@@ -1,16 +1,17 @@
-import { BarChart3, Bell, Plus, PlusCircle } from 'lucide-react'
+import { BarChart3, Bell, Plus, PlusCircle, Sparkles } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ActivityRow } from '@/components/ActivityRow'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
-import { GiftBoxSticker, TrophySticker } from '@/components/Stickers'
+import { GiftBoxSticker } from '@/components/Stickers'
 import { Avatar, Badge, Button, Card, EmptyState } from '@/components/ui'
 import { monthlyBudget } from '@/domain/engine'
 import { diffDays, vnd } from '@/domain/format'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
+import { beep, haptic } from '@/lib/fx'
 import { IMG } from '@/lib/assets'
 import { TopUpDialog } from './TopUpDialog'
 
@@ -37,7 +38,7 @@ export default function HomePage() {
   const anyConfirmed = cs.some((c) => c.status === 'confirmed')
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
 
-  // Monthly contribution progress (%) to pour water/color into the translucent 3D pig!
+  // Monthly contribution progress (%) to pour dual-color water into the translucent 3D pig!
   const curMonthKey = today.slice(0, 7)
   const monthSaved = state.contributions
     .filter((c) => c.status === 'confirmed' && c.date.startsWith(curMonthKey))
@@ -53,6 +54,9 @@ export default function HomePage() {
         ? `${Math.round(daysLeft / 30)} tháng`
         : `${daysLeft} ngày`
 
+  const shareA = actual.a * 100
+  const shareB = actual.b * 100
+
   return (
     <div
       className="relative min-h-[100dvh] pb-[calc(96px+env(safe-area-inset-bottom))]"
@@ -61,78 +65,90 @@ export default function HomePage() {
         background: 'linear-gradient(180deg, #86c5ff 0%, #b8deff 26%, #e6f5d0 52%, #fdf2e9 72%, #fce8ef 100%)',
       }}
     >
-      {/* 1. Top Row: Avatars + Plus button on left, Bell on right */}
+      {/* 1. Top Bar: Avatars with Love Line on left, Notification Bell on right */}
       <header className="relative z-10 flex items-center justify-between px-4">
         <div className="flex items-center">
-          <Avatar value={j.members.a.avatar} size={46} className="z-10 shadow-md" />
-          <Avatar value={j.members.b.avatar} size={46} className="-ml-2.5 z-20 shadow-md" />
+          <Avatar value={j.members.a.avatar} size={44} className="z-10 shadow-md ring-2 ring-white" />
+          <span className="relative z-20 -mx-1.5 grid h-6 w-6 place-items-center rounded-full bg-pink-500 text-[11px] text-white shadow-sm">
+            💖
+          </span>
+          <Avatar value={j.members.b.avatar} size={44} className="z-10 shadow-md ring-2 ring-white" />
           <Link
             to="/couple"
             aria-label="Của chúng mình"
-            className="ml-1.5 grid h-10 w-10 place-items-center rounded-full border-2 border-white/80 bg-white/30 text-white shadow-sm backdrop-blur-sm no-underline transition-transform active:scale-95"
+            className="ml-2 grid h-9 w-9 place-items-center rounded-full border-2 border-white/80 bg-white/40 text-white shadow-sm backdrop-blur-sm no-underline transition-transform active:scale-95"
           >
-            <Plus size={20} strokeWidth={2.75} />
+            <Plus size={18} strokeWidth={2.75} />
           </Link>
         </div>
 
         <Link
           to="/notifications"
           aria-label={`Thông báo${unread ? `, ${unread} chưa đọc` : ''}`}
-          className="relative grid h-11 w-11 place-items-center rounded-full border-2 border-white/80 bg-white/75 text-[#1e1b4b] shadow-md backdrop-blur-md no-underline"
+          className="relative grid h-10 w-10 place-items-center rounded-full border-2 border-white/80 bg-white/85 text-[#1e1b4b] shadow-md backdrop-blur-md no-underline transition-transform active:scale-95"
         >
-          <Bell size={20} />
-          <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full border-2 border-white bg-[#ff3b6b] px-1 text-[10px] font-black text-white">
-            {unread > 0 ? unread : 1}
-          </span>
+          <Bell size={19} />
+          {unread > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-[#ff3b6b] px-1 text-[9px] font-black text-white">
+              {unread}
+            </span>
+          )}
         </Link>
       </header>
 
-      {/* 2. Centered Journey Name & Subtitle on the sky */}
-      <div className="mt-1.5 px-4 text-center">
-        <h1 className="text-[24px] font-black leading-tight tracking-tight text-[#172554]">
-          {j.name} <span className="text-[#ff4d8d]">♡</span>
+      {/* 2. Journey Title */}
+      <div className="mt-1 px-4 text-center">
+        <h1 className="text-[22px] font-black leading-tight tracking-tight text-[#172554]">
+          {j.name} <Sparkles size={16} className="inline text-[#ff4d8d]" />
         </h1>
-        <p className="mt-0.5 text-[13px] font-extrabold text-[#1e3a8a]/85">
-          Cùng nhau tiết kiệm, cùng nhau hạnh phúc!
+        <p className="mt-0.5 text-xs font-extrabold text-[#1e3a8a]/80">
+          Chạm vào heo để tương tác & bỏ xu nha!
         </p>
       </div>
 
-      {/* 3. Separated 3D Cutout Pig Mascot on Interactive Multi-Layer 3D Cloud & Grassy Hill Stage + Overlapping Progress Card */}
+      {/* 3. HERO: CHỦ ĐẠO LÀ CON HEO ĐẤT 3D MỚI VỚI NƯỚC ĐA MÀU SO SÁNH ĐÓNG GÓP */}
       <div className="relative mt-0.5">
         <Interactive3DStage
           spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
           alt={`${j.pig.name} – ${pigStage(progress).label}`}
           theme="meadow"
-          spriteHeight={235}
+          spriteHeight={255}
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
-          liquidLabel={`Tháng ${today.slice(5, 7)}: ${monthPct.toFixed(1)}%`}
+          membersShare={{
+            a: { name: j.members.a.name, avatar: j.members.a.avatar, amount: t.a, pct: shareA },
+            b: { name: j.members.b.name, avatar: j.members.b.avatar, amount: t.b, pct: shareB },
+          }}
+          onPoke={() => {
+            beep(state.settings, 'tick')
+            haptic(state.settings, 30)
+          }}
         />
 
-        {/* Overlapping Glossy Green Progress Card */}
-        <div className="relative -mt-7 px-4">
+        {/* 4. Overlapping Glossy Green-Gold Progress & Duel Card */}
+        <div className="relative -mt-8 px-4">
           <div
-            className="relative overflow-hidden rounded-[32px] border-[2.5px] border-white/85 px-5 pb-4 pt-3 text-center text-white shadow-[0_16px_32px_rgba(90,150,60,.32),inset_0_2px_6px_rgba(255,255,255,.75)] backdrop-blur-md"
+            className="relative overflow-hidden rounded-[30px] border-[2.5px] border-white/90 px-5 pb-4 pt-3.5 text-center text-white shadow-[0_16px_32px_rgba(90,150,60,.32),inset_0_2px_6px_rgba(255,255,255,.75)] backdrop-blur-md"
             style={{
               background:
-                'linear-gradient(180deg, rgba(143,204,88,0.92) 0%, rgba(164,214,104,0.9) 45%, rgba(210,192,126,0.92) 100%)',
+                'linear-gradient(180deg, rgba(143,204,88,0.95) 0%, rgba(164,214,104,0.92) 45%, rgba(210,192,126,0.95) 100%)',
             }}
           >
-            {/* Top-left yellow glossy arc decoration matching the mockup */}
+            {/* Top-left yellow glossy arc decoration */}
             <span
               aria-hidden
               className="pointer-events-none absolute left-3 top-2.5 h-10 w-16 rounded-tl-[24px] border-l-[6px] border-t-[6px] border-[#ffd43b] opacity-95 drop-shadow"
             />
 
-            <p className="text-[48px] font-black leading-none tracking-tight drop-shadow-[0_3px_4px_rgba(40,90,30,.3)]">
+            <p className="text-[44px] font-black leading-none tracking-tight drop-shadow-[0_3px_4px_rgba(40,90,30,.3)]">
               <AnimatedNumber value={progress} format={(n) => `${n.toFixed(1)} %`} />
             </p>
-            <p className="mt-1 text-[15px] font-black tracking-wide text-white/95 drop-shadow-sm">
+            <p className="mt-1 text-[14px] font-black tracking-wide text-white/95 drop-shadow-sm">
               <AnimatedNumber value={confirmed.total} format={(n) => Math.round(n).toLocaleString('vi-VN')} /> /{' '}
               {j.goal.toLocaleString('vi-VN')}đ
             </p>
 
-            {/* Pink Progress Bar with Gift Box Icon on the right */}
+            {/* Total Savings Progress Bar with Gift Box Icon */}
             <div className="mt-2.5 flex items-center gap-2.5">
               <div
                 className="h-4 flex-1 overflow-hidden rounded-full bg-black/20 p-0.5 shadow-inner"
@@ -153,113 +169,91 @@ export default function HomePage() {
                   transition={{ duration: 0.9, ease: 'easeOut' }}
                 />
               </div>
-              <GiftBoxSticker size={34} className="-mr-1 shrink-0 drop-shadow" />
+              <GiftBoxSticker size={32} className="-mr-1 shrink-0 drop-shadow" />
             </div>
 
-            {pending.total > 0 && (
-              <p className="mt-2 rounded-full bg-black/20 px-3 py-0.5 text-[11px] font-extrabold text-white">
-                ⏳ Đang chờ xác nhận: {vnd(pending.total)}
-              </p>
-            )}
+            {/* In-Card Duel Ratio Bar showing who contributed more/less */}
+            <div className="mt-3 rounded-2xl bg-black/20 p-2 text-white">
+              <div className="flex items-center justify-between text-[11px] font-black">
+                <span className="flex items-center gap-1 text-sky-200">
+                  {shareA > shareB && '👑'} {j.members.a.name}: {fmtM(t.a)} ({shareA.toFixed(0)}%)
+                </span>
+                <span className="text-white/60">·</span>
+                <span className="flex items-center gap-1 text-pink-200">
+                  {shareB > shareA && '👑'} {j.members.b.name}: {fmtM(t.b)} ({shareB.toFixed(0)}%)
+                </span>
+              </div>
+              <div className="mt-1.5 flex h-2 w-full overflow-hidden rounded-full bg-white/20 p-0.5">
+                <div
+                  className="h-full rounded-l-full bg-sky-400 transition-all duration-700"
+                  style={{ width: `${Math.max(8, Math.min(92, shareA))}%` }}
+                />
+                <div
+                  className="h-full rounded-r-full bg-pink-400 transition-all duration-700"
+                  style={{ width: `${Math.max(8, Math.min(92, shareB))}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-center gap-3 text-[11px] font-extrabold text-white/95">
+              <span>⏳ Còn lại: {timeRemainingLabel}</span>
+              {pending.total > 0 && <span>· Chờ duyệt: {vnd(pending.total)}</span>}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="px-4">
-        {/* 4. Side-by-Side Member Contribution Card matching the mockup */}
-        <div className="mt-3.5 grid grid-cols-2 divide-x divide-[#f1e4e8] rounded-[26px] border-2 border-white bg-white/95 px-3 py-3 shadow-[0_10px_24px_rgba(180,140,160,.16)]">
-          {(['a', 'b'] as const).map((k, idx) => {
-            const m = j.members[k]
-            const sharePct = actual[k] * 100
-            const barColor = idx === 0 ? 'linear-gradient(90deg,#38bdf8,#2563eb)' : 'linear-gradient(90deg,#ff7aa2,#ec4899)'
-            return (
-              <div key={k} className={`flex items-center gap-2.5 ${idx === 1 ? 'pl-3' : 'pr-2'}`}>
-                <Avatar value={m.avatar} size={46} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[18px] font-black leading-tight text-[#1e1b4b]">
-                    {fmtM(t[k])}
-                  </p>
-                  <div className="my-1 h-2 w-full overflow-hidden rounded-full bg-[#e5e7eb]">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${Math.max(8, Math.min(100, sharePct))}%`, background: barColor }}
-                    />
-                  </div>
-                  <p className="text-[13px] font-black text-[#1e1b4b]">
-                    {sharePct.toFixed(1)}% <span className="text-[11px] font-bold text-[#6b7280]">({m.name})</span>
-                  </p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* 5. Two Prominent Pill Buttons: + Nạp tiền (Pink) & Xem chi tiết (Purple) */}
-        <div className="mt-3.5 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setTopUp(true)}
-            className="btn flex items-center justify-center gap-2 !py-3.5 !text-[16px]"
-          >
-            <PlusCircle size={20} strokeWidth={2.5} /> Nạp tiền
-          </button>
-          <button
-            type="button"
-            onClick={() => nav('/stats')}
-            className="btn btn-violet flex items-center justify-center gap-2 !py-3.5 !text-[16px]"
-          >
-            <BarChart3 size={20} strokeWidth={2.5} /> Xem chi tiết
-          </button>
-        </div>
-
-        {/* 6. Trophy Goal Card matching the mockup */}
-        <div className="mt-3.5 flex items-center justify-between rounded-[26px] border-2 border-white bg-white/95 px-4 py-3.5 shadow-[0_10px_24px_rgba(180,140,160,.15)]">
-          <div className="flex items-center gap-3">
-            <TrophySticker size={44} className="shrink-0 drop-shadow-sm" />
-            <div>
-              <p className="text-xs font-extrabold text-[#6b7280]">Mục tiêu của chúng ta</p>
-              <p className="text-[19px] font-black leading-tight text-[#1e1b4b]">{vnd(j.goal)}</p>
-            </div>
-          </div>
-          <div className="border-l border-[#f1e4e8] pl-4 text-right">
-            <p className="text-xs font-extrabold text-[#6b7280]">Còn lại</p>
-            <p className="text-[18px] font-black leading-tight text-[#1e1b4b]">{timeRemainingLabel}</p>
-          </div>
-        </div>
-
-        {/* 7. Daily Random Savings Ritual Card */}
-        <div className="mt-3.5">
+      <div className="mt-3.5 space-y-3.5 px-4">
+        {/* 5. PRIMARY ACTION: HÔM NAY CÙNG TIẾT KIỆM (Daily Ritual) */}
+        <div>
           {goalReached ? (
             <Card className="!mt-0 text-center">
               <h2 className="h2">🎉 Hoàn thành mục tiêu!</h2>
               <p className="muted mt-1">Hai bạn đã chạm đích. Tạo hành trình mới ở tab “Của chúng mình”.</p>
             </Card>
           ) : !reveal ? (
-            <Card className="!mt-0 text-center">
-              <h2 className="text-[16px] font-black text-[#1e1b4b]">🐷 Hôm nay tụi mình góp bao nhiêu nhỉ?</h2>
-              <p className="muted mb-3 mt-1">Một lần mỗi ngày, cả hai cùng mở kết quả may mắn.</p>
-              <Button onClick={() => nav('/reveal')}>MỞ SỐ TIỀN HÔM NAY</Button>
-            </Card>
+            <div className="relative overflow-hidden rounded-[26px] border-2 border-white bg-white/95 p-4 shadow-[0_12px_28px_rgba(90,40,160,.16)] text-center">
+              <p className="text-xs font-black uppercase tracking-wider text-[#7c3aed]">
+                Nhiệm vụ hôm nay 🎰
+              </p>
+              <h2 className="mt-0.5 text-[17px] font-black text-[#1e1b4b]">
+                Hôm nay tụi mình góp bao nhiêu nhỉ?
+              </h2>
+              <p className="mt-0.5 text-xs font-bold text-[#64748b]">
+                Kéo cần gạt may mắn để mở số tiền cho cả 2 người!
+              </p>
+              <Button
+                variant="violet"
+                className="mt-3 w-full !py-3.5 !text-[16px] shadow-lg shadow-purple-500/25"
+                onClick={() => nav('/reveal')}
+              >
+                🎰 KÉO CẦN GẠT MỞ SỐ HÔM NAY
+              </Button>
+            </div>
           ) : (
             <Card className="!mt-0">
               <div className="flex items-center justify-between">
                 <h2 className="h3 text-[#1e1b4b]">🎲 Kết quả mở số hôm nay</h2>
-                <Badge tone={allDone ? 'ok' : 'warn'}>{allDone ? 'Đã xác nhận đủ' : 'Chờ xác nhận'}</Badge>
+                <Badge tone={allDone ? 'ok' : 'warn'}>
+                  {allDone ? 'Đã xác nhận đủ ✅' : 'Chờ xác nhận ⏳'}
+                </Badge>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-center">
+
+              <div className="mt-3 grid grid-cols-2 gap-2.5 text-center">
                 {(['a', 'b'] as const).map((k) => {
                   const c = cs.find((x) => x.member === k)
                   return (
-                    <div key={k} className="rounded-2xl bg-white/70 p-2.5 shadow-sm">
+                    <div key={k} className="rounded-2xl bg-[#fdf2f7] p-2.5 shadow-sm">
                       <Avatar value={j.members[k].avatar} size={42} className="mx-auto" />
-                      <p className="mt-1 text-base font-black text-pink">+{vnd(reveal.amounts[k])}</p>
-                      <p className="muted !text-xs">
+                      <p className="mt-1 text-base font-black text-[#e11d48]">+{vnd(reveal.amounts[k])}</p>
+                      <p className="text-xs font-bold text-[#64748b]">
                         {j.members[k].name} {c?.status === 'confirmed' ? '✅' : '⏳'}
                       </p>
                     </div>
                   )
                 })}
               </div>
+
               <div className={`mt-3 grid ${anyConfirmed ? 'grid-cols-1' : 'grid-cols-2'} gap-2.5`}>
                 <Button variant="violet" size="sm" onClick={() => nav('/reveal')}>
                   {allDone ? 'Xem chi tiết' : 'Vào xác nhận góp'}
@@ -278,6 +272,7 @@ export default function HomePage() {
                   </Button>
                 )}
               </div>
+
               {anyConfirmed && !allDone && (
                 <p className="mt-2 text-center text-[11px] font-extrabold text-amber-700">
                   🔒 Đã có người xác nhận – số tiền hôm nay đã được khoá
@@ -287,19 +282,39 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 8. Compact Recent Activity */}
-        <Card className="!mt-3.5">
+        {/* 6. Quick Action Buttons: Nạp tiền (Pink) & Xem biểu đồ (Purple) */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setTopUp(true)}
+            className="btn flex items-center justify-center gap-2 !py-3.5 !text-[15px]"
+          >
+            <PlusCircle size={19} strokeWidth={2.5} /> + Nạp thêm
+          </button>
+          <button
+            type="button"
+            onClick={() => nav('/stats')}
+            className="btn btn-violet flex items-center justify-center gap-2 !py-3.5 !text-[15px]"
+          >
+            <BarChart3 size={19} strokeWidth={2.5} /> Xem biểu đồ
+          </button>
+        </div>
+
+        {/* 7. Recent Activity (Hoạt động gần đây) */}
+        <Card className="!mt-0">
           <div className="flex items-center justify-between">
             <h2 className="h3 text-[#1e1b4b]">Hoạt động gần đây</h2>
-            <Link to="/journal" className="muted !text-xs">
+            <Link to="/journal" className="muted !text-xs font-bold">
               Xem tất cả
             </Link>
           </div>
-          {state.activity.length ? (
-            state.activity.slice(0, 3).map((a) => <ActivityRow key={a.id} a={a} journey={j} />)
-          ) : (
-            <EmptyState title="Chưa có hoạt động" hint="Mở số tiền hôm nay để bắt đầu nhé!" />
-          )}
+          <div className="mt-2">
+            {state.activity.length ? (
+              state.activity.slice(0, 3).map((a) => <ActivityRow key={a.id} a={a} journey={j} />)
+            ) : (
+              <EmptyState title="Chưa có hoạt động" hint="Mở số tiền hôm nay để bắt đầu nhé!" />
+            )}
+          </div>
         </Card>
       </div>
 
