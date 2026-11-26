@@ -192,7 +192,8 @@ export class LocalRepository implements Repository {
     }
     this.syncStatus = { ...this.syncStatus, syncing: true, lastError: null }
     try {
-      const res = await fetch(url, { method: 'GET' })
+      const bustUrl = `${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}`
+      const res = await fetch(bustUrl, { method: 'GET', cache: 'no-store' })
       const text = await res.text()
       if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
         throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi" hoặc "Bất kỳ ai có tài khoản Google". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
@@ -236,34 +237,24 @@ export class LocalRepository implements Repository {
     return cur
   }
 
-  private commit(next: AppState): AppState {
+  private async mutate(fn: (s: AppState) => AppState): Promise<AppState> {
+    const next = fn(read())
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
-    void this.pushToSheet(next, true)
-    return next
-  }
-
-  private mutate(fn: (s: AppState) => AppState): Promise<AppState> {
-    try {
-      return Promise.resolve(this.commit(fn(read())))
-    } catch (e) {
-      return Promise.reject(e)
-    }
+    this.notify(next)
+    // Save immediately to Google Sheets on every user operation and return the synced state
+    await this.pushToSheet(next, true)
+    return read()
   }
 
   async load() {
+    // Always load fresh data from Google Sheets immediately when entering the app!
+    const remote = await this.pullFromSheet(true)
+    if (remote) return remote
     const local = read()
-    if (!local.journey?.setupDone) {
-      // Wait for Google Sheet data on cold start before rendering so we don't bounce to /#/welcome!
-      const remote = await this.pullFromSheet(false)
-      if (remote) return remote
-      return local
+    if (local.journey) {
+      void this.pushToSheet(local, false)
     }
-    void this.pullFromSheet(false).then((remote) => {
-      if (!remote && local.journey) {
-        void this.pushToSheet(local, false)
-      }
-    })
     return local
   }
 
@@ -272,7 +263,10 @@ export class LocalRepository implements Repository {
     const onMsg = () => cb(read())
     const onStorage = (e: StorageEvent) => { if (e.key === KEY || e.key === CFG_KEY) cb(read()) }
     const onFocus = () => {
-      if (document.visibilityState === 'visible') void this.pullFromSheet(false)
+      if (document.visibilityState === 'visible') void this.pullFromSheet(true)
+    }
+    const onWindowFocus = () => {
+      void this.pullFromSheet(true)
     }
     // Realtime polling every 6 seconds while tab is visible so partner's actions appear live
     const timer = setInterval(() => {
@@ -283,12 +277,16 @@ export class LocalRepository implements Repository {
     this.bc?.addEventListener('message', onMsg)
     window.addEventListener('storage', onStorage)
     window.addEventListener('visibilitychange', onFocus)
+    window.addEventListener('focus', onWindowFocus)
+    window.addEventListener('pageshow', onWindowFocus)
     return () => {
       clearInterval(timer)
       this.listeners.delete(cb)
       this.bc?.removeEventListener('message', onMsg)
       window.removeEventListener('storage', onStorage)
       window.removeEventListener('visibilitychange', onFocus)
+      window.removeEventListener('focus', onWindowFocus)
+      window.removeEventListener('pageshow', onWindowFocus)
     }
   }
 
@@ -298,7 +296,7 @@ export class LocalRepository implements Repository {
 
   async revealToday(by: Parameters<Repository['revealToday']>[0], forceReroll = false) {
     if (!forceReroll) {
-      await this.pullFromSheet(false).catch(() => null)
+      await this.pullFromSheet(true).catch(() => null)
     }
     let cur = read()
     const tz = cur.journey?.timezone
@@ -310,9 +308,10 @@ export class LocalRepository implements Repository {
     if (out.created) {
       localStorage.setItem(KEY, JSON.stringify(out.state))
       this.bc?.postMessage('changed')
-      void this.pushToSheet(out.state, true, forceReroll)
+      this.notify(out.state)
+      await this.pushToSheet(out.state, true, forceReroll)
     }
-    return out
+    return { ...out, state: read() }
   }
 
   async resetTodayReveal() {
