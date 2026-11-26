@@ -239,6 +239,21 @@ export default function OnboardingPage() {
                       />
                     )}
                   />
+                  <span className="label">Giới tính</span>
+                  <Controller
+                    control={control}
+                    name={`${k}Gender` as 'aGender'}
+                    render={({ field }) => (
+                      <div className="flex gap-2">
+                        <Chip on={field.value === 'male'} onClick={() => field.onChange('male')}>
+                          👦 Nam (Chàng)
+                        </Chip>
+                        <Chip on={field.value === 'female'} onClick={() => field.onChange('female')}>
+                          👧 Nữ (Nàng)
+                        </Chip>
+                      </div>
+                    )}
+                  />
                   <Controller
                     control={control}
                     name={`${k}Income` as 'aIncome'}

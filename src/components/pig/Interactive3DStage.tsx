@@ -65,8 +65,8 @@ function GrassyHillsSVG({ variant = 'green' }: { variant?: 'green' | 'pink' }) {
 }
 
 export interface MembersShareData {
-  a: { name: string; avatar: string; amount: number; pct: number }
-  b: { name: string; avatar: string; amount: number; pct: number }
+  a: { name: string; avatar: string; amount: number; pct: number; gender?: 'male' | 'female' }
+  b: { name: string; avatar: string; amount: number; pct: number; gender?: 'male' | 'female' }
 }
 
 interface StageProps {
@@ -144,22 +144,26 @@ export function Interactive3DStage({
   const clampedFill = hasLiquid ? Math.max(0, Math.min(100, liquidFillPct)) : 100
   const visualFill = clampedFill <= 0 ? 0 : Math.max(8, Math.min(100, clampedFill))
 
-  // Calculate dual contributions: Member A (Sky Blue) vs Member B (Rose Pink)
-  const shareA = membersShare?.a?.pct ?? 50
-  const shareB = membersShare?.b?.pct ?? 50
-  const nameA = membersShare?.a?.name ?? 'Bạn'
-  const nameB = membersShare?.b?.name ?? 'Người ấy'
+  // Identify Male (Chàng / Sky Blue) vs Female (Nàng / Rose Pink)
+  const isBMale = membersShare?.b?.gender === 'male' || membersShare?.a?.gender === 'female'
+  const memberMale = isBMale ? membersShare?.b : membersShare?.a
+  const memberFemale = isBMale ? membersShare?.a : membersShare?.b
+
+  const nameMale = memberMale?.name ?? 'Chàng'
+  const nameFemale = memberFemale?.name ?? 'Nàng'
+  const pctMale = memberMale?.pct ?? 50
+  const pctFemale = memberFemale?.pct ?? 50
 
   // Dynamic Pig Quotes reflecting who is contributing more or less
   const quotes = [
-    shareA > shareB
-      ? `👑 ${nameA} đang dẫn đầu (${shareA.toFixed(0)}%) · ${nameB} cố lên nè! 💕`
-      : shareB > shareA
-        ? `👑 ${nameB} đang dẫn đầu (${shareB.toFixed(0)}%) · ${nameA} ơi đuổi theo nha! 💕`
-        : `⚖️ Hai bạn đang hòa nhau (${shareA.toFixed(0)}%) · Cùng cố gắng nhé! 💗`,
+    pctMale > pctFemale
+      ? `👑 Chàng (${nameMale}) đang dẫn đầu (${pctMale.toFixed(0)}%) · Nàng (${nameFemale}) cố lên nè! 💕`
+      : pctFemale > pctMale
+        ? `👑 Nàng (${nameFemale}) đang dẫn đầu (${pctFemale.toFixed(0)}%) · Chàng (${nameMale}) đuổi theo nha! 💕`
+        : `⚖️ Chàng & Nàng đang hòa nhau (${pctMale.toFixed(0)}%) · Cùng cố gắng nhé! 💗`,
     `🐷 Heo no ${clampedFill.toFixed(0)}% rồi đó! Chạm vào em để bỏ thêm xu nha 🪙`,
     `✨ Tích tiểu thành đại, chẳng mấy chốc về chung một nhà! 🏡`,
-    `💧 Nước trong bụng em: Xanh (${nameA}) & Hồng (${nameB}) nè! 🌊`,
+    `💧 Nước xanh của Chàng (${nameMale}) & Nước hồng của Nàng (${nameFemale}) nè! 🌊`,
   ]
   const currentQuote = quotes[quoteIdx % quotes.length]
 
@@ -393,7 +397,7 @@ export function Interactive3DStage({
                       <defs>
                         <linearGradient id="wave-grad-back" x1="0" y1="0" x2="1" y2="0">
                           <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.65" />
-                          <stop offset={`${Math.max(25, Math.min(75, shareA))}%`} stopColor="#a855f7" stopOpacity="0.6" />
+                          <stop offset={`${Math.max(25, Math.min(75, pctMale))}%`} stopColor="#a855f7" stopOpacity="0.6" />
                           <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.65" />
                         </linearGradient>
                       </defs>
@@ -417,11 +421,11 @@ export function Interactive3DStage({
                       />
                     </motion.svg>
 
-                    {/* Dual Liquid Body Gradient (shows ratio of Member A vs Member B) */}
+                    {/* Dual Liquid Body Gradient (shows ratio of Male vs Female) */}
                     <div
                       className="relative h-full w-full overflow-hidden"
                       style={{
-                        background: `linear-gradient(90deg, rgba(56,189,248,0.36) 0%, rgba(56,189,248,0.32) ${Math.max(15, shareA - 8)}%, rgba(244,63,94,0.32) ${Math.min(85, shareA + 8)}%, rgba(244,63,94,0.36) 100%)`,
+                        background: `linear-gradient(90deg, rgba(56,189,248,0.36) 0%, rgba(56,189,248,0.32) ${Math.max(15, pctMale - 8)}%, rgba(244,63,94,0.32) ${Math.min(85, pctMale + 8)}%, rgba(244,63,94,0.36) 100%)`,
                       }}
                     >
                       {/* Dual rising bubbles: Sky Blue on left, Rose Pink on right */}
@@ -461,12 +465,12 @@ export function Interactive3DStage({
                 <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1.5 px-3">
                   {membersShare ? (
                     <div className="flex items-center gap-1.5 rounded-full border border-white/90 bg-white/90 px-3 py-1 shadow-md backdrop-blur-sm text-[11px] font-black">
-                      <span className={`flex items-center gap-0.5 ${shareA >= shareB ? 'text-sky-600 font-extrabold' : 'text-slate-600'}`}>
-                        {shareA > shareB && '👑'} {nameA}: {shareA.toFixed(0)}%
+                      <span className={`flex items-center gap-0.5 ${pctMale >= pctFemale ? 'text-sky-600 font-extrabold' : 'text-slate-600'}`}>
+                        {pctMale > pctFemale && '👑'} 👦 {nameMale}: {pctMale.toFixed(0)}%
                       </span>
                       <span className="text-slate-400">·</span>
-                      <span className={`flex items-center gap-0.5 ${shareB >= shareA ? 'text-pink-600 font-extrabold' : 'text-slate-600'}`}>
-                        {shareB > shareA && '👑'} {nameB}: {shareB.toFixed(0)}%
+                      <span className={`flex items-center gap-0.5 ${pctFemale >= pctMale ? 'text-pink-600 font-extrabold' : 'text-slate-600'}`}>
+                        {pctFemale > pctMale && '👑'} 👧 {nameFemale}: {pctFemale.toFixed(0)}%
                       </span>
                     </div>
                   ) : (

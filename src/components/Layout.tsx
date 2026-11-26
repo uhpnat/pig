@@ -1,6 +1,7 @@
 import { Clock, Heart, Home, Trophy, WifiOff } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { FxHost, ToastHost } from '@/components/FxHost'
+import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { PullToRefresh } from '@/components/PullToRefresh'
 import { useOnline } from '@/hooks/useStore'
 
@@ -56,6 +57,7 @@ export function AppFrame({ nav }: { nav: boolean }) {
       )}
       <FxHost />
       <ToastHost />
+      <GenderSelectDialog />
     </div>
   )
 }

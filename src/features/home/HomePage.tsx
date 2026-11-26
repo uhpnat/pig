@@ -57,6 +57,14 @@ export default function HomePage() {
   const shareA = actual.a * 100
   const shareB = actual.b * 100
 
+  const isBMale = j.members.b.gender === 'male' || j.members.a.gender === 'female'
+  const memberMale = isBMale ? j.members.b : j.members.a
+  const memberFemale = isBMale ? j.members.a : j.members.b
+  const tMale = isBMale ? t.b : t.a
+  const tFemale = isBMale ? t.a : t.b
+  const shareMale = isBMale ? shareB : shareA
+  const shareFemale = isBMale ? shareA : shareB
+
   return (
     <div
       className="relative min-h-[100dvh] pb-[calc(96px+env(safe-area-inset-bottom))]"
@@ -116,8 +124,8 @@ export default function HomePage() {
           reducedMotion={motionOff}
           liquidFillPct={monthPct}
           membersShare={{
-            a: { name: j.members.a.name, avatar: j.members.a.avatar, amount: t.a, pct: shareA },
-            b: { name: j.members.b.name, avatar: j.members.b.avatar, amount: t.b, pct: shareB },
+            a: { name: j.members.a.name, avatar: j.members.a.avatar, amount: t.a, pct: shareA, gender: j.members.a.gender },
+            b: { name: j.members.b.name, avatar: j.members.b.avatar, amount: t.b, pct: shareB, gender: j.members.b.gender },
           }}
           onPoke={() => {
             beep(state.settings, 'tick')
@@ -176,21 +184,21 @@ export default function HomePage() {
             <div className="mt-3 rounded-2xl bg-black/20 p-2 text-white">
               <div className="flex items-center justify-between text-[11px] font-black">
                 <span className="flex items-center gap-1 text-sky-200">
-                  {shareA > shareB && '👑'} {j.members.a.name}: {fmtM(t.a)} ({shareA.toFixed(0)}%)
+                  {shareMale > shareFemale && '👑'} 👦 {memberMale.name}: {fmtM(tMale)} ({shareMale.toFixed(0)}%)
                 </span>
                 <span className="text-white/60">·</span>
                 <span className="flex items-center gap-1 text-pink-200">
-                  {shareB > shareA && '👑'} {j.members.b.name}: {fmtM(t.b)} ({shareB.toFixed(0)}%)
+                  {shareFemale > shareMale && '👑'} 👧 {memberFemale.name}: {fmtM(tFemale)} ({shareFemale.toFixed(0)}%)
                 </span>
               </div>
               <div className="mt-1.5 flex h-2 w-full overflow-hidden rounded-full bg-white/20 p-0.5">
                 <div
                   className="h-full rounded-l-full bg-sky-400 transition-all duration-700"
-                  style={{ width: `${Math.max(8, Math.min(92, shareA))}%` }}
+                  style={{ width: `${Math.max(8, Math.min(92, shareMale))}%` }}
                 />
                 <div
                   className="h-full rounded-r-full bg-pink-400 transition-all duration-700"
-                  style={{ width: `${Math.max(8, Math.min(92, shareB))}%` }}
+                  style={{ width: `${Math.max(8, Math.min(92, shareFemale))}%` }}
                 />
               </div>
             </div>

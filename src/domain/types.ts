@@ -3,6 +3,8 @@ export const MEMBER_IDS: MemberId[] = ['a', 'b']
 
 export type FairnessMode = 'proportional' | 'equal' | 'custom'
 
+export type Gender = 'male' | 'female'
+
 export interface Member {
   id: MemberId
   name: string
@@ -10,6 +12,7 @@ export interface Member {
   avatar: string
   income: number
   role: 'owner' | 'member'
+  gender?: Gender
   joinedAt: string
 }
 

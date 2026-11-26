@@ -19,7 +19,7 @@ export function EditRulesDialog({ open, onClose }: { open: boolean; onClose: () 
   const draft = useMemo(() => valuesToJourney(v, j, true), [v, j])
   const plan = useMemo(() => previewPlan(draft), [draft])
 
-  const submit = handleSubmit(async (vals) => {
+  const submit = handleSubmit(async (vals: OnboardingValues) => {
     if (!consent) return toast('Cần cả hai đồng ý trước khi đổi quy tắc chung', 'error')
     const next = valuesToJourney(vals, j, true)
     const out = await run(repo.updateJourney({ ...next, requireConfirmation: reqConfirm }))
@@ -34,6 +34,32 @@ export function EditRulesDialog({ open, onClose }: { open: boolean; onClose: () 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Tên người 1" error={errors.aName?.message} {...register('aName')} />
           <Field label="Tên người 2" error={errors.bName?.message} {...register('bName')} />
+          <div>
+            <span className="label">Giới tính {v.aName}</span>
+            <Controller
+              control={control}
+              name="aGender"
+              render={({ field }) => (
+                <div className="flex gap-2">
+                  <Chip on={field.value === 'male'} onClick={() => field.onChange('male')}>👦 Nam</Chip>
+                  <Chip on={field.value === 'female'} onClick={() => field.onChange('female')}>👧 Nữ</Chip>
+                </div>
+              )}
+            />
+          </div>
+          <div>
+            <span className="label">Giới tính {v.bName}</span>
+            <Controller
+              control={control}
+              name="bGender"
+              render={({ field }) => (
+                <div className="flex gap-2">
+                  <Chip on={field.value === 'male'} onClick={() => field.onChange('male')}>👦 Nam</Chip>
+                  <Chip on={field.value === 'female'} onClick={() => field.onChange('female')}>👧 Nữ</Chip>
+                </div>
+              )}
+            />
+          </div>
           <Controller control={control} name="aIncome" render={({ field }) => <MoneyInput label="Thu nhập 1" suffix="đ" value={field.value} onChange={field.onChange} error={errors.aIncome?.message} />} />
           <Controller control={control} name="bIncome" render={({ field }) => <MoneyInput label="Thu nhập 2" suffix="đ" value={field.value} onChange={field.onChange} error={errors.bIncome?.message} />} />
         </div>
