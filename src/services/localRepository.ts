@@ -1,6 +1,7 @@
 import * as A from '@/domain/actions'
 import { secureRand } from '@/domain/engine'
 import { todayIn } from '@/domain/format'
+import { mergeStates } from '@/domain/merge'
 import { buildDemoState } from '@/domain/seed'
 import type { AppState } from '@/domain/types'
 import type { Repository, SheetSyncConfig, Unsubscribe } from './repository'
@@ -158,6 +159,12 @@ export class LocalRepository implements Repository {
         throw new Error(data?.error || `HTTP ${res.status}`)
       }
       this.syncStatus = { syncing: false, lastSyncedAt: data.syncedAt || new Date().toISOString(), lastError: null }
+      // If server returned a merged state (when both partners acted concurrently), adopt it immediately
+      if (data?.state) {
+        const merged = mergeStates(read(), data.state as AppState)
+        localStorage.setItem(KEY, JSON.stringify(merged))
+        this.bc?.postMessage('changed')
+      }
     } catch (e) {
       this.syncStatus = { ...this.syncStatus, syncing: false, lastError: e instanceof Error ? e.message : String(e) }
     } finally {
@@ -192,11 +199,13 @@ export class LocalRepository implements Repository {
       }
       this.syncStatus = { syncing: false, lastSyncedAt: data.updatedAt || new Date().toISOString(), lastError: null }
       if (data?.state) {
-        const merged: AppState = {
+        const cur = read()
+        const remoteState: AppState = {
           ...A.createInitialState(),
           ...data.state,
           settings: { ...A.DEFAULT_SETTINGS, ...data.state.settings },
         }
+        const merged = cur.journey ? mergeStates(cur, remoteState) : remoteState
         localStorage.setItem(KEY, JSON.stringify(merged))
         this.bc?.postMessage('changed')
         this.notify(merged)
@@ -254,10 +263,17 @@ export class LocalRepository implements Repository {
     const onFocus = () => {
       if (document.visibilityState === 'visible') void this.pullFromSheet(false)
     }
+    // Realtime polling every 6 seconds while tab is visible so partner's actions appear live
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !this.syncStatus.syncing) {
+        void this.pullFromSheet(false)
+      }
+    }, 6000)
     this.bc?.addEventListener('message', onMsg)
     window.addEventListener('storage', onStorage)
     window.addEventListener('visibilitychange', onFocus)
     return () => {
+      clearInterval(timer)
       this.listeners.delete(cb)
       this.bc?.removeEventListener('message', onMsg)
       window.removeEventListener('storage', onStorage)
@@ -270,6 +286,8 @@ export class LocalRepository implements Repository {
   updateJourney(p: Parameters<Repository['updateJourney']>[0]) { return this.mutate((s) => A.updateJourney(s, p)) }
 
   async revealToday(by: Parameters<Repository['revealToday']>[0]) {
+    // Pull latest from Sheet right before revealing so if partner just revealed 1 second ago, we reuse their reveal!
+    await this.pullFromSheet(false).catch(() => null)
     const cur = read()
     const tz = cur.journey?.timezone
     const out = A.revealToday(cur, todayIn(tz), by, secureRand)

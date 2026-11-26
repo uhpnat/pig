@@ -1,25 +1,12 @@
 /**
  * ============================================================================
- * PIGGY DUO – GOOGLE APPS SCRIPT BACKEND (Dùng cho GitHub Pages / 2 điện thoại)
+ * PIGGY DUO – GOOGLE APPS SCRIPT BACKEND (Có LockService + Merge chống xung đột)
  * ============================================================================
- * Hướng dẫn gắn vào Google Sheet của bạn (chỉ làm 1 lần, mất 30 giây):
- * 1. Mở file Google Sheet của bạn:
- *    https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit
- * 2. Trên thanh menu, chọn: Tiện ích mở rộng (Extensions) -> Apps Script.
- * 3. Xoá mã mặc định trong Code.gs và dán toàn bộ nội dung file này vào.
- * 4. Nhấn "Triển khai" (Deploy) -> "Tạo phiên bản triển khai mới" (New deployment).
- * 5. Chọn loại: "Ứng dụng web" (Web app):
- *    - Thực thi dưới dạng (Execute as): Tôi (Me)
- *    - Ai có quyền truy cập (Who has access): Bất kỳ ai (Anyone)
- * 6. Nhấn Triển khai, cấp quyền cho tài khoản Google của bạn, rồi copy URL Web App
- *    (có dạng https://script.google.com/macros/s/.../exec)
- * 7. Dán URL đó vào mục "Kết nối Google Sheets" trong tab "Của chúng mình" trên app!
+ * Đã gắn cứng vào Google Sheet của 2 bạn:
+ * https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit?gid=0#gid=0
  */
 
-// Đã gắn cứng vào Google Sheet của 2 bạn:
-// https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit?gid=0#gid=0
 var SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s';
-// Nếu bạn muốn khoá thêm ở tầng Google Sheet, điền cùng Mã khoá đôi mình vào đây (để trống = không bắt buộc):
 var SECRET_PASSCODE = '';
 
 function checkPasscode(pass) {
@@ -30,6 +17,88 @@ function checkPasscode(pass) {
 function jsonOut(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Hợp nhất (Merge) trạng thái cũ trên Sheet và trạng thái mới từ điện thoại gửi lên để không bao giờ mất thao tác khi 2 người bấm cùng lúc!
+function mergeAppState(existing, incoming) {
+  if (!existing || !existing.journey) return incoming;
+  if (!incoming || !incoming.journey) return existing;
+
+  var out = JSON.parse(JSON.stringify(incoming));
+
+  // 1. Hợp nhất Daily Reveals theo ngày (ưu tiên kết quả được mở sớm hơn -> cả 2 luôn thấy chung 1 kết quả!)
+  var revByDate = {};
+  (existing.reveals || []).concat(incoming.reveals || []).forEach(function(r) {
+    var prev = revByDate[r.date];
+    if (!prev || String(r.createdAt) < String(prev.createdAt)) {
+      revByDate[r.date] = r;
+    }
+  });
+  out.reveals = Object.keys(revByDate).sort().map(function(d) { return revByDate[d]; });
+
+  // 2. Hợp nhất Contributions (không mất xác nhận của người kia khi 2 người bấm xác nhận cùng lúc)
+  var rank = { pending: 0, confirmed: 1, voided: 2 };
+  var cMap = {};
+  (existing.contributions || []).concat(incoming.contributions || []).forEach(function(raw) {
+    var canonRev = raw.revealId ? revByDate[raw.date] : null;
+    var c = canonRev ? {
+      id: 'ct_' + canonRev.id + '_' + raw.member,
+      member: raw.member,
+      revealId: canonRev.id,
+      amount: canonRev.amounts[raw.member],
+      date: raw.date,
+      status: raw.status,
+      notes: raw.notes || '',
+      createdAt: raw.createdAt,
+      confirmedAt: raw.confirmedAt || null
+    } : raw;
+    var key = c.revealId ? ('rev:' + c.date + ':' + c.member) : ('id:' + c.id);
+    var prev = cMap[key];
+    if (!prev) {
+      cMap[key] = c;
+    } else {
+      var st = (rank[c.status] || 0) >= (rank[prev.status] || 0) ? c.status : prev.status;
+      cMap[key] = {
+        id: c.id,
+        member: c.member,
+        revealId: c.revealId,
+        amount: c.amount,
+        date: c.date,
+        status: st,
+        notes: c.notes || prev.notes || '',
+        createdAt: prev.createdAt || c.createdAt,
+        confirmedAt: c.confirmedAt || prev.confirmedAt || null
+      };
+    }
+  });
+  out.contributions = Object.keys(cMap).map(function(k) { return cMap[k]; });
+
+  // 3. Hợp nhất ActivityLog
+  var aMap = {};
+  (existing.activity || []).concat(incoming.activity || []).forEach(function(a) {
+    var k = a.type === 'reveal' ? ('reveal:' + String(a.at).slice(0, 10)) : a.id;
+    if (!aMap[k]) aMap[k] = a;
+  });
+  out.activity = Object.keys(aMap).map(function(k) { return aMap[k]; }).sort(function(x, y) {
+    return String(y.at).localeCompare(String(x.at));
+  });
+
+  // 4. Hợp nhất Challenges & Milestones
+  var cs = Object.assign({}, existing.challengeStatus || {}, incoming.challengeStatus || {});
+  Object.keys(cs).forEach(function(k) {
+    if ((existing.challengeStatus && existing.challengeStatus[k] === 'completed') ||
+        (incoming.challengeStatus && incoming.challengeStatus[k] === 'completed')) {
+      cs[k] = 'completed';
+    }
+  });
+  out.challengeStatus = cs;
+  out.completedAt = Object.assign({}, existing.completedAt || {}, incoming.completedAt || {});
+
+  var msMap = {};
+  (existing.milestonesReached || []).concat(incoming.milestonesReached || []).forEach(function(m) { msMap[m] = true; });
+  out.milestonesReached = Object.keys(msMap).map(Number).sort(function(a, b) { return a - b; });
+
+  return out;
 }
 
 function doGet(e) {
@@ -48,22 +117,27 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  // LockService xếp hàng tuần tự khi 2 người bấm cùng 1 giây
   var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(15000);
   try {
     var payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (!checkPasscode(payload.passcode)) {
       return jsonOut({ ok: false, error: 'Sai mã khoá bảo mật (SECRET_PASSCODE)' });
     }
-    var state = payload.state;
-    if (!state) {
+    var incoming = payload.state;
+    if (!incoming) {
       return jsonOut({ ok: false, error: 'Missing state' });
     }
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var now = new Date().toISOString();
 
-    // 1. Lưu JSON chuẩn vào AppState
     var appSheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
+    var existingJson = appSheet.getRange('C2').getValue();
+    var existing = existingJson ? JSON.parse(existingJson) : null;
+    var state = existing ? mergeAppState(existing, incoming) : incoming;
+
+    // 1. Lưu JSON chuẩn đã merge vào AppState
     appSheet.clearContents();
     appSheet.getRange(1, 1, 2, 3).setValues([
       ['key', 'updated_at', 'json_state'],
@@ -120,7 +194,8 @@ function doPost(e) {
     });
     aSheet.getRange(1, 1, aRows.length, 8).setValues(aRows);
 
-    return jsonOut({ ok: true, syncedAt: now });
+    // Trả luôn state đã merge về để máy vừa bấm cập nhật theo máy kia ngay lập tức!
+    return jsonOut({ ok: true, syncedAt: now, state: state });
   } finally {
     lock.releaseLock();
   }
