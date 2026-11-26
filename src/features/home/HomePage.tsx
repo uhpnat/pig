@@ -1,4 +1,5 @@
 import { Bell, Clock, PlusCircle, Sparkles } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
@@ -125,360 +126,401 @@ export default function HomePage() {
   const activeAmountA = pigMode === 'month' ? monthA : t.a
   const activeAmountB = pigMode === 'month' ? monthB : t.b
 
+  const isBMale = j.members.b.gender === 'male' || j.members.a.gender === 'female'
+  const memberMale = isBMale ? j.members.b : j.members.a
+  const memberFemale = isBMale ? j.members.a : j.members.b
+  const activePctMale = isBMale ? activeShareB : activeShareA
+  const activePctFemale = isBMale ? activeShareA : activeShareB
+
   const stage = pigStage(progress)
   const isMyMale = myMember?.gender === 'male'
 
   return (
     <div
-      className="relative min-h-[100dvh] pb-[calc(96px+env(safe-area-inset-bottom))]"
+      className="relative flex min-h-[100dvh] flex-col justify-between pb-[calc(88px+env(safe-area-inset-bottom))]"
       style={{
         paddingTop: 'calc(10px + env(safe-area-inset-top, 0px))',
         background:
-          'linear-gradient(180deg, #b8e1ff 0px, #b8e1ff 76px, #dff2ff 26%, #eef9e3 50%, #fff6f8 75%, #fde8f1 100%)',
+          'linear-gradient(180deg, #b8e1ff 0px, #b8e1ff 76px, #d8f0ff 28%, #e8f8dc 52%, #fdf2f7 78%, #fde8f1 100%)',
       }}
     >
-      {/* 1. Sleek Top Navigation Bar */}
-      <header className="relative z-20 flex items-center justify-between gap-2 px-4">
-        <Link
-          to="/couple"
-          className="flex min-w-0 items-center gap-2 rounded-full border border-white/90 bg-white/80 py-1 pl-1.5 pr-3 shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
-        >
-          <div className="flex items-center">
-            <Avatar value={j.members.a.avatar} size={30} className="z-10 ring-2 ring-white" />
-            <Avatar value={j.members.b.avatar} size={30} className="-ml-2 ring-2 ring-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-xs font-black leading-tight text-[#1e1b4b]">{j.name}</p>
-            <p className="truncate text-[10px] font-extrabold text-pink-600">{stage.label}</p>
-          </div>
-        </Link>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setGenderDialogOpen(true)}
-            className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-xs font-black shadow-sm backdrop-blur-md transition-transform active:scale-95 ${
-              isMyMale ? 'bg-sky-50/95 text-sky-900' : 'bg-pink-50/95 text-pink-900'
-            }`}
+      {/* TOP HERO ZONE: Header + Mode Switcher + 3D Pig on Feathered Meadow */}
+      <div className="relative">
+        {/* 1. Sleek Top Navigation Bar */}
+        <header className="relative z-20 flex items-center justify-between gap-2 px-4">
+          <Link
+            to="/couple"
+            className="flex min-w-0 items-center gap-2 rounded-full border border-white/90 bg-white/85 py-1 pl-1.5 pr-3 shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
           >
-            <span>{isMyMale ? '👦' : '👧'}</span>
-            <span className="max-w-[78px] truncate">{myMember?.name}</span>
-            <span
-              className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-black ${
-                isMyMale ? 'bg-sky-200/80 text-sky-800' : 'bg-pink-200/80 text-pink-800'
+            <div className="flex items-center">
+              <Avatar value={j.members.a.avatar} size={30} className="z-10 ring-2 ring-white" />
+              <Avatar value={j.members.b.avatar} size={30} className="-ml-2 ring-2 ring-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-black leading-tight text-[#1e1b4b]">{j.name}</p>
+              <p className="truncate text-[10px] font-extrabold text-pink-600">{stage.label}</p>
+            </div>
+          </Link>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setGenderDialogOpen(true)}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-xs font-black shadow-sm backdrop-blur-md transition-transform active:scale-95 ${
+                isMyMale ? 'bg-sky-50/95 text-sky-900' : 'bg-pink-50/95 text-pink-900'
               }`}
             >
-              ✏️ Sửa
-            </span>
-          </button>
-
-          <Link
-            to="/notifications"
-            aria-label={`Thông báo${unread ? `, ${unread} chưa đọc` : ''}`}
-            className="relative grid h-9 w-9 place-items-center rounded-full border border-white/90 bg-white/85 text-[#1e1b4b] shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
-          >
-            <Bell size={18} />
-            {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-[#ff3b6b] px-1 text-[9px] font-black text-white">
-                {unread}
+              <span>{isMyMale ? '👦' : '👧'}</span>
+              <span className="max-w-[78px] truncate">{myMember?.name}</span>
+              <span
+                className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-black ${
+                  isMyMale ? 'bg-sky-200/80 text-sky-800' : 'bg-pink-200/80 text-pink-800'
+                }`}
+              >
+                ✏️ Sửa
               </span>
-            )}
-          </Link>
-        </div>
-      </header>
+            </button>
 
-      {/* 2. Segmented Switcher right on HomePage: Heo theo tháng vs Heo cuối kỳ */}
-      <div className="relative z-20 mt-2.5 px-4">
-        <div className="mx-auto grid max-w-[340px] grid-cols-2 gap-1 rounded-full border-2 border-white bg-white/75 p-1 shadow-sm backdrop-blur-md">
-          <button
-            type="button"
-            onClick={() => setPigMode('month')}
-            className={`cursor-pointer rounded-full border-0 py-1.5 text-xs font-black transition-all ${
-              pigMode === 'month'
-                ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-sm'
-                : 'bg-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            📅 Heo theo tháng
-          </button>
-          <button
-            type="button"
-            onClick={() => setPigMode('final')}
-            className={`cursor-pointer rounded-full border-0 py-1.5 text-xs font-black transition-all ${
-              pigMode === 'final'
-                ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-sm'
-                : 'bg-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            🎯 Heo cuối kỳ
-          </button>
-        </div>
-      </div>
-
-      {/* 3. HERO CENTERPIECE: 3D Crystal Piggy Bank (No percentage bar beneath the pig!) */}
-      <div className="relative mt-0.5">
-        <Interactive3DStage
-          spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
-          alt={`${j.pig.name} – ${pigMode === 'month' ? 'Heo theo tháng' : 'Heo cuối kỳ'}`}
-          theme="meadow"
-          spriteHeight={255}
-          reducedMotion={motionOff}
-          liquidFillPct={activeFillPct}
-          membersShare={{
-            a: {
-              name: j.members.a.name,
-              avatar: j.members.a.avatar,
-              amount: activeAmountA,
-              pct: activeShareA,
-              gender: j.members.a.gender,
-            },
-            b: {
-              name: j.members.b.name,
-              avatar: j.members.b.avatar,
-              amount: activeAmountB,
-              pct: activeShareB,
-              gender: j.members.b.gender,
-            },
-          }}
-          onPoke={() => {
-            beep(state.settings, 'tick')
-            haptic(state.settings, 30)
-          }}
-        />
-      </div>
-
-      {/* 4. Essential Info Stack: Mode Summary + Today's Money Confirmation */}
-      <div className="mt-1 space-y-2.5 px-4">
-        {/* 4A. Compact Mode Summary Card (Monthly vs Final-Term Countdown) */}
-        {pigMode === 'month' ? (
-          <div className="flex items-center justify-between rounded-2xl border-2 border-white bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur-md">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-wider text-sky-700">
-                📅 Quỹ tháng {curMonthKey.slice(5)}/{curMonthKey.slice(0, 4)}
-              </p>
-              <p className="text-base font-black text-[#1e1b4b] tabular-nums">
-                <AnimatedNumber value={monthSaved} format={(n) => vnd(Math.round(n))} />{' '}
-                <span className="text-xs font-bold text-slate-400">/ {vnd(mBudget)}</span>
-              </p>
-            </div>
-            <span className="rounded-xl bg-sky-100 px-2.5 py-1 text-sm font-black text-sky-800 tabular-nums">
-              {monthPct.toFixed(0)}%
-            </span>
-          </div>
-        ) : (
-          <div className="rounded-2xl border-2 border-white bg-white/92 p-3 shadow-sm backdrop-blur-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-purple-700">
-                  <Clock size={12} /> Đích cuối kỳ ({fmtDate(targetDateStr)})
-                </p>
-                <p className="text-base font-black text-[#1e1b4b] tabular-nums">
-                  <AnimatedNumber value={confirmed.total} format={(n) => vnd(Math.round(n))} />{' '}
-                  <span className="text-xs font-bold text-slate-400">/ {vnd(j.goal)}</span>
-                </p>
-              </div>
-              <span className="rounded-xl bg-pink-100 px-2.5 py-1 text-sm font-black text-pink-700 tabular-nums">
-                {progress.toFixed(1)}%
-              </span>
-            </div>
-            {/* Compact 4-box final countdown */}
-            <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
-              {[
-                { val: timeLeft.days, label: 'Ngày', color: '#4f46e5' },
-                { val: timeLeft.hours, label: 'Giờ', color: '#0284c7' },
-                { val: timeLeft.minutes, label: 'Phút', color: '#9333ea' },
-                { val: timeLeft.seconds, label: 'Giây', color: '#e11d48' },
-              ].map((b, i) => (
-                <div key={i} className="rounded-xl border border-slate-100 bg-slate-50/90 py-1.5">
-                  <p className="text-base font-black leading-none tabular-nums" style={{ color: b.color }}>
-                    {String(b.val).padStart(2, '0')}
-                  </p>
-                  <p className="mt-0.5 text-[9.5px] font-extrabold uppercase text-slate-400">{b.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 4B. XÁC NHẬN TIỀN HÔM NAY (2-person cross-confirmation) */}
-        {goalReached ? (
-          <Card className="!mt-0 text-center">
-            <h2 className="h2">🎉 Hoàn thành mục tiêu!</h2>
-            <p className="muted mt-1">Hai bạn đã chạm đích xuất sắc!</p>
-          </Card>
-        ) : !reveal ? (
-          <div className="rounded-[24px] border-2 border-white bg-white/95 p-4 text-center shadow-sm">
-            <p className="text-xs font-black text-purple-700">
-              <Sparkles size={13} className="mr-1 inline" /> Hôm nay chưa mở số tiền
-            </p>
-            <Button
-              variant="violet"
-              className="mt-2.5 w-full !py-3 !text-sm"
-              onClick={() => nav('/reveal')}
+            <Link
+              to="/notifications"
+              aria-label={`Thông báo${unread ? `, ${unread} chưa đọc` : ''}`}
+              className="relative grid h-9 w-9 place-items-center rounded-full border border-white/90 bg-white/85 text-[#1e1b4b] shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
             >
-              🎰 {myMember?.name} kéo cần gạt mở số ngay
-            </Button>
+              <Bell size={18} />
+              {unread > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-[#ff3b6b] px-1 text-[9px] font-black text-white">
+                  {unread}
+                </span>
+              )}
+            </Link>
           </div>
-        ) : (
-          <div className="rounded-[24px] border-2 border-white bg-white/95 p-3.5 shadow-[0_10px_24px_rgba(124,58,237,0.1)] backdrop-blur-md">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black text-[#1e1b4b]">🎲 Xác nhận tiền hôm nay</h2>
-              <Badge tone={allDone ? 'ok' : 'warn'}>
-                {allDone ? 'Đã duyệt đủ 2/2 ✅' : 'Duyệt chéo 2 người ⏳'}
-              </Badge>
-            </div>
+        </header>
 
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
-              {/* My Card */}
-              {(() => {
-                const myC = myDailyC
-                const cBy = myDailyBy
-                const done = myC?.status === 'confirmed'
-                const iConfirmed = cBy.includes(myMemberId)
-                return (
-                  <div
-                    className={`rounded-2xl border-2 p-2.5 text-center ${
-                      isMyMale ? 'border-sky-300 bg-sky-50/75' : 'border-pink-300 bg-pink-50/75'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-1 min-w-0">
-                      <Avatar value={myMember?.avatar || 'boy'} size={24} />
-                      <span className="truncate text-xs font-black text-[#1e1b4b]">
-                        {myMember?.name}
-                      </span>
-                      <span className="shrink-0 rounded-full bg-indigo-600 px-1.5 py-0.2 text-[8.5px] font-black text-white">
-                        Bạn
-                      </span>
-                    </div>
-                    <p
-                      className={`mt-1 text-base font-black tabular-nums ${
-                        isMyMale ? 'text-sky-700' : 'text-pink-700'
+        {/* 2. Floating Segmented Switcher: Heo theo tháng vs Heo cuối kỳ */}
+        <div className="relative z-20 mt-2.5 px-4">
+          <div className="mx-auto grid max-w-[330px] grid-cols-2 gap-1 rounded-full border-2 border-white bg-white/85 p-1 shadow-[0_6px_18px_rgba(30,27,75,0.08)] backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setPigMode('month')}
+              className={`cursor-pointer rounded-full border-0 py-1.5 text-xs font-black transition-all ${
+                pigMode === 'month'
+                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-sm'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              📅 Heo theo tháng
+            </button>
+            <button
+              type="button"
+              onClick={() => setPigMode('final')}
+              className={`cursor-pointer rounded-full border-0 py-1.5 text-xs font-black transition-all ${
+                pigMode === 'final'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-sm'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              🎯 Heo cuối kỳ
+            </button>
+          </div>
+        </div>
+
+        {/* 3. HERO CENTERPIECE: 3D Crystal Piggy Bank on Smooth Feathered Meadow */}
+        <div className="relative mt-0.5">
+          <Interactive3DStage
+            spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
+            alt={`${j.pig.name} – ${pigMode === 'month' ? 'Heo theo tháng' : 'Heo cuối kỳ'}`}
+            theme="meadow"
+            spriteHeight={255}
+            reducedMotion={motionOff}
+            liquidFillPct={activeFillPct}
+            membersShare={{
+              a: {
+                name: j.members.a.name,
+                avatar: j.members.a.avatar,
+                amount: activeAmountA,
+                pct: activeShareA,
+                gender: j.members.a.gender,
+              },
+              b: {
+                name: j.members.b.name,
+                avatar: j.members.b.avatar,
+                amount: activeAmountB,
+                pct: activeShareB,
+                gender: j.members.b.gender,
+              },
+            }}
+            onPoke={() => {
+              beep(state.settings, 'tick')
+              haptic(state.settings, 30)
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 4. CURVED GLASSMORPHIC BOTTOM SHEET (Overlaps smoothly over the feathered meadow with rounded-t-[36px] — NO flat horizontal cut!) */}
+      <div
+        className="relative z-20 -mt-5 flex-1 rounded-t-[36px] border-t-2 border-white px-4 pb-5 pt-3.5 shadow-[0_-12px_32px_rgba(80,140,90,0.12)] backdrop-blur-xl"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(255,248,252,0.96) 55%, rgba(253,232,241,0.98) 100%)',
+        }}
+      >
+        {/* Subtle iOS drag-handle pill at top of bottom sheet */}
+        <div className="mx-auto mb-3 h-1 w-11 rounded-full bg-slate-200/90" />
+
+        <div className="space-y-3">
+          {/* 4A. Mode Summary Header inside the Curved Sheet */}
+          {pigMode === 'month' ? (
+            <div className="rounded-2xl border border-sky-100/90 bg-gradient-to-r from-sky-50/80 via-white to-pink-50/80 p-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-sky-700">
+                    📅 Quỹ heo tháng {curMonthKey.slice(5)}/{curMonthKey.slice(0, 4)}
+                  </span>
+                  <p className="mt-0.5 text-lg font-black text-[#1e1b4b] tabular-nums">
+                    <AnimatedNumber value={monthSaved} format={(n) => vnd(Math.round(n))} />{' '}
+                    <span className="text-xs font-bold text-slate-400">/ {vnd(mBudget)}</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-2.5 py-1 text-xs font-black text-white shadow-sm tabular-nums">
+                    💧 {monthPct.toFixed(0)}%
+                  </span>
+                  <p className="mt-1 text-[10px] font-extrabold text-slate-500">
+                    👦 {memberMale.name} {activePctMale.toFixed(0)}% · 👧 {memberFemale.name} {activePctFemale.toFixed(0)}%
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100 p-0.5">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-pink-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.max(5, Math.min(100, monthPct))}%` }}
+                  transition={{ duration: 0.8 }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-purple-100/90 bg-gradient-to-r from-purple-50/80 via-white to-pink-50/80 p-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-purple-700">
+                    <Clock size={12} /> Quỹ cuối kỳ ({fmtDate(targetDateStr)})
+                  </span>
+                  <p className="mt-0.5 text-lg font-black text-[#1e1b4b] tabular-nums">
+                    <AnimatedNumber value={confirmed.total} format={(n) => vnd(Math.round(n))} />{' '}
+                    <span className="text-xs font-bold text-slate-400">/ {vnd(j.goal)}</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-2.5 py-1 text-xs font-black text-white shadow-sm tabular-nums">
+                    🎯 {progress.toFixed(1)}%
+                  </span>
+                  <p className="mt-1 text-[10px] font-extrabold text-slate-500">
+                    👦 {memberMale.name} {activePctMale.toFixed(0)}% · 👧 {memberFemale.name} {activePctFemale.toFixed(0)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Compact 4-box final countdown */}
+              <div className="mt-2.5 grid grid-cols-4 gap-1.5 text-center">
+                {[
+                  { val: timeLeft.days, label: 'Ngày', color: '#4f46e5' },
+                  { val: timeLeft.hours, label: 'Giờ', color: '#0284c7' },
+                  { val: timeLeft.minutes, label: 'Phút', color: '#9333ea' },
+                  { val: timeLeft.seconds, label: 'Giây', color: '#e11d48' },
+                ].map((b, i) => (
+                  <div key={i} className="rounded-xl border border-white bg-white/90 py-1.5 shadow-sm">
+                    <p className="text-[15px] font-black leading-none tabular-nums" style={{ color: b.color }}>
+                      {String(b.val).padStart(2, '0')}
+                    </p>
+                    <p className="mt-0.5 text-[9px] font-extrabold uppercase text-slate-400">{b.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4B. XÁC NHẬN TIỀN HÔM NAY (2-person cross-confirmation) */}
+          {goalReached ? (
+            <Card className="!mt-0 text-center">
+              <h2 className="h2">🎉 Hoàn thành mục tiêu!</h2>
+              <p className="muted mt-1">Hai bạn đã chạm đích xuất sắc!</p>
+            </Card>
+          ) : !reveal ? (
+            <div className="rounded-2xl border border-purple-100 bg-white p-3.5 text-center shadow-sm">
+              <p className="text-xs font-black text-purple-700">
+                <Sparkles size={13} className="mr-1 inline" /> Hôm nay chưa mở số tiền
+              </p>
+              <Button
+                variant="violet"
+                className="mt-2.5 w-full !py-3 !text-sm"
+                onClick={() => nav('/reveal')}
+              >
+                🎰 {myMember?.name} kéo cần gạt mở số ngay
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-black text-[#1e1b4b]">🎲 Xác nhận tiền hôm nay</h2>
+                <Badge tone={allDone ? 'ok' : 'warn'}>
+                  {allDone ? 'Đã duyệt đủ 2/2 ✅' : 'Duyệt chéo 2 người ⏳'}
+                </Badge>
+              </div>
+
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                {/* My Card */}
+                {(() => {
+                  const myC = myDailyC
+                  const cBy = myDailyBy
+                  const done = myC?.status === 'confirmed'
+                  const iConfirmed = cBy.includes(myMemberId)
+                  return (
+                    <div
+                      className={`rounded-2xl border-2 p-2.5 text-center ${
+                        isMyMale ? 'border-sky-300 bg-sky-50/75' : 'border-pink-300 bg-pink-50/75'
                       }`}
                     >
-                      +{vnd(reveal.amounts[myMemberId])}
-                    </p>
-                    {done ? (
-                      <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-700">
-                        Đã vào quỹ (2/2) ✅
-                      </span>
-                    ) : iConfirmed ? (
-                      <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1 text-[10px] font-black text-amber-800">
-                        ⏳ Đã nạp (1/2) · Chờ {partnerMember?.name}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => myC && handleConfirmContrib(myC)}
-                        className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-xs font-black text-white shadow-sm active:scale-95 ${
-                          isMyMale
-                            ? 'bg-gradient-to-r from-sky-500 to-blue-600'
-                            : 'bg-gradient-to-r from-pink-500 to-rose-600'
-                        }`}
-                      >
-                        💸 Tôi đã nạp ({cBy.length}/2)
-                      </button>
-                    )}
-                  </div>
-                )
-              })()}
-
-              {/* Partner Card */}
-              {(() => {
-                const partnerC = partnerDailyC
-                const cBy = partnerDailyBy
-                const done = partnerC?.status === 'confirmed'
-                const partnerReported = cBy.includes(partnerMemberId)
-                const iApprovedPartner = cBy.includes(myMemberId)
-                return (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-2.5 text-center">
-                    <div className="flex items-center justify-center gap-1 min-w-0">
-                      <Avatar value={partnerMember?.avatar || 'girl'} size={24} />
-                      <span className="truncate text-xs font-black text-slate-700">
-                        {partnerMember?.name}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-base font-black tabular-nums text-slate-700">
-                      +{vnd(reveal.amounts[partnerMemberId])}
-                    </p>
-                    {done ? (
-                      <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-700">
-                        Đã vào quỹ (2/2) ✅
-                      </span>
-                    ) : iApprovedPartner ? (
-                      <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1 text-[10px] font-black text-amber-800">
-                        ⏳ Đã duyệt (1/2) · Chờ {partnerMember?.name}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => partnerC && handleConfirmContrib(partnerC)}
-                        className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-[11px] font-black active:scale-95 ${
-                          partnerReported
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm animate-pulse'
-                            : 'border border-slate-200 bg-white text-slate-600'
-                        }`}
-                      >
-                        {partnerReported
-                          ? `✅ Duyệt ${partnerMember?.name} (2/2)`
-                          : `✅ Xác nhận cho ${partnerMember?.name}`}
-                      </button>
-                    )}
-                  </div>
-                )
-              })()}
-            </div>
-
-            {/* Extra Pending Top-Ups needing 2-person cross-confirmation */}
-            {extraPending.length > 0 && (
-              <div className="mt-2.5 space-y-1.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-2">
-                {extraPending.map((c) => {
-                  const cBy = c.confirmedBy ?? []
-                  const iConfirmed = cBy.includes(myMemberId)
-                  const owner = j.members[c.member]
-                  const other = j.members[c.member === 'a' ? 'b' : 'a']
-                  return (
-                    <div key={c.id} className="flex items-center justify-between gap-2 rounded-xl bg-white px-2.5 py-1.5 shadow-sm">
-                      <span className="truncate text-xs font-black text-[#1e1b4b]">
-                        ➕ {owner.name} nạp +{vnd(c.amount)} ({cBy.length}/2)
-                      </span>
-                      {iConfirmed ? (
-                        <span className="shrink-0 rounded-lg bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
-                          Chờ {other.name}
+                      <div className="flex items-center justify-center gap-1 min-w-0">
+                        <Avatar value={myMember?.avatar || 'boy'} size={24} />
+                        <span className="truncate text-xs font-black text-[#1e1b4b]">
+                          {myMember?.name}
                         </span>
+                        <span className="shrink-0 rounded-full bg-indigo-600 px-1.5 py-0.2 text-[8.5px] font-black text-white">
+                          Bạn
+                        </span>
+                      </div>
+                      <p
+                        className={`mt-1 text-base font-black tabular-nums ${
+                          isMyMale ? 'text-sky-700' : 'text-pink-700'
+                        }`}
+                      >
+                        +{vnd(reveal.amounts[myMemberId])}
+                      </p>
+                      {done ? (
+                        <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-700">
+                          Đã vào quỹ (2/2) ✅
+                        </span>
+                      ) : iConfirmed ? (
+                        <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1 text-[10px] font-black text-amber-800">
+                          ⏳ Đã nạp (1/2) · Chờ {partnerMember?.name}
+                        </div>
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleConfirmContrib(c)}
-                          className="shrink-0 cursor-pointer rounded-lg border-0 bg-emerald-600 px-2.5 py-1 text-[10.5px] font-black text-white shadow-sm active:scale-95"
+                          onClick={() => myC && handleConfirmContrib(myC)}
+                          className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-xs font-black text-white shadow-sm active:scale-95 ${
+                            isMyMale
+                              ? 'bg-gradient-to-r from-sky-500 to-blue-600'
+                              : 'bg-gradient-to-r from-pink-500 to-rose-600'
+                          }`}
                         >
-                          ✅ Duyệt (2/2)
+                          💸 Tôi đã nạp ({cBy.length}/2)
                         </button>
                       )}
                     </div>
                   )
-                })}
-              </div>
-            )}
+                })()}
 
-            {/* Single compact extra deposit button */}
-            <div className="mt-2.5 flex items-center justify-between pt-0.5">
-              <button
-                type="button"
-                onClick={() => setTopUp(true)}
-                className="flex cursor-pointer items-center gap-1 rounded-full border-0 bg-pink-50 px-3 py-1 text-xs font-black text-pink-600 active:scale-95"
-              >
-                <PlusCircle size={14} /> Nạp thêm vào quỹ
-              </button>
-              <button
-                type="button"
-                onClick={() => nav('/reveal')}
-                className="cursor-pointer border-0 bg-transparent text-xs font-extrabold text-indigo-600 hover:underline"
-              >
-                🎰 Xem lồng quay →
-              </button>
+                {/* Partner Card */}
+                {(() => {
+                  const partnerC = partnerDailyC
+                  const cBy = partnerDailyBy
+                  const done = partnerC?.status === 'confirmed'
+                  const partnerReported = cBy.includes(partnerMemberId)
+                  const iApprovedPartner = cBy.includes(myMemberId)
+                  return (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-2.5 text-center">
+                      <div className="flex items-center justify-center gap-1 min-w-0">
+                        <Avatar value={partnerMember?.avatar || 'girl'} size={24} />
+                        <span className="truncate text-xs font-black text-slate-700">
+                          {partnerMember?.name}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-base font-black tabular-nums text-slate-700">
+                        +{vnd(reveal.amounts[partnerMemberId])}
+                      </p>
+                      {done ? (
+                        <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-700">
+                          Đã vào quỹ (2/2) ✅
+                        </span>
+                      ) : iApprovedPartner ? (
+                        <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1 text-[10px] font-black text-amber-800">
+                          ⏳ Đã duyệt (1/2) · Chờ {partnerMember?.name}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => partnerC && handleConfirmContrib(partnerC)}
+                          className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-[11px] font-black active:scale-95 ${
+                            partnerReported
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm animate-pulse'
+                              : 'border border-slate-200 bg-white text-slate-600'
+                          }`}
+                        >
+                          {partnerReported
+                            ? `✅ Duyệt ${partnerMember?.name} (2/2)`
+                            : `✅ Xác nhận cho ${partnerMember?.name}`}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Extra Pending Top-Ups needing 2-person cross-confirmation */}
+              {extraPending.length > 0 && (
+                <div className="mt-2.5 space-y-1.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-2">
+                  {extraPending.map((c) => {
+                    const cBy = c.confirmedBy ?? []
+                    const iConfirmed = cBy.includes(myMemberId)
+                    const owner = j.members[c.member]
+                    const other = j.members[c.member === 'a' ? 'b' : 'a']
+                    return (
+                      <div key={c.id} className="flex items-center justify-between gap-2 rounded-xl bg-white px-2.5 py-1.5 shadow-sm">
+                        <span className="truncate text-xs font-black text-[#1e1b4b]">
+                          ➕ {owner.name} nạp +{vnd(c.amount)} ({cBy.length}/2)
+                        </span>
+                        {iConfirmed ? (
+                          <span className="shrink-0 rounded-lg bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                            Chờ {other.name}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmContrib(c)}
+                            className="shrink-0 cursor-pointer rounded-lg border-0 bg-emerald-600 px-2.5 py-1 text-[10.5px] font-black text-white shadow-sm active:scale-95"
+                          >
+                            ✅ Duyệt (2/2)
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Compact extra deposit & slot machine links */}
+              <div className="mt-2.5 flex items-center justify-between pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setTopUp(true)}
+                  className="flex cursor-pointer items-center gap-1 rounded-full border-0 bg-pink-50 px-3 py-1 text-xs font-black text-pink-600 active:scale-95"
+                >
+                  <PlusCircle size={14} /> Nạp thêm vào quỹ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => nav('/reveal')}
+                  className="cursor-pointer border-0 bg-transparent text-xs font-extrabold text-indigo-600 hover:underline"
+                >
+                  🎰 Xem lồng quay →
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <TopUpDialog open={topUp} onClose={() => setTopUp(false)} />

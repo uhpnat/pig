@@ -27,29 +27,43 @@ function FluffyCloud({ className = '', scale = 1 }: { className?: string; scale?
 function GrassyHillsSVG({ variant = 'green' }: { variant?: 'green' | 'pink' }) {
   return (
     <svg
-      viewBox="0 0 440 130"
+      viewBox="0 0 440 140"
       preserveAspectRatio="none"
-      className="pointer-events-none block h-[96px] w-full select-none"
+      className="pointer-events-none block h-[115px] w-full select-none"
+      style={{
+        maskImage: 'linear-gradient(180deg, #000 0%, #000 58%, rgba(0,0,0,0.45) 82%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 58%, rgba(0,0,0,0.45) 82%, transparent 100%)',
+      }}
       aria-hidden
     >
       <defs>
         <linearGradient id="hill-back" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={variant === 'pink' ? '#FBCFE8' : '#BBF7D0'} />
-          <stop offset="100%" stopColor={variant === 'pink' ? '#F472B6' : '#4ADE80'} />
+          <stop offset="0%" stopColor={variant === 'pink' ? '#FBCFE8' : '#BBF7D0'} stopOpacity="0.85" />
+          <stop offset="65%" stopColor={variant === 'pink' ? '#F472B6' : '#4ADE80'} stopOpacity="0.55" />
+          <stop offset="100%" stopColor={variant === 'pink' ? '#FCE7F3' : '#ECFCCB'} stopOpacity="0" />
         </linearGradient>
         <linearGradient id="hill-front" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={variant === 'pink' ? '#FCE7F3' : '#D9F99D'} />
-          <stop offset="55%" stopColor={variant === 'pink' ? '#F9A8D4' : '#86EFAC'} />
-          <stop offset="100%" stopColor={variant === 'pink' ? '#EC4899' : '#22C55E'} />
+          <stop offset="0%" stopColor={variant === 'pink' ? '#FCE7F3' : '#D9F99D'} stopOpacity="0.95" />
+          <stop offset="48%" stopColor={variant === 'pink' ? '#F9A8D4' : '#86EFAC'} stopOpacity="0.82" />
+          <stop offset="85%" stopColor={variant === 'pink' ? '#FDF2F8' : '#DCFCE7'} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={variant === 'pink' ? '#FFF5F9' : '#F0FDF4'} stopOpacity="0" />
         </linearGradient>
+        <radialGradient id="island-podium" cx="50%" cy="45%" r="48%">
+          <stop offset="0%" stopColor={variant === 'pink' ? '#FBCFE8' : '#BEF264'} stopOpacity="0.95" />
+          <stop offset="68%" stopColor={variant === 'pink' ? '#F472B6' : '#4ADE80'} stopOpacity="0.75" />
+          <stop offset="100%" stopColor={variant === 'pink' ? '#FCE7F3' : '#BBF7D0'} stopOpacity="0" />
+        </radialGradient>
       </defs>
-      <path d="M-20 82 Q 110 24 240 58 T 460 48 L 460 130 L -20 130 Z" fill="url(#hill-back)" opacity="0.75" />
-      <path d="M-20 58 Q 220 12 460 62 L 460 130 L -20 130 Z" fill="url(#hill-front)" opacity="0.9" />
+      {/* Rolling background hills that fade smoothly into mist at the bottom */}
+      <path d="M-20 78 Q 110 20 240 54 T 460 44 L 460 140 L -20 140 Z" fill="url(#hill-back)" />
+      <path d="M-20 56 Q 220 8 460 58 L 460 140 L -20 140 Z" fill="url(#hill-front)" />
+      {/* Soft 3D Floating Meadow Island under the pig */}
+      <ellipse cx="220" cy="86" rx="175" ry="38" fill="url(#island-podium)" />
       {[
-        { x: 48, y: 74, s: 0.9 },
-        { x: 92, y: 86, s: 0.7 },
-        { x: 358, y: 72, s: 0.95 },
-        { x: 396, y: 84, s: 0.75 },
+        { x: 56, y: 70, s: 0.9 },
+        { x: 96, y: 84, s: 0.7 },
+        { x: 352, y: 68, s: 0.95 },
+        { x: 390, y: 82, s: 0.75 },
       ].map((f, idx) => (
         <g key={idx} transform={`translate(${f.x} ${f.y}) scale(${f.s})`}>
           <circle cx="0" cy="-7" r="5" fill="#FFFFFF" />
