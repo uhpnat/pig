@@ -21,11 +21,20 @@ export function AppFrame({ nav }: { nav: boolean }) {
       )}
       <main id="main"><Outlet /></main>
       {nav && (
-        <nav aria-label="Điều hướng chính" className="fixed inset-x-0 bottom-0 z-30 flex justify-center rounded-t-[28px] px-2 pt-2 shadow-[0_-6px_24px_rgba(143,124,240,.2)] backdrop-blur-xl" style={{ background: 'var(--card)', paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
+        <nav
+          aria-label="Điều hướng chính"
+          className="fixed inset-x-0 bottom-0 z-30 flex justify-center rounded-t-[28px] border-t-2 border-white bg-white/95 px-2 pt-2 shadow-[0_-8px_28px_rgba(143,124,240,.18)] backdrop-blur-xl"
+          style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}
+        >
           <div className="flex w-full max-w-[440px]">
             {TABS.map(({ to, label, Icon, end }) => (
               <NavLink key={to} to={to} end={end} className={({ isActive }) => `tab no-underline ${isActive ? 'tab-on' : ''}`}>
-                <Icon size={22} aria-hidden /><span>{label}</span>
+                {({ isActive }) => (
+                  <>
+                    <Icon size={22} strokeWidth={isActive ? 2.6 : 2.1} aria-hidden />
+                    <span>{label}</span>
+                  </>
+                )}
               </NavLink>
             ))}
           </div>

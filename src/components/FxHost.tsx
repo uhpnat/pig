@@ -30,7 +30,7 @@ export function ToastHost() {
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div key={t.id} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}
-            className={`rounded-full px-4 py-2.5 text-sm font-extrabold text-white shadow-lg ${t.tone === 'error' ? 'bg-[#e5484d]' : 'bg-[#3b2a6b]'}`}>{t.text}</motion.div>
+            className={`rounded-full border-2 border-white px-4 py-2.5 text-sm font-extrabold text-white shadow-xl ${t.tone === 'error' ? 'bg-[#e5484d]' : 'bg-gradient-to-r from-[#7c3aed] to-[#ec4899]'}`}>{t.text}</motion.div>
         ))}
       </AnimatePresence>
     </div>

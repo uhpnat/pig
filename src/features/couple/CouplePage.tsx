@@ -263,20 +263,6 @@ export default function CouplePage() {
             onChange={(v) => set({ animations: v ? 'auto' : 'off' })}
             label="Hiệu ứng chuyển động"
           />
-          <div>
-            <span className="label">Giao diện</span>
-            <div className="flex gap-2">
-              {([
-                ['auto', 'Theo máy'],
-                ['light', 'Sáng'],
-                ['dark', 'Tối'],
-              ] as const).map(([id, l]) => (
-                <Chip key={id} on={s.theme === id} onClick={() => set({ theme: id })}>
-                  {l}
-                </Chip>
-              ))}
-            </div>
-          </div>
 
           <div className="mt-4 grid gap-2.5 pt-2">
             <Button variant="ghost" size="sm" onClick={() => { setSettingsOpen(false); nav('/notifications') }}>

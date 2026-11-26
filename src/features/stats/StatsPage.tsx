@@ -154,7 +154,7 @@ export default function StatsPage() {
       <div className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-5 shadow-[0_12px_28px_rgba(143,124,240,.14)]">
         <div className="flex items-center justify-between">
           <h2 className="text-[16px] font-black text-[#172554]">Tiến độ theo tháng</h2>
-          <span className="rounded-full bg-[#1e1b4b] px-3 py-1 text-xs font-black text-white shadow">
+          <span className="rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-3 py-1 text-xs font-black text-white shadow">
             {millions(d.total.total)}
           </span>
         </div>

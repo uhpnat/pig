@@ -119,13 +119,13 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-[#2a1a5e]/50 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+        <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-[#1e1b4b]/45 backdrop-blur-[2px] sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
           <motion.div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}
             initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            className="max-h-[90vh] w-full max-w-[440px] overflow-y-auto rounded-t-[32px] p-5 outline-none sm:rounded-[32px]" style={{ background: 'var(--bg1)', paddingBottom: 'calc(20px + env(safe-area-inset-bottom))' }}>
+            className="max-h-[90vh] w-full max-w-[440px] overflow-y-auto rounded-t-[34px] border-t-2 border-white p-5 text-[#1e1b4b] shadow-2xl outline-none sm:rounded-[34px]" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #fff5f9 100%)', paddingBottom: 'calc(22px + env(safe-area-inset-bottom))' }}>
             <div className="flex items-center justify-between">
-              <h2 className="h2">{title}</h2>
-              <button type="button" onClick={onClose} aria-label="Đóng" className="grid h-9 w-9 place-items-center rounded-full bg-white/70 text-vio"><X size={18} /></button>
+              <h2 className="h2 !text-[#1e1b4b]">{title}</h2>
+              <button type="button" onClick={onClose} aria-label="Đóng" className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border-0 bg-[#f3e8ff] text-[#6d28d9]"><X size={18} /></button>
             </div>
             {children}
           </motion.div>

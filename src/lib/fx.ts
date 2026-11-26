@@ -32,9 +32,9 @@ export function beep(settings: Pick<AppSettings, 'sound'>, kind: 'tick' | 'win' 
   }
 }
 
-export function applyTheme(theme: AppSettings['theme']) {
-  const dark = theme === 'dark' || (theme === 'auto' && typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches)
-  document.documentElement.classList.toggle('dark', dark)
+export function applyTheme(_theme?: AppSettings['theme']) {
+  // Always enforce the unified Light 3D Pastel theme across the entire PWA so dark/light never mix!
+  document.documentElement.classList.remove('dark')
 }
 
 /** Downscale an uploaded avatar to a small data URL so it fits in storage. */

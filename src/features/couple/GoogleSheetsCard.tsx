@@ -232,14 +232,14 @@ export function GoogleSheetsCard() {
               Xoá đoạn mã mặc định và dán đoạn mã dưới đây vào, rồi bấm nút <b>Sao chép mã</b> bên dưới:
             </li>
           </ol>
-          <div className="relative rounded-2xl bg-[#2a2150] p-3 text-[11px] text-white">
+          <div className="relative rounded-2xl bg-[#f5f3ff] border border-[#ddd6fe] p-3 text-[11px] text-[#1e1b4b]">
             <button
               type="button"
               onClick={async () => {
                 await navigator.clipboard.writeText(GAS_CODE)
                 toast('Đã sao chép mã Apps Script! 📋')
               }}
-              className="chip !bg-white/20 !px-2.5 !py-1 !text-[11px] !text-white float-right flex items-center gap-1"
+              className="chip !bg-[#7c3aed] !px-2.5 !py-1 !text-[11px] !text-white float-right flex items-center gap-1"
             >
               <Copy size={12} /> Sao chép mã
             </button>
