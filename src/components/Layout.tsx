@@ -14,7 +14,21 @@ const TABS = [
 export function AppFrame({ nav }: { nav: boolean }) {
   const online = useOnline()
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[440px]" style={{ paddingBottom: nav ? 'calc(88px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)' }}>
+    <div
+      className="mx-auto min-h-[100dvh] w-full max-w-[440px]"
+      style={{
+        paddingBottom: nav ? 'calc(88px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)',
+      }}
+    >
+      {/* Top Safe-Area Notch Bleed Cover so iPhone notch / Dynamic Island never shows a white gap */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 top-0 z-20"
+        style={{
+          height: 'env(safe-area-inset-top, 0px)',
+          background: 'inherit',
+        }}
+      />
       {!online && (
         <div role="status" className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3b2a6b] px-3 py-1.5 text-xs font-extrabold text-white">
           <WifiOff size={14} /> Đang ngoại tuyến – dữ liệu vẫn được lưu trên máy này

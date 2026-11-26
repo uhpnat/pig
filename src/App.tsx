@@ -40,12 +40,29 @@ function WelcomeGate() {
   return <Page><OnboardingPage /></Page>
 }
 
+const ROUTE_TOP_COLOR: Record<string, string> = {
+  '/': '#86c5ff',
+  '/reveal': '#5b3dc8',
+  '/pig': '#dbeafe',
+  '/couple': '#fde8f1',
+  '/welcome': '#f3e8ff',
+  '/journal': '#f5efff',
+  '/challenges': '#f5efff',
+  '/stats': '#f5efff',
+  '/notifications': '#f5efff',
+}
+
 export default function App() {
   const loc = useLocation()
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
+    const topColor = ROUTE_TOP_COLOR[loc.pathname] || '#f5efff'
+    document.documentElement.style.backgroundColor = topColor
+    document.body.style.backgroundColor = topColor
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', topColor)
   }, [loc.pathname])
   return (
     <PasscodeGate>

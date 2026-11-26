@@ -17,11 +17,11 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
         ? local.journey
         : remote.journey || local.journey
 
-  // 1. Merge daily reveals by date (earliest createdAt wins — idempotent across two phones!)
+  // 1. Merge daily reveals by date (LATEST createdAt wins so when a user re-rolls today's reveal, the new random amount wins across devices!)
   const revealByDate = new Map<string, Reveal>()
   for (const r of [...remote.reveals, ...local.reveals]) {
     const prev = revealByDate.get(r.date)
-    if (!prev || r.createdAt < prev.createdAt) {
+    if (!prev || r.createdAt >= prev.createdAt) {
       revealByDate.set(r.date, r)
     }
   }

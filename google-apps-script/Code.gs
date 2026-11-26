@@ -26,11 +26,11 @@ function mergeAppState(existing, incoming) {
 
   var out = JSON.parse(JSON.stringify(incoming));
 
-  // 1. Hợp nhất Daily Reveals theo ngày (ưu tiên kết quả được mở sớm hơn -> cả 2 luôn thấy chung 1 kết quả!)
+  // 1. Hợp nhất Daily Reveals theo ngày (ưu tiên kết quả mới nhất khi người dùng bấm Random lại số tiền!)
   var revByDate = {};
   (existing.reveals || []).concat(incoming.reveals || []).forEach(function(r) {
     var prev = revByDate[r.date];
-    if (!prev || String(r.createdAt) < String(prev.createdAt)) {
+    if (!prev || String(r.createdAt) >= String(prev.createdAt)) {
       revByDate[r.date] = r;
     }
   });

@@ -26,7 +26,7 @@ const fmtM = (n: number) => `${(n / 1e6).toFixed(1)}M`
 
 export default function HomePage() {
   const j = useJourney()
-  const { state, confirmed, pending, progress, today, unread, goalReached, motionOff } = useStore()
+  const { state, repo, run, toast, confirmed, pending, progress, today, unread, goalReached, motionOff } = useStore()
   const nav = useNavigate()
   const [topUp, setTopUp] = useState(false)
 
@@ -54,14 +54,21 @@ export default function HomePage() {
 
   return (
     <div
-      className="min-h-screen pb-8"
+      className="relative min-h-[100dvh] pb-8"
       style={{
-        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
+        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
         background: 'linear-gradient(180deg, #86c5ff 0%, #b8deff 26%, #e6f5d0 52%, #fdf2e9 72%, #fce8ef 100%)',
       }}
     >
+      {/* Extended sky bleed above the viewport to cover iPhone notch & rubber-band overscroll */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 -top-24 z-0 h-28"
+        style={{ background: '#86c5ff' }}
+      />
       {/* 1. Top Row: Avatars + Plus button on left, Bell on right */}
-      <header className="flex items-center justify-between px-4">
+      <header className="relative z-10 flex items-center justify-between px-4">
         <div className="flex items-center">
           <Avatar value={j.members.a.avatar} size={46} className="z-10 shadow-md" />
           <Avatar value={j.members.b.avatar} size={46} className="-ml-2.5 z-20 shadow-md" />
@@ -259,9 +266,20 @@ export default function HomePage() {
                   )
                 })}
               </div>
-              <div className="mt-3">
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
                 <Button variant="violet" size="sm" onClick={() => nav('/reveal')}>
-                  {allDone ? 'Xem chi tiết hôm nay' : 'Vào xác nhận đã góp'}
+                  {allDone ? 'Xem chi tiết' : 'Vào xác nhận góp'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    await run(repo.resetTodayReveal())
+                    toast('Đã đặt lại! Hãy bấm mở số tiền mới nhé 🎲')
+                    nav('/reveal')
+                  }}
+                >
+                  🎲 Random lại số tiền
                 </Button>
               </div>
             </Card>

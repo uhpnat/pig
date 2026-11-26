@@ -24,10 +24,13 @@ export default function RevealPage() {
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
   const sound = state.settings.sound
 
-  const start = async () => {
+  const start = async (forceReroll = false) => {
     if (rolling) return
     setRolling(true)
     haptic(state.settings, 40)
+    if (forceReroll) {
+      await run(repo.resetTodayReveal())
+    }
     const t0 = Date.now()
     const dur = motionOff ? 300 : 2800
     const scale = (j.goal / Math.max(1, j.months * 30)) * 2
@@ -68,11 +71,21 @@ export default function RevealPage() {
 
   return (
     <div
-      className="min-h-screen pb-10"
-      style={{ background: 'linear-gradient(180deg, #5b3dc8 0%, #8e6ee8 45%, #fde8f1 100%)' }}
+      className="relative min-h-[100dvh] pb-10"
+      style={{
+        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(180deg, #5b3dc8 0%, #8e6ee8 45%, #fde8f1 100%)',
+      }}
     >
+      {/* Extended purple galaxy bleed above the viewport to cover iPhone notch */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 -top-24 z-0 h-28"
+        style={{ background: '#5b3dc8' }}
+      />
       {/* Top Floating Controls */}
-      <div className="flex items-center justify-between px-4 pt-3.5">
+      <div className="relative z-10 flex items-center justify-between px-4">
         <button
           type="button"
           onClick={() => nav('/')}
@@ -183,7 +196,7 @@ export default function RevealPage() {
               </div>
             )}
 
-            <Button variant="violet" className="mt-4 !py-4 !text-[18px]" disabled={rolling} onClick={start}>
+            <Button variant="violet" className="mt-4 !py-4 !text-[18px]" disabled={rolling} onClick={() => start(false)}>
               {rolling ? 'Đang quay số… 🎲' : 'MỞ KẾT QUẢ HÔM NAY 🎉'}
             </Button>
           </>
@@ -248,25 +261,23 @@ export default function RevealPage() {
               )}
             </div>
 
-            <Button
-              variant="violet"
-              className="mt-4 !py-4 !text-[18px]"
-              onClick={() => nav(allDone ? '/' : '/journal')}
-            >
-              Tuyệt vời! 🎉
-            </Button>
-            <button
-              type="button"
-              onClick={async () => {
-                if (window.confirm('Bạn muốn xoá kết quả hôm nay để quay số lại từ đầu?')) {
-                  await run(repo.resetTodayReveal())
-                  toast('Đã đặt lại lượt mở số hôm nay! 🎲')
-                }
-              }}
-              className="muted mt-3 block w-full cursor-pointer border-0 bg-transparent text-center !text-xs underline"
-            >
-              🔄 Quay lại số tiền hôm nay (Reset kết quả ngày này)
-            </button>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Button
+                variant="ghost"
+                className="!py-3.5 !text-[15px]"
+                disabled={rolling}
+                onClick={() => start(true)}
+              >
+                🎲 Random lại số tiền
+              </Button>
+              <Button
+                variant="violet"
+                className="!py-3.5 !text-[15px]"
+                onClick={() => nav(allDone ? '/' : '/journal')}
+              >
+                Tuyệt vời! 🎉
+              </Button>
+            </div>
           </>
         )}
       </div>
