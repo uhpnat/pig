@@ -79,7 +79,7 @@ export default function JournalPage() {
       className="min-h-[100dvh] px-4 pb-[calc(96px+env(safe-area-inset-bottom))]"
       style={{
         paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(180deg, #e0f2fe 0px, #e0f2fe 76px, #f5efff 38%, #ffeef5 100%)',
+        background: 'linear-gradient(180deg, #e0f2fe 0%, #f5efff 42%, #ffeef5 100%)',
       }}
     >
       {/* Header matching 05_savings_journal.png */}

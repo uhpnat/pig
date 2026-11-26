@@ -75,7 +75,7 @@ export default function OnboardingPage() {
       className="min-h-[100dvh] px-4 pb-16"
       style={{
         paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(180deg, #f3e8ff 0px, #f3e8ff 76px, #ffe6f1 45%, #fff7fa 100%)',
+        background: 'linear-gradient(180deg, #f3e8ff 0%, #ffe6f1 46%, #fff7fa 100%)',
       }}
     >
       {/* Top Bar matching 01_onboarding.png */}

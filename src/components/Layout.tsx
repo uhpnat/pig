@@ -21,31 +21,13 @@ export function AppFrame({ nav }: { nav: boolean }) {
     <div
       className="mx-auto min-h-[100dvh] w-full max-w-[440px]"
     >
-      {/* Top foreground 4px + safe-area fixed bar (z-50) so iOS Safari WebKit ALWAYS samples the active page's top color and never gets stuck on /reveal's purple! */}
+      {/* Fixed full-screen backdrop layer (-z-10) so top & bottom safe-area edges smoothly match the active page without any foreground seam line */}
       <div
-        key={`top-bar-${loc.pathname}`}
+        key={`backdrop-${loc.pathname}`}
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-50"
+        className="pointer-events-none fixed inset-0 -z-10"
         style={{
-          height: 'calc(4px + env(safe-area-inset-top, 0px))',
-          backgroundColor: theme.top,
-        }}
-      />
-      {/* Fixed top & bottom backdrop layers */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 -z-10"
-        style={{
-          height: 'calc(88px + env(safe-area-inset-top, 0px))',
-          backgroundColor: theme.top,
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 bottom-0 -z-10"
-        style={{
-          height: 'calc(88px + env(safe-area-inset-bottom, 0px))',
-          backgroundColor: theme.bottom,
+          background: `linear-gradient(180deg, ${theme.top} 0%, ${theme.top} 35%, ${theme.bottom} 65%, ${theme.bottom} 100%)`,
         }}
       />
       {!online && (

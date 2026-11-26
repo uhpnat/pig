@@ -117,7 +117,7 @@ export default function RevealPage() {
         overscrollBehavior: 'none',
         paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
-        background: 'linear-gradient(180deg, #5b3dc8 0px, #5b3dc8 76px, #8e6ee8 54%, #fde8f1 100%)',
+        background: 'linear-gradient(180deg, #5b3dc8 0%, #8e6ee8 54%, #fde8f1 100%)',
       }}
     >
       {/* 1. Top Floating Controls */}

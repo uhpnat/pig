@@ -75,7 +75,7 @@ export default function NotificationsPage() {
       className="min-h-[100dvh] px-4 pb-10"
       style={{
         paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(180deg, #fce7f3 0px, #fce7f3 76px, #f5efff 40%, #ffeef5 100%)',
+        background: 'linear-gradient(180deg, #fce7f3 0%, #f5efff 42%, #ffeef5 100%)',
       }}
     >
       <button

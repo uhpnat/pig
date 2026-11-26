@@ -67,7 +67,7 @@ export default function StatsPage() {
       className="min-h-[100dvh] px-4 pb-10"
       style={{
         paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(180deg, #e0f2fe 0px, #e0f2fe 76px, #f5efff 40%, #ffeef5 100%)',
+        background: 'linear-gradient(180deg, #e0f2fe 0%, #f5efff 42%, #ffeef5 100%)',
       }}
     >
       {/* Header matching 06_statistics.png */}

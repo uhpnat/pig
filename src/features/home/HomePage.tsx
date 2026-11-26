@@ -195,7 +195,7 @@ export default function HomePage() {
       style={{
         paddingTop: 'calc(10px + env(safe-area-inset-top, 0px))',
         background:
-          'linear-gradient(180deg, #b8e1ff 0px, #b8e1ff 76px, #d8f0ff 28%, #e8f8dc 52%, #fdf2f7 78%, #fde8f1 100%)',
+          'linear-gradient(180deg, #b8e1ff 0%, #d8f0ff 30%, #e8f8dc 54%, #fdf2f7 78%, #fde8f1 100%)',
       }}
     >
       {/* TOP HERO ZONE: Header + Mode Switcher + 3D Pig on Feathered Meadow */}
