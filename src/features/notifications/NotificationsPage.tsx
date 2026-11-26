@@ -1,10 +1,11 @@
-import { BellRing, ChevronLeft } from 'lucide-react'
+import { BellRing, ChevronLeft, Send } from 'lucide-react'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, EmptyState, Toggle } from '@/components/ui'
 import { fmtDateTime } from '@/domain/format'
 import { usePushPermission } from '@/hooks/usePwa'
 import { useJourney, useStore } from '@/hooks/useStore'
+import { fireBrowserNotification } from '@/lib/pushNotify'
 import type { NotificationType } from '@/domain/types'
 
 const ICON: Record<NotificationType, string> = { reveal: '🐷', partner_confirmed: '💰', pending: '⏳', milestone: '🎉', challenge: '🏅', recap: '📬', goal: '🎆', invite: '💌' }
@@ -21,9 +22,20 @@ export default function NotificationsPage() {
 
   const enablePush = async () => {
     const r = await request()
-    if (r === 'granted') toast('Đã bật thông báo trình duyệt 🔔')
-    else if (r === 'denied') toast('Bạn đã chặn thông báo. Hãy bật lại trong cài đặt trình duyệt.', 'error')
-    else if (r === 'unsupported') toast('Thiết bị này chưa hỗ trợ thông báo đẩy. Thông báo trong app vẫn hoạt động.', 'error')
+    if (r === 'granted') {
+      toast('Đã bật thông báo đẩy trên thiết bị! 🔔')
+      await fireBrowserNotification('🐷 Piggy Duo đã bật thông báo!', 'Mỗi khi hai bạn mở số tiền hoặc xác nhận góp, thông báo sẽ hiện ngay trên màn hình.')
+    } else if (r === 'denied') toast('Bạn đã chặn thông báo. Hãy bật lại trong cài đặt trình duyệt.', 'error')
+    else if (r === 'unsupported') toast('Trên iPhone, hãy chọn "Thêm vào Màn hình chính" rồi mở app từ màn hình chính để bật thông báo đẩy nhé!', 'error')
+  }
+
+  const testPush = async () => {
+    if (perm !== 'granted') {
+      await enablePush()
+      return
+    }
+    await fireBrowserNotification('🐷 Thử chuông Piggy Duo!', `Heo đất "${j.name}" chào ${j.members.a.name} & ${j.members.b.name} 💗`)
+    toast('Đã bắn thử thông báo đẩy! 🔔')
   }
 
   return (
@@ -46,8 +58,21 @@ export default function NotificationsPage() {
         <Toggle checked={s.notifyRecap} onChange={(v) => run(repo.updateSettings({ notifyRecap: v }))} label="Tổng kết tuần / tháng" />
         <div className="mt-2 flex items-center gap-3 rounded-2xl bg-white/60 p-3">
           <BellRing className="shrink-0 text-vio" />
-          <p className="muted flex-1 !text-xs">{perm === 'granted' ? 'Thông báo trình duyệt đã bật.' : perm === 'denied' ? 'Thông báo đang bị chặn trong trình duyệt.' : perm === 'unsupported' ? 'Thiết bị chưa hỗ trợ thông báo đẩy.' : 'Bật thông báo đẩy (tuỳ chọn). Push thật cần backend – xem README.'}</p>
-          {perm === 'default' && <Button size="sm" block={false} onClick={enablePush}>Bật</Button>}
+          <p className="muted flex-1 !text-xs">
+            {perm === 'granted'
+              ? 'Đã bật thông báo đẩy (PWA / Trình duyệt). Mỗi khi thao tác hoặc người ấy thao tác trên Google Sheet, máy sẽ báo chuông & hiện banner!'
+              : perm === 'denied'
+                ? 'Thông báo đang bị chặn trong cài đặt trình duyệt.'
+                : perm === 'unsupported'
+                  ? 'Trên iPhone: bấm Chia sẻ -> "Thêm vào Màn hình chính" rồi mở app ngoài màn hình chính để bật Push.'
+                  : 'Bật thông báo đẩy lên màn hình điện thoại mỗi khi có thao tác mới.'}
+          </p>
+          {perm === 'default' && <Button size="sm" block={false} onClick={enablePush}>Bật ngay</Button>}
+        </div>
+        <div className="mt-3">
+          <Button size="sm" variant="violet" onClick={testPush}>
+            <Send size={15} className="mr-1.5 inline" /> Bắn thử thông báo đẩy ngay
+          </Button>
         </div>
       </Card>
     </div>

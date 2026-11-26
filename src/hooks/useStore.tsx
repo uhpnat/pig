@@ -5,7 +5,8 @@ import { todayIn } from '@/domain/format'
 import { confirmedTotals, pendingTotals, progressPct } from '@/domain/stats'
 import type { AppState, Journey } from '@/domain/types'
 import { DomainError } from '@/domain/types'
-import { applyTheme, prefersReducedMotion } from '@/lib/fx'
+import { applyTheme, beep, haptic, prefersReducedMotion } from '@/lib/fx'
+import { fireBrowserNotification, shouldNotifyEvent } from '@/lib/pushNotify'
 import { repository } from '@/services'
 import type { Repository } from '@/services/repository'
 
@@ -41,6 +42,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [fx, setFx] = useState<Fx | null>(null)
   const seq = useRef(0)
+  const seenNotifIds = useRef<Set<string> | null>(null)
 
   useEffect(() => {
     let off = () => {}
@@ -62,6 +64,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setToasts((t) => [...t, { id, text, tone }])
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200)
   }, [])
+
+  // Whenever state.notifications gains a new item (from our own action OR from 6s realtime Google Sheet sync),
+  // fire a system/PWA notification + in-app toast + gentle sound/haptic!
+  useEffect(() => {
+    if (!state) return
+    if (seenNotifIds.current === null) {
+      seenNotifIds.current = new Set(state.notifications.map((n) => n.id))
+      return
+    }
+    const fresh = state.notifications.filter((n) => !seenNotifIds.current!.has(n.id))
+    if (!fresh.length) return
+    for (const n of fresh) {
+      seenNotifIds.current.add(n.id)
+      if (!shouldNotifyEvent(n, state.settings)) continue
+      void fireBrowserNotification(`🐷 ${n.title}`, n.message, n.id)
+      toast(`🔔 ${n.title}: ${n.message}`)
+      haptic(state.settings, 35)
+      beep(state.settings, 'win')
+    }
+  }, [state, toast])
 
   const celebrate = useCallback((emojis = ['🪙', '🎉', '✨', '💗']) => setFx({ id: ++seq.current, emojis }), [])
 

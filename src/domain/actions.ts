@@ -121,6 +121,9 @@ export function updateJourney(state: AppState, patch: Partial<Journey>, now = ne
   s.journey = { ...j, ...patch }
   s.journey.endDate = endDateOf(s.journey.startDate, s.journey.months)
   pushActivity(s, { at: now, type: 'settings', title: '⚙️ Đã cập nhật quy tắc chung', description: `Thay đổi: ${Object.keys(next).join(', ')}. Các giao dịch đã xác nhận được giữ nguyên.`, status: 'done', audit: { old, next } })
+  if (!('pig' in next && Object.keys(next).length === 1)) {
+    pushNotification(s, 'recap', '⚙️ Quy tắc chung vừa được cập nhật', `Mục thay đổi: ${Object.keys(next).join(', ')}`, now)
+  }
   return s
 }
 
@@ -189,6 +192,13 @@ export function addContribution(state: AppState, member: MemberId, amount: numbe
   const c: Contribution = { id: uid('ct'), member, revealId: null, amount: Math.round(amount), date, status: pending ? 'pending' : 'confirmed', notes: notes.trim(), createdAt: now, confirmedAt: pending ? null : now }
   s.contributions.push(c)
   pushActivity(s, { at: now, type: 'contribution', member, amount: c.amount, title: `➕ ${j.members[member].name} nạp thêm`, description: c.notes || 'Khoản nạp thêm', status: pending ? 'pending' : 'done' })
+  pushNotification(
+    s,
+    'partner_confirmed',
+    `➕ ${j.members[member].name} vừa nạp thêm ${vnd(c.amount)}`,
+    c.notes ? `Ghi chú: ${c.notes}` : pending ? 'Đang chờ xác nhận vào heo đất.' : 'Đã cộng thẳng vào heo đất! 🐷',
+    now,
+  )
   if (!pending) afterConfirmation(s, now)
   return s
 }
