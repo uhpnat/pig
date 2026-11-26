@@ -212,44 +212,59 @@ export function Interactive3DStage({
   const pctFemale = totalShare > 0 ? (rawPctFemale / totalShare) * 100 : 50
 
   /**
-   * 100% CLEAN INTERNAL WATER WAVE FILL (NO external rulers, NO badges or text covering the pig!):
-   * - The pig's physical body inside the 440x420 sprite spans from bottom 3.8% (paws) to 93.8% (top of head/ears) = 90% usable height.
-   * - Total water level height inside the pig = `totalTopY%` (strictly 0% when clampedFill is 0, rising linearly to 100% as savings grow).
-   * - Inside that rising water body, the water is formed by two naturally undulating horizontal wave layers:
-   *   1. Bottom Water Layer (Sky Blue 💙 for Nam): occupies `pctMale%` of the water height (`0 -> maleTopY%`), with a rolling wave crest at `maleTopY%`.
-   *   2. Top Water Layer (Rose Pink 💗 for Nữ): floats smoothly on top of Nam's blue water (`maleTopY% -> totalTopY%`), occupying `pctFemale%` of the water height, with a counter-rolling wave crest at the top water surface (`totalTopY%`).
-   * - This way, looking purely at the water inside the transparent pig:
-   *   - How high the water reaches inside the pig = Total % saved.
-   *   - The thickness of the Blue water wave vs Pink water wave = Each person's exact contribution share.
+   * DUAL-WAVE BLENDED WATER WITH RELATIVE NAM vs NỮ HEIGHTS:
+   * 1. Overall Water Height (`baseWaterY%`):
+   *    - Strictly 0% when `clampedFill <= 0` (100% transparent pig).
+   *    - Linearly proportional to `clampedFill` across the pig's belly (`BODY_BASE_PCT = 10%` just above hooves up to `92%` at top of head),
+   *      so Heo theo tháng (1 month) and Heo cuối kỳ (full journey) have distinctly different, accurate water levels!
+   * 2. Relative Nam (Blue) vs Nữ (Pink) Water Heights (`maleWaterY%` vs `femaleWaterY%`):
+   *    - Both waters ripple across the full width of the pig and blend together where they overlap.
+   *    - Their individual heights scale directly with `pctMale` and `pctFemale` around `baseWaterY`:
+   *      The partner with the higher `%` rises up to `peakWaterY` (`baseWaterY`), while the partner with the lower `%`
+   *      sits lower at `BODY_BASE_PCT + (peakWaterY - BODY_BASE_PCT) * (theirPct / maxPct)`.
+   *    - When Nam > Nữ (e.g. 60% vs 40%): Nam's Blue waves rise higher on top, Nữ's Pink waves ripple lower underneath and blend through.
+   *    - When Nữ > Nam (e.g. 65% vs 35%): Nữ's Pink waves rise higher on top, Nam's Blue waves ripple lower underneath and blend through.
+   *    - When Nam == Nữ (50% / 50%): Both Blue & Pink waves ripple at the exact same height (`maleWaterY === femaleWaterY`),
+   *      interweaving into a dual-color blue-pink wave crest!
    */
   const BODY_BASE_PCT = 10
   const BODY_SPAN_PCT = 82
-  // When clampedFill > 0, guarantee at least 18% visible water height above the pig's hooves so even small percentages are clearly visible inside the belly!
-  const visualTotalSpan =
-    clampedFill <= 0 ? 0 : Math.max(14, (clampedFill / 100) * BODY_SPAN_PCT)
-  const visualMaleSpan = (visualTotalSpan * pctMale) / 100
-  const visualFemaleSpan = (visualTotalSpan * pctFemale) / 100
+  const maxMemberPct = Math.max(pctMale, pctFemale, 1)
 
-  const totalTopY =
-    clampedFill <= 0 ? 0 : clampedFill >= 100 ? 100 : Number((BODY_BASE_PCT + visualTotalSpan).toFixed(2))
-  const maleTopY =
+  // Linearly map 0..100% -> 11.5%..92% (just 1.5% above hooves at 1% fill so even 1% is visible above the dark hoof line without forcing a 24% floor!)
+  const peakSpan =
+    clampedFill <= 0 ? 0 : Math.max(4.5, (clampedFill / 100) * BODY_SPAN_PCT)
+
+  const maleSpan = clampedFill <= 0 || pctMale <= 0 ? 0 : Math.max(3.5, peakSpan * (pctMale / maxMemberPct))
+  const femaleSpan = clampedFill <= 0 || pctFemale <= 0 ? 0 : Math.max(3.5, peakSpan * (pctFemale / maxMemberPct))
+
+  const maleWaterY =
     clampedFill <= 0 || pctMale <= 0
       ? 0
-      : pctFemale <= 0
-        ? totalTopY
-        : Number((BODY_BASE_PCT + visualMaleSpan).toFixed(2))
+      : clampedFill >= 100 && pctMale >= pctFemale
+        ? 98
+        : Number((BODY_BASE_PCT + maleSpan).toFixed(2))
+
+  const femaleWaterY =
+    clampedFill <= 0 || pctFemale <= 0
+      ? 0
+      : clampedFill >= 100 && pctFemale >= pctMale
+        ? 98
+        : Number((BODY_BASE_PCT + femaleSpan).toFixed(2))
+
+  const maxWaterY = Math.max(maleWaterY, femaleWaterY)
 
   // Dynamic Pig Quotes in the speech bubble above
   const quotes = [
     clampedFill <= 0
       ? `🐷 Bụng heo pha lê đang trong suốt (0%)! Cùng nạp tiền để nước dâng lên nha 💧`
       : pctMale > pctFemale
-        ? `💧 Nước xanh của ${nameMale} (${pctMale.toFixed(0)}%) đang nhiều hơn nước hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) nè!`
+        ? `💧 Sóng xanh của ${nameMale} (${pctMale.toFixed(0)}%) đang dâng cao hơn sóng hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) nè!`
         : pctFemale > pctMale
-          ? `💧 Nước hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) đang nhiều hơn nước xanh của ${nameMale} (${pctMale.toFixed(0)}%) nè!`
-          : `⚖️ Hai làn sóng Xanh – Hồng đang bằng nhau (${pctMale.toFixed(0)}% / ${pctFemale.toFixed(0)}%) · Tuyệt vời quá! 💗`,
-    `🌊 Mực nước trong bụng heo đã dâng được ${clampedFill.toFixed(0)}% rồi đó! Chạm vào heo nha ✨`,
-    `💙 Sóng xanh của ${nameMale} hòa quyện cùng sóng hồng của ${nameFemale} 💗`,
+          ? `💧 Sóng hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) đang dâng cao hơn sóng xanh của ${nameMale} (${pctMale.toFixed(0)}%) nè!`
+          : `⚖️ Hai làn sóng Xanh – Hồng đang cao bằng nhau (${pctMale.toFixed(0)}% / ${pctFemale.toFixed(0)}%) · Quá ăn ý! 💗`,
+    `🌊 Mực nước hiện đạt ${clampedFill.toFixed(1)}% · Sóng xanh 💙 và sóng hồng 💗 đang hòa quyện!`,
+    `✨ Chạm vào heo pha lê để khuấy động làn sóng của ${nameMale} & ${nameFemale} nha!`,
   ]
   const currentQuote = quotes[quoteIdx % quotes.length]
 
@@ -402,7 +417,7 @@ export function Interactive3DStage({
           />
         </div>
 
-        {/* LAYER 4: 3D Crystal Piggy Bank with Pure Internal Dual-Wave Rising Water (Nothing drawn outside or covering the pig!) */}
+        {/* LAYER 4: 3D Crystal Piggy Bank with Pure Internal Dual-Wave Blending Water */}
         <div className="absolute inset-x-0 bottom-3.5 flex justify-center">
           <motion.div
             style={{
@@ -470,7 +485,7 @@ export function Interactive3DStage({
                   draggable={false}
                 />
 
-                {/* 4B. PURE INTERNAL WATER WAVES MASKED STRICTLY TO THE PIG'S BODY */}
+                {/* 4B. PURE INTERNAL RIPPLING & BLENDING DUAL-WATER WAVES (Height of Nam vs Nữ directly reflects their %) */}
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -485,131 +500,131 @@ export function Interactive3DStage({
                     maskPosition: 'center',
                   }}
                 >
-                  {/* UPPER WATER LAYER (Floats up to totalTopY%): 👧 NỮ'S ROSE-PINK RIPPLING WATER */}
-                  {clampedFill > 0 && visualFemaleSpan > 0 && (
+                  {/* WATER STREAM 1: 👦 NAM'S SKY-BLUE RIPPLING WATER (Rises to `maleWaterY%`, proportional to Nam's %) */}
+                  {clampedFill > 0 && maleWaterY > 0 && (
                     <motion.div
                       className="absolute inset-x-0 bottom-0 overflow-hidden"
                       initial={{ height: '0%' }}
-                      animate={{ height: `${totalTopY}%` }}
-                      transition={{ duration: 0.95, ease: 'easeOut' }}
+                      animate={{ height: `${maleWaterY}%` }}
+                      transition={{ duration: 0.9, ease: 'easeOut' }}
                     >
-                      {/* Pink Back Wave at the top water surface */}
+                      {/* Blue Wave 1 (Scrolls Left) */}
                       <motion.svg
                         viewBox="0 0 800 32"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-0 h-[20px] w-[200%]"
+                        className="absolute left-0 top-0 h-[18px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                        transition={{ duration: 2.3, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 2.35, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
                           d="M 0 16 Q 50 0 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(225, 29, 72, 0.84)"
+                          fill="rgba(2, 132, 199, 0.86)"
                         />
                       </motion.svg>
 
-                      {/* Pink Front Counter-Wave at the top water surface */}
+                      {/* Blue Wave 2 (Scrolls Right) */}
                       <motion.svg
                         viewBox="0 0 800 32"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[3px] h-[19px] w-[200%]"
+                        className="absolute left-0 top-[3px] h-[18px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 1.75, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
                           d="M 0 16 Q 50 32 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(251, 113, 133, 0.94)"
+                          fill="rgba(56, 189, 248, 0.92)"
                         />
                       </motion.svg>
 
-                      {/* Shimmering White Meniscus Highlight on the top water wave */}
+                      {/* Blue Foam Crest Highlight */}
                       <motion.svg
                         viewBox="0 0 800 24"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[2px] h-[12px] w-[200%]"
+                        className="absolute left-0 top-[2px] h-[11px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                        transition={{ duration: 1.9, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 1.95, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
                           d="M 0 12 Q 50 2 100 12 T 200 12 T 300 12 T 400 12 T 500 12 T 600 12 T 700 12 T 800 12 L 800 16 L 0 16 Z"
-                          fill="rgba(255, 255, 255, 0.65)"
+                          fill="rgba(186, 230, 253, 0.75)"
                         />
                       </motion.svg>
 
-                      {/* Pink Water Body: fills 100% of container up to the 10px wave crest so it is NEVER invisible when layer is thin! */}
+                      {/* Translucent Blue Water Body (blends with Pink water where they overlap!) */}
                       <div
                         className="absolute inset-x-0 bottom-0 top-[9px]"
                         style={{
                           background:
-                            'linear-gradient(180deg, rgba(251,113,133,0.95) 0%, rgba(244,63,94,0.93) 55%, rgba(225,29,72,0.96) 100%)',
+                            'linear-gradient(90deg, rgba(14,165,233,0.92) 0%, rgba(56,189,248,0.78) 52%, rgba(2,132,199,0.52) 100%)',
                         }}
                       />
                     </motion.div>
                   )}
 
-                  {/* LOWER WATER LAYER (Rises from bottom up to maleTopY%): 👦 NAM'S SKY-BLUE RIPPLING WATER */}
-                  {clampedFill > 0 && visualMaleSpan > 0 && (
+                  {/* WATER STREAM 2: 👧 NỮ'S ROSE-PINK RIPPLING WATER (Rises to `femaleWaterY%`, proportional to Nữ's %, blending seamlessly with Nam's Blue water!) */}
+                  {clampedFill > 0 && femaleWaterY > 0 && (
                     <motion.div
                       className="absolute inset-x-0 bottom-0 overflow-hidden"
                       initial={{ height: '0%' }}
-                      animate={{ height: `${maleTopY}%` }}
-                      transition={{ duration: 0.95, ease: 'easeOut' }}
+                      animate={{ height: `${femaleWaterY}%` }}
+                      transition={{ duration: 0.9, ease: 'easeOut' }}
                     >
-                      {/* Blue Back Wave (interlocks with the Pink water above or forms the surface if Nữ = 0%) */}
+                      {/* Pink Wave 1 (Scrolls Right — opposite to Blue Wave 1 so both waves interweave when heights are close!) */}
                       <motion.svg
                         viewBox="0 0 800 32"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-0 h-[20px] w-[200%]"
+                        className="absolute left-0 top-0 h-[18px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 2.15, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 16 Q 50 0 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(2, 132, 199, 0.88)"
+                          d="M 0 16 Q 50 32 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
+                          fill="rgba(225, 29, 72, 0.82)"
                         />
                       </motion.svg>
 
-                      {/* Blue Front Counter-Wave */}
+                      {/* Pink Wave 2 (Scrolls Left) */}
                       <motion.svg
                         viewBox="0 0 800 32"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[3px] h-[19px] w-[200%]"
+                        className="absolute left-0 top-[3px] h-[18px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
+                        transition={{ duration: 1.65, repeat: Infinity, ease: 'linear' }}
+                      >
+                        <path
+                          d="M 0 16 Q 50 0 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
+                          fill="rgba(251, 113, 133, 0.88)"
+                        />
+                      </motion.svg>
+
+                      {/* Pink Foam Crest Highlight */}
+                      <motion.svg
+                        viewBox="0 0 800 24"
+                        preserveAspectRatio="none"
+                        className="absolute left-0 top-[2px] h-[11px] w-[200%]"
+                        animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
                         transition={{ duration: 1.85, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 16 Q 50 32 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(56, 189, 248, 0.95)"
+                          d="M 0 12 Q 50 22 100 12 T 200 12 T 300 12 T 400 12 T 500 12 T 600 12 T 700 12 T 800 12 L 800 16 L 0 16 Z"
+                          fill="rgba(254, 205, 211, 0.78)"
                         />
                       </motion.svg>
 
-                      {/* Luminous Wave Crest Ribbon where Blue water meets Pink water */}
-                      <motion.svg
-                        viewBox="0 0 800 24"
-                        preserveAspectRatio="none"
-                        className="absolute left-0 top-[2px] h-[12px] w-[200%]"
-                        animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 2.0, repeat: Infinity, ease: 'linear' }}
-                      >
-                        <path
-                          d="M 0 12 Q 50 2 100 12 T 200 12 T 300 12 T 400 12 T 500 12 T 600 12 T 700 12 T 800 12 L 800 16 L 0 16 Z"
-                          fill="rgba(255, 255, 255, 0.6)"
-                        />
-                      </motion.svg>
-
-                      {/* Blue Water Body: fills 100% of container up to the 9px wave crest so it is NEVER invisible when layer is thin! */}
+                      {/* Translucent Pink Water Body that blends smoothly into Nam's Blue Water across the pig */}
                       <div
                         className="absolute inset-x-0 bottom-0 top-[9px]"
                         style={{
                           background:
-                            'linear-gradient(180deg, rgba(56,189,248,0.96) 0%, rgba(14,165,233,0.94) 55%, rgba(2,132,199,0.97) 100%)',
+                            'linear-gradient(90deg, rgba(244,63,94,0.38) 0%, rgba(251,113,133,0.72) 48%, rgba(225,29,72,0.92) 100%)',
                         }}
                       />
                     </motion.div>
                   )}
 
-                  {/* Effervescent Rising Water Bubbles inside the water */}
+                  {/* Effervescent Rising Water Bubbles inside the blended water */}
                   {!reducedMotion &&
-                    totalTopY > 8 &&
+                    maxWaterY > 12 &&
                     [20, 36, 52, 68, 82].map((leftPct, bIdx) => (
                       <motion.span
                         key={bIdx}
@@ -620,7 +635,7 @@ export function Interactive3DStage({
                           height: 4 + (bIdx % 3) * 2,
                         }}
                         animate={{
-                          y: [0, -Math.max(20, spriteHeight * (totalTopY / 100) - 18)],
+                          y: [0, -Math.max(18, spriteHeight * (maxWaterY / 100) - 18)],
                           x: [0, bIdx % 2 === 0 ? 5 : -5, 0],
                           opacity: [0, 0.85, 0],
                         }}
