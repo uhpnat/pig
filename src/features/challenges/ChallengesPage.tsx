@@ -42,7 +42,13 @@ export default function ChallengesPage() {
   const selected = items.find((i) => i.def.id === detailId)
 
   return (
-    <div className="min-h-screen px-4 pb-8 pt-4">
+    <div
+      className="min-h-[100dvh] px-4 pb-8"
+      style={{
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(180deg, #ede9fe 0%, #f5efff 38%, #ffeef5 100%)',
+      }}
+    >
       {/* Header matching 07_challenges.png */}
       <div className="relative flex items-center justify-center">
         <button

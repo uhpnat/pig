@@ -63,7 +63,13 @@ export default function StatsPage() {
   const maxBar = Math.max(1, ...bars.map((b) => b.total))
 
   return (
-    <div className="min-h-screen px-4 pb-10 pt-4">
+    <div
+      className="min-h-[100dvh] px-4 pb-10"
+      style={{
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(180deg, #e0f2fe 0%, #f5efff 40%, #ffeef5 100%)',
+      }}
+    >
       {/* Header matching 06_statistics.png */}
       <div className="relative flex items-center justify-center">
         <button

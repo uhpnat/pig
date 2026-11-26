@@ -39,7 +39,13 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="px-4 pb-10 pt-3.5">
+    <div
+      className="min-h-[100dvh] px-4 pb-10"
+      style={{
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(180deg, #fce7f3 0%, #f5efff 40%, #ffeef5 100%)',
+      }}
+    >
       <button type="button" onClick={() => nav(-1)} className="chip flex items-center gap-1"><ChevronLeft size={16} /> Quay lại</button>
       <h1 className="h1 mt-2">Thông báo</h1>
       {!hasToday && <Card className="!bg-[#fff7e0]"><p className="h3">🐷 Hôm nay chưa mở số tiền!</p><div className="mt-2"><Button size="sm" block={false} onClick={() => nav('/reveal')}>Mở ngay</Button></div></Card>}

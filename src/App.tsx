@@ -46,10 +46,10 @@ const ROUTE_TOP_COLOR: Record<string, string> = {
   '/pig': '#dbeafe',
   '/couple': '#fde8f1',
   '/welcome': '#f3e8ff',
-  '/journal': '#f5efff',
-  '/challenges': '#f5efff',
-  '/stats': '#f5efff',
-  '/notifications': '#f5efff',
+  '/journal': '#e0f2fe',
+  '/challenges': '#ede9fe',
+  '/stats': '#e0f2fe',
+  '/notifications': '#fce7f3',
 }
 
 export default function App() {

@@ -72,8 +72,9 @@ export default function OnboardingPage() {
 
   return (
     <div
-      className="min-h-screen px-4 pb-16 pt-3.5"
+      className="min-h-[100dvh] px-4 pb-16"
       style={{
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
         background: 'linear-gradient(180deg, #f3e8ff 0%, #ffe6f1 45%, #fff7fa 100%)',
       }}
     >

@@ -70,7 +70,13 @@ export default function JournalPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 pb-8 pt-4">
+    <div
+      className="min-h-[100dvh] px-4 pb-8"
+      style={{
+        paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(180deg, #e0f2fe 0%, #f5efff 38%, #ffeef5 100%)',
+      }}
+    >
       {/* Header matching 05_savings_journal.png */}
       <div className="flex items-center justify-between">
         <button

@@ -1,9 +1,9 @@
 ﻿import { motion } from 'framer-motion'
-import { ChevronLeft, Volume2, VolumeX } from 'lucide-react'
+import { ChevronLeft, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DuoSlotMachine3D } from '@/components/pig/DuoSlotMachine3D'
-import { Avatar, Badge, Button, Chip } from '@/components/ui'
+import { Avatar, Badge, Button, Chip, Modal } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import type { MemberId } from '@/domain/types'
 import { useJourney, useStore } from '@/hooks/useStore'
@@ -15,10 +15,19 @@ export default function RevealPage() {
   const nav = useNavigate()
   const reveal = state.reveals.find((r) => r.date === today)
   const [rolling, setRolling] = useState(false)
+  const [resultModalOpen, setResultModalOpen] = useState(false)
   const [by, setBy] = useState<MemberId>('a')
   const [ticker, setTicker] = useState<Record<MemberId, number>>({ a: 0, b: 0 })
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+
   useEffect(() => () => clearInterval(timer.current), [])
+
+  // Auto-open result popup if today's reveal already exists on page open
+  useEffect(() => {
+    if (reveal && !rolling) {
+      setResultModalOpen(true)
+    }
+  }, [reveal?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cs = reveal ? state.contributions.filter((c) => c.revealId === reveal.id) : []
   const allDone = cs.length > 0 && cs.every((c) => c.status === 'confirmed')
@@ -26,6 +35,7 @@ export default function RevealPage() {
 
   const start = async (forceReroll = false) => {
     if (rolling) return
+    setResultModalOpen(false)
     const scale = (j.goal / Math.max(1, j.months * 30)) * 2
     const randomTick = () => ({
       a: Math.max(10_000, Math.round((Math.random() * scale * 0.7) / 10_000) * 10_000),
@@ -35,7 +45,7 @@ export default function RevealPage() {
     setRolling(true)
     haptic(state.settings, 40)
     const t0 = Date.now()
-    const dur = motionOff ? 300 : 2800
+    const dur = motionOff ? 300 : 2500
     timer.current = setInterval(() => {
       setTicker(randomTick())
       beep(state.settings, 'tick')
@@ -47,6 +57,7 @@ export default function RevealPage() {
       clearInterval(timer.current)
       setRolling(false)
       if (!out) return
+      setResultModalOpen(true)
       if (out.created) {
         celebrate(['🎊', '🪙', '✨', '💗'])
         haptic(state.settings, [60, 40, 60])
@@ -68,26 +79,23 @@ export default function RevealPage() {
     }
   }
 
-  const displayAmounts = rolling
-    ? ticker
-    : reveal
-      ? reveal.amounts
-      : { a: 0, b: 0 }
+  const displayAmounts = rolling ? ticker : reveal ? reveal.amounts : { a: 0, b: 0 }
 
   return (
     <div
-      className="relative min-h-[100dvh] pb-10"
+      className="relative flex h-[100dvh] flex-col justify-between overflow-hidden px-4"
       style={{
         paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(180deg, #5b3dc8 0%, #8e6ee8 45%, #fde8f1 100%)',
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        background: 'linear-gradient(180deg, #5b3dc8 0%, #8e6ee8 52%, #fde8f1 100%)',
       }}
     >
-      {/* Top Floating Controls */}
-      <div className="relative z-10 flex items-center justify-between px-4">
+      {/* 1. Top Floating Controls */}
+      <div className="relative z-10 flex shrink-0 items-center justify-between">
         <button
           type="button"
           onClick={() => nav('/')}
-          className="chip flex items-center gap-1 !bg-white/25 !text-white backdrop-blur-sm"
+          className="chip flex items-center gap-1 !bg-white/25 !py-1.5 !text-white backdrop-blur-sm"
         >
           <ChevronLeft size={16} /> Quay lại
         </button>
@@ -96,68 +104,56 @@ export default function RevealPage() {
           onClick={() => run(repo.updateSettings({ sound: !sound }))}
           aria-pressed={sound}
           aria-label="Bật/tắt âm thanh"
-          className="chip flex items-center gap-1 !bg-white/25 !text-white backdrop-blur-sm"
+          className="chip flex items-center gap-1 !bg-white/25 !py-1.5 !text-white backdrop-blur-sm"
         >
           {sound ? <Volume2 size={16} /> : <VolumeX size={16} />} Âm thanh
         </button>
       </div>
 
-      {/* Crisp Native Header Title + 3D Piggy Duo Twin-Reel Slot Machine */}
-      <div className="relative z-10 mt-2 px-4 text-center">
-        <h1 className="text-[22px] font-black leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(30,10,90,.45)]">
-          Hôm nay là ngày
-          <br />
-          cùng nhau thử thách!
+      {/* 2. Header Title */}
+      <div className="relative z-10 shrink-0 text-center">
+        <h1 className="text-[20px] font-black leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(30,10,90,.45)]">
+          Hôm nay là ngày cùng nhau thử thách!
         </h1>
+        <p className="mt-0.5 text-xs font-extrabold text-white/85">
+          Kéo cần gạt để mở số tiền cho {j.members.a.name} & {j.members.b.name} 💗
+        </p>
       </div>
 
-      <DuoSlotMachine3D
-        journey={j}
-        rolling={rolling}
-        revealed={!!reveal && !rolling}
-        amounts={displayAmounts}
-        reducedMotion={motionOff}
-        onPullLever={() => start(!!reveal)}
-      />
+      {/* 3. Centered 3D Twin-Reel Slot Machine */}
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
+        <DuoSlotMachine3D
+          journey={j}
+          rolling={rolling}
+          revealed={!!reveal && !rolling}
+          amounts={displayAmounts}
+          reducedMotion={motionOff}
+          onPullLever={() => start(!!reveal)}
+        />
+      </div>
 
-      {/* Soft Pink Rounded Sheet */}
-      <div
-        className="relative z-10 mt-1 rounded-t-[36px] px-5 pb-7 pt-5 text-center shadow-[0_-12px_32px_rgba(90,50,180,.2)]"
-        style={{ background: 'linear-gradient(180deg, #ffeaf2 0%, #fff7fa 60%, #ffffff 100%)' }}
-      >
-        <p className="text-[15px] font-black leading-snug text-[#1e1b4b]">
-          Máy quay số Heo Đôi sẽ random số tiền
-          <br />
-          cho cả {j.members.a.name} & {j.members.b.name} cùng lúc!
-        </p>
-        <p className="mt-1 text-[13px] font-extrabold text-[#4b5563]">
-          Tổng tiền vẫn bám sát mục tiêu chung nhé <span className="text-[#ff3b6b]">❤️</span>
-        </p>
-
+      {/* 4. Compact Bottom ControlDock (fits strictly inside 100dvh without scrolling!) */}
+      <div className="relative z-10 shrink-0 rounded-[28px] border-2 border-white bg-white/95 p-4 text-center shadow-[0_12px_32px_rgba(60,20,140,.25)]">
         {goalReached && !reveal ? (
-          <div className="mt-4 rounded-3xl bg-white p-5 shadow-md">
-            <p className="text-4xl">🎆</p>
-            <h2 className="h2 mt-2 text-[#1e1b4b]">Đã hoàn thành mục tiêu!</h2>
-            <div className="mt-4">
-              <Button onClick={() => nav('/couple')}>Sang “Của chúng mình”</Button>
-            </div>
+          <div>
+            <p className="text-sm font-black text-[#1e1b4b]">🎆 Đã hoàn thành mục tiêu!</p>
+            <Button size="sm" className="mt-2.5" onClick={() => nav('/couple')}>
+              Sang “Của chúng mình”
+            </Button>
           </div>
         ) : !reveal || rolling ? (
           <>
-            {!rolling && (
-              <div className="mt-3 flex items-center justify-center gap-2 text-xs font-extrabold text-[#4b5563]">
-                <span>Người kéo cần gạt:</span>
-                {(['a', 'b'] as const).map((k) => (
-                  <Chip key={k} on={by === k} onClick={() => setBy(k)}>
-                    {j.members[k].name}
-                  </Chip>
-                ))}
-              </div>
-            )}
-
+            <div className="mb-2.5 flex items-center justify-center gap-2 text-xs font-extrabold text-[#4b5563]">
+              <span>Người kéo cần gạt:</span>
+              {(['a', 'b'] as const).map((k) => (
+                <Chip key={k} on={by === k} onClick={() => setBy(k)} className="!py-1">
+                  {j.members[k].name}
+                </Chip>
+              ))}
+            </div>
             <Button
               variant="violet"
-              className="mt-4 !py-4 !text-[18px]"
+              className="!py-3.5 !text-[16px]"
               disabled={rolling}
               onClick={() => start(false)}
             >
@@ -165,85 +161,112 @@ export default function RevealPage() {
             </Button>
           </>
         ) : (
-          <>
-            {/* Revealed Result White Card */}
-            <div className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-4 shadow-[0_12px_28px_rgba(143,124,240,.16)]">
-              <h2 className="text-[19px] font-black text-[#4c1d95]">Kết quả hôm nay</h2>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                {(['a', 'b'] as const).map((k, idx) => {
-                  const c = cs.find((x) => x.member === k)
-                  return (
-                    <motion.div
-                      key={k}
-                      initial={motionOff ? false : { scale: 0.75, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', delay: idx * 0.06 }}
-                      className="text-center"
-                    >
-                      <div
-                        className={`mx-auto grid h-20 w-20 place-items-center rounded-full p-1 ${
-                          idx === 0 ? 'bg-[#dbeafe]' : 'bg-[#fce7f3]'
-                        }`}
-                      >
-                        <Avatar value={j.members[k].avatar} size={70} />
-                      </div>
-                      <p
-                        className="mt-1.5 text-[13px] font-black"
-                        style={{ color: idx === 0 ? '#2563eb' : '#ec4899' }}
-                      >
-                        {j.members[k].name}
-                      </p>
-                      <p
-                        className="mt-0.5 text-[21px] font-black tabular-nums"
-                        style={{ color: idx === 0 ? '#1d4ed8' : '#e11d48' }}
-                      >
-                        +{vnd(reveal.amounts[k])}
-                      </p>
-                      {c && (
-                        <div className="mt-1">
-                          <Badge tone={c.status === 'confirmed' ? 'ok' : 'warn'}>
-                            {c.status === 'confirmed' ? 'Đã góp ✅' : 'Chờ xác nhận ⏳'}
-                          </Badge>
-                        </div>
-                      )}
-                    </motion.div>
-                  )
-                })}
-              </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between rounded-2xl bg-[#f5f3ff] px-3.5 py-2 text-xs font-black text-[#4c1d95]">
+              <span>
+                {j.members.a.name}: <b className="text-[#1d4ed8]">+{vnd(reveal.amounts.a)}</b>
+              </span>
+              <span>·</span>
+              <span>
+                {j.members.b.name}: <b className="text-[#e11d48]">+{vnd(reveal.amounts.b)}</b>
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Button variant="ghost" size="sm" disabled={rolling} onClick={() => start(true)}>
+                🎲 Random lại
+              </Button>
+              <Button variant="violet" size="sm" onClick={() => setResultModalOpen(true)}>
+                <Sparkles size={15} className="mr-1 inline" /> Xem & Xác nhận
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
-              {cs.some((c) => c.status === 'pending') && (
-                <div className="mt-3.5 grid gap-2 border-t border-[#f3e8ff] pt-3">
-                  {cs.map((c) =>
-                    c.status === 'confirmed' ? null : (
-                      <Button key={c.id} size="sm" onClick={() => confirm(c.id)}>
-                        ✅ {j.members[c.member].name} xác nhận đã góp {vnd(c.amount)}
-                      </Button>
-                    ),
-                  )}
-                </div>
-              )}
+      {/* 5. Compact Popup Modal for Today's Revealed Result & Contribution Confirmation */}
+      <Modal
+        open={resultModalOpen && !!reveal && !rolling}
+        onClose={() => setResultModalOpen(false)}
+        title="🎉 Kết quả mở số hôm nay"
+      >
+        {reveal && (
+          <div className="mt-3 text-center">
+            <p className="text-xs font-bold text-[#64748b]">
+              Tổng hôm nay: <b className="text-[#e11d48]">+{vnd(reveal.amounts.a + reveal.amounts.b)}</b>
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-3 rounded-2xl bg-[#fdf2f7] p-3.5">
+              {(['a', 'b'] as const).map((k, idx) => {
+                const c = cs.find((x) => x.member === k)
+                return (
+                  <motion.div
+                    key={k}
+                    initial={motionOff ? false : { scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', delay: idx * 0.05 }}
+                    className="rounded-2xl bg-white p-2.5 shadow-sm"
+                  >
+                    <div
+                      className={`mx-auto grid h-16 w-16 place-items-center rounded-full p-1 ${
+                        idx === 0 ? 'bg-[#dbeafe]' : 'bg-[#fce7f3]'
+                      }`}
+                    >
+                      <Avatar value={j.members[k].avatar} size={56} />
+                    </div>
+                    <p
+                      className="mt-1 text-xs font-black"
+                      style={{ color: idx === 0 ? '#2563eb' : '#ec4899' }}
+                    >
+                      {j.members[k].name}
+                    </p>
+                    <p
+                      className="mt-0.5 text-[18px] font-black tabular-nums"
+                      style={{ color: idx === 0 ? '#1d4ed8' : '#e11d48' }}
+                    >
+                      +{vnd(reveal.amounts[k])}
+                    </p>
+                    {c && (
+                      <div className="mt-1">
+                        <Badge tone={c.status === 'confirmed' ? 'ok' : 'warn'}>
+                          {c.status === 'confirmed' ? 'Đã góp ✅' : 'Chờ xác nhận ⏳'}
+                        </Badge>
+                      </div>
+                    )}
+                  </motion.div>
+                )
+              })}
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Button
-                variant="ghost"
-                className="!py-3.5 !text-[15px]"
-                disabled={rolling}
-                onClick={() => start(true)}
-              >
+            {cs.some((c) => c.status === 'pending') && (
+              <div className="mt-3 grid gap-2">
+                {cs.map((c) =>
+                  c.status === 'confirmed' ? null : (
+                    <Button key={c.id} size="sm" onClick={() => confirm(c.id)}>
+                      ✅ {j.members[c.member].name} xác nhận đã góp {vnd(c.amount)}
+                    </Button>
+                  ),
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
+              <Button variant="ghost" size="sm" onClick={() => start(true)}>
                 🎲 Random lại số tiền
               </Button>
               <Button
                 variant="violet"
-                className="!py-3.5 !text-[15px]"
-                onClick={() => nav(allDone ? '/' : '/journal')}
+                size="sm"
+                onClick={() => {
+                  setResultModalOpen(false)
+                  nav(allDone ? '/' : '/journal')
+                }}
               >
                 Tuyệt vời! 🎉
               </Button>
             </div>
-          </>
+          </div>
         )}
-      </div>
+      </Modal>
     </div>
   )
 }
