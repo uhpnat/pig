@@ -28,6 +28,13 @@ function Gate({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+/** On /welcome, if a completed journey already exists (or arrives from Google Sheets), go straight to Home! */
+function WelcomeGate() {
+  const { journey } = useStore()
+  if (journey?.setupDone) return <Navigate to="/" replace />
+  return <Page><OnboardingPage /></Page>
+}
+
 export default function App() {
   const loc = useLocation()
   return (
@@ -35,7 +42,7 @@ export default function App() {
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={loc} key={loc.pathname}>
           <Route element={<FullLayout />}>
-            <Route path="/welcome" element={<Page><OnboardingPage /></Page>} />
+            <Route path="/welcome" element={<WelcomeGate />} />
             <Route path="/pig" element={<PigGate />} />
             <Route path="/reveal" element={<Gate><Page><RevealPage /></Page></Gate>} />
             <Route path="/stats" element={<Gate><Page><Suspense fallback={<div className="p-8 text-center font-black text-vio">Đang tải biểu đồ…</div>}><StatsPage /></Suspense></Page></Gate>} />

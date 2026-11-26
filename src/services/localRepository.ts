@@ -253,9 +253,15 @@ export class LocalRepository implements Repository {
 
   async load() {
     const local = read()
-    void this.pullFromSheet(true).then((remote) => {
+    if (!local.journey?.setupDone) {
+      // Wait for Google Sheet data on cold start before rendering so we don't bounce to /#/welcome!
+      const remote = await this.pullFromSheet(false)
+      if (remote) return remote
+      return local
+    }
+    void this.pullFromSheet(false).then((remote) => {
       if (!remote && local.journey) {
-        void this.pushToSheet(local, true)
+        void this.pushToSheet(local, false)
       }
     })
     return local
