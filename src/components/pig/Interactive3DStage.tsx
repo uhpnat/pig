@@ -222,9 +222,11 @@ export function Interactive3DStage({
    *   - How high the water reaches inside the pig = Total % saved.
    *   - The thickness of the Blue water wave vs Pink water wave = Each person's exact contribution share.
    */
-  const BODY_BASE_PCT = 3.8
-  const BODY_SPAN_PCT = 90
-  const visualTotalSpan = clampedFill <= 0 ? 0 : (clampedFill / 100) * BODY_SPAN_PCT
+  const BODY_BASE_PCT = 10
+  const BODY_SPAN_PCT = 82
+  // When clampedFill > 0, guarantee at least 18% visible water height above the pig's hooves so even small percentages are clearly visible inside the belly!
+  const visualTotalSpan =
+    clampedFill <= 0 ? 0 : Math.max(14, (clampedFill / 100) * BODY_SPAN_PCT)
   const visualMaleSpan = (visualTotalSpan * pctMale) / 100
   const visualFemaleSpan = (visualTotalSpan * pctFemale) / 100
 
@@ -533,12 +535,12 @@ export function Interactive3DStage({
                         />
                       </motion.svg>
 
-                      {/* Pink Water Body below the top wave crest */}
+                      {/* Pink Water Body: fills 100% of container up to the 10px wave crest so it is NEVER invisible when layer is thin! */}
                       <div
-                        className="absolute inset-x-0 bottom-0 top-[16px]"
+                        className="absolute inset-x-0 bottom-0 top-[9px]"
                         style={{
                           background:
-                            'linear-gradient(180deg, rgba(251,113,133,0.94) 0%, rgba(244,63,94,0.92) 55%, rgba(225,29,72,0.95) 100%)',
+                            'linear-gradient(180deg, rgba(251,113,133,0.95) 0%, rgba(244,63,94,0.93) 55%, rgba(225,29,72,0.96) 100%)',
                         }}
                       />
                     </motion.div>
@@ -594,12 +596,12 @@ export function Interactive3DStage({
                         />
                       </motion.svg>
 
-                      {/* Blue Water Body below its wave crest */}
+                      {/* Blue Water Body: fills 100% of container up to the 9px wave crest so it is NEVER invisible when layer is thin! */}
                       <div
-                        className="absolute inset-x-0 bottom-0 top-[16px]"
+                        className="absolute inset-x-0 bottom-0 top-[9px]"
                         style={{
                           background:
-                            'linear-gradient(180deg, rgba(56,189,248,0.95) 0%, rgba(14,165,233,0.93) 55%, rgba(2,132,199,0.96) 100%)',
+                            'linear-gradient(180deg, rgba(56,189,248,0.96) 0%, rgba(14,165,233,0.94) 55%, rgba(2,132,199,0.97) 100%)',
                         }}
                       />
                     </motion.div>

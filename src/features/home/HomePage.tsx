@@ -151,20 +151,31 @@ export default function HomePage() {
   const monthShareA = monthSaved > 0 ? (monthA / monthSaved) * 100 : 0
   const monthShareB = monthSaved > 0 ? (monthB / monthSaved) * 100 : 0
 
-  // Monthly water fill % based on active saving days in that month (0% when 0đ saved; rises accurately with days/deposits in that month!)
+  // Monthly water fill %:
+  // - 0% when 0đ is confirmed in that month (pig stays 100% transparent).
+  // - Rises clearly with every confirmed day/deposit in the month (giving an immediate 24% base water level as soon as the first deposit of the month is confirmed, scaling smoothly to 100%).
   const totalDaysInSelectedMonth = daysInMonth(selectedMonthKey)
   const monthStartStr = `${selectedMonthKey}-01`
   const monthEndStr = `${selectedMonthKey}-${String(totalDaysInSelectedMonth).padStart(2, '0')}`
   const effStart = j.startDate > monthStartStr ? j.startDate : monthStartStr
   const effEnd = j.endDate < monthEndStr ? j.endDate : monthEndStr
   const activeDaysInMonth = Math.max(1, diffDays(effStart, effEnd) + 1)
-  // Each active day has 2 member deposits (activeDaysInMonth * 2 slots).
-  const monthDailySlots = activeDaysInMonth * 2
+  const elapsedDaysInMonth =
+    selectedMonthKey === curMonthKey
+      ? Math.max(1, diffDays(effStart, today < effEnd ? today : effEnd) + 1)
+      : activeDaysInMonth
+  const monthConfirmedDays = new Set(monthContribs.map((c) => c.date.slice(0, 10))).size
   const monthConfirmedCount = monthContribs.length
+  const monthMonthlyRef = Math.max(1, j.goal / Math.max(1, j.months))
+  const rawMonthRatio = Math.max(
+    monthConfirmedDays / Math.max(1, Math.min(activeDaysInMonth, Math.max(7, elapsedDaysInMonth * 2))),
+    monthConfirmedCount / Math.max(2, activeDaysInMonth * 2),
+    monthSaved / monthMonthlyRef,
+  )
   const monthFillPct =
     monthSaved <= 0
       ? 0
-      : Math.min(100, Math.max((monthConfirmedCount / monthDailySlots) * 100, (monthSaved / Math.max(1, j.goal / Math.max(1, j.months))) * 100))
+      : Math.min(100, Math.round(24 + Math.min(1, rawMonthRatio) * 76))
 
   // 2. Final-Term Pig Metrics & Live Countdown (Heo cuối kỳ)
   const totalShareA = confirmed.total > 0 ? actual.a * 100 : 0
