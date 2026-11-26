@@ -1,14 +1,18 @@
-/* Piggy Duo service worker: offline shell + runtime cache. Bump VERSION on release. */
-const VERSION = 'piggy-duo-v2'
+/* Piggy Duo service worker: network-first so new deployments always appear immediately, falling back to cache offline. */
+const VERSION = 'piggy-duo-v5'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()))
+  self.skipWaiting()
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).catch(() => undefined))
 })
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   )
 })
 
@@ -18,29 +22,17 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url)
   if (url.origin !== location.origin) return
 
-  // SPA navigation: network first, fall back to the cached shell when offline.
-  if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req)
-        .then((r) => {
-          caches.open(VERSION).then((c) => c.put('./index.html', r.clone()))
-          return r
-        })
-        .catch(() => caches.match('./index.html')),
-    )
-    return
-  }
-  // Static assets: stale-while-revalidate.
+  // Network-first for all same-origin requests so updates on GitHub Pages take effect immediately on reload!
   e.respondWith(
-    caches.match(req).then((hit) => {
-      const net = fetch(req)
-        .then((r) => {
-          if (r.ok) caches.open(VERSION).then((c) => c.put(req, r.clone()))
-          return r
-        })
-        .catch(() => hit)
-      return hit || net
-    }),
+    fetch(req)
+      .then((r) => {
+        if (r.ok) {
+          const copy = r.clone()
+          caches.open(VERSION).then((c) => c.put(req, copy))
+        }
+        return r
+      })
+      .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html'))),
   )
 })
 

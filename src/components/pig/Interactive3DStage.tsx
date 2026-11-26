@@ -212,45 +212,43 @@ export function Interactive3DStage({
   const pctFemale = totalShare > 0 ? (rawPctFemale / totalShare) * 100 : 50
 
   /**
-   * DUAL-WAVE BLENDED WATER WITH RELATIVE NAM vs NỮ HEIGHTS:
-   * 1. Overall Water Height (`baseWaterY%`):
-   *    - Strictly 0% when `clampedFill <= 0` (100% transparent pig).
-   *    - Linearly proportional to `clampedFill` across the pig's belly (`BODY_BASE_PCT = 10%` just above hooves up to `92%` at top of head),
-   *      so Heo theo tháng (1 month) and Heo cuối kỳ (full journey) have distinctly different, accurate water levels!
-   * 2. Relative Nam (Blue) vs Nữ (Pink) Water Heights (`maleWaterY%` vs `femaleWaterY%`):
-   *    - Both waters ripple across the full width of the pig and blend together where they overlap.
-   *    - Their individual heights scale directly with `pctMale` and `pctFemale` around `baseWaterY`:
-   *      The partner with the higher `%` rises up to `peakWaterY` (`baseWaterY`), while the partner with the lower `%`
-   *      sits lower at `BODY_BASE_PCT + (peakWaterY - BODY_BASE_PCT) * (theirPct / maxPct)`.
-   *    - When Nam > Nữ (e.g. 60% vs 40%): Nam's Blue waves rise higher on top, Nữ's Pink waves ripple lower underneath and blend through.
-   *    - When Nữ > Nam (e.g. 65% vs 35%): Nữ's Pink waves rise higher on top, Nam's Blue waves ripple lower underneath and blend through.
-   *    - When Nam == Nữ (50% / 50%): Both Blue & Pink waves ripple at the exact same height (`maleWaterY === femaleWaterY`),
-   *      interweaving into a dual-color blue-pink wave crest!
+   * ANATOMICALLY CALIBRATED PIG BELLY WATER LEVELS:
+   * - In `sprite_hero.png` (440x420), the bottom 0%..18% is ground shadow and dark gold hooves/legs.
+   * - The pig's round belly cavity starts at `BELLY_FLOOR_PCT = 19%` and goes up to `92%` (span = 73%).
+   * - Using a gentle perceptual curve `Math.pow(clampedFill / 100, 0.72)` inside the belly cavity (19%..92%):
+   *   - `0%` -> `0%` (100% transparent empty pig).
+   *   - `1.0%` (Heo cuối kỳ 24 tháng on Day 1) -> `22.5%` (clearly visible right in the lower belly above the legs!).
+   *   - `24.3%` (Heo theo tháng on Day 1: 1.214tr / 5tr) -> `45.3%` (nearly half the pig's belly — unmistakably higher than Heo cuối kỳ!).
+   *   - `50%` -> `63.3%`
+   *   - `100%` -> `95%`
+   * - Furthermore, `maleWaterY` (Sky Blue 💙) and `femaleWaterY` (Rose Pink 💗) rise to heights directly proportional to `pctMale` and `pctFemale`:
+   *   - Whoever contributed a higher `%` has their wave crest visibly higher (`peakSpan`), while the other partner's wave crest ripples below (`peakSpan * (theirPct / maxMemberPct)`) and blends seamlessly through the translucent water!
    */
-  const BODY_BASE_PCT = 10
-  const BODY_SPAN_PCT = 82
+  const BELLY_FLOOR_PCT = 19
+  const BELLY_SPAN_PCT = 73
   const maxMemberPct = Math.max(pctMale, pctFemale, 1)
 
-  // Linearly map 0..100% -> 11.5%..92% (just 1.5% above hooves at 1% fill so even 1% is visible above the dark hoof line without forcing a 24% floor!)
-  const peakSpan =
-    clampedFill <= 0 ? 0 : Math.max(4.5, (clampedFill / 100) * BODY_SPAN_PCT)
+  const normalizedCurve = clampedFill <= 0 ? 0 : Math.pow(clampedFill / 100, 0.72)
+  const peakSpan = clampedFill <= 0 ? 0 : Math.max(4, normalizedCurve * BELLY_SPAN_PCT)
 
-  const maleSpan = clampedFill <= 0 || pctMale <= 0 ? 0 : Math.max(3.5, peakSpan * (pctMale / maxMemberPct))
-  const femaleSpan = clampedFill <= 0 || pctFemale <= 0 ? 0 : Math.max(3.5, peakSpan * (pctFemale / maxMemberPct))
+  const maleSpan =
+    clampedFill <= 0 || pctMale <= 0 ? 0 : Math.max(3, peakSpan * (pctMale / maxMemberPct))
+  const femaleSpan =
+    clampedFill <= 0 || pctFemale <= 0 ? 0 : Math.max(3, peakSpan * (pctFemale / maxMemberPct))
 
   const maleWaterY =
     clampedFill <= 0 || pctMale <= 0
       ? 0
       : clampedFill >= 100 && pctMale >= pctFemale
-        ? 98
-        : Number((BODY_BASE_PCT + maleSpan).toFixed(2))
+        ? 96
+        : Number((BELLY_FLOOR_PCT + maleSpan).toFixed(2))
 
   const femaleWaterY =
     clampedFill <= 0 || pctFemale <= 0
       ? 0
       : clampedFill >= 100 && pctFemale >= pctMale
-        ? 98
-        : Number((BODY_BASE_PCT + femaleSpan).toFixed(2))
+        ? 96
+        : Number((BELLY_FLOOR_PCT + femaleSpan).toFixed(2))
 
   const maxWaterY = Math.max(maleWaterY, femaleWaterY)
 
@@ -259,9 +257,9 @@ export function Interactive3DStage({
     clampedFill <= 0
       ? `🐷 Bụng heo pha lê đang trong suốt (0%)! Cùng nạp tiền để nước dâng lên nha 💧`
       : pctMale > pctFemale
-        ? `💧 Sóng xanh của ${nameMale} (${pctMale.toFixed(0)}%) đang dâng cao hơn sóng hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) nè!`
+        ? `💧 Sóng xanh của ${nameMale} (${pctMale.toFixed(0)}%) đang cao hơn sóng hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) nè!`
         : pctFemale > pctMale
-          ? `💧 Sóng hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) đang dâng cao hơn sóng xanh của ${nameMale} (${pctMale.toFixed(0)}%) nè!`
+          ? `💧 Sóng hồng của ${nameFemale} (${pctFemale.toFixed(0)}%) đang cao hơn sóng xanh của ${nameMale} (${pctMale.toFixed(0)}%) nè!`
           : `⚖️ Hai làn sóng Xanh – Hồng đang cao bằng nhau (${pctMale.toFixed(0)}% / ${pctFemale.toFixed(0)}%) · Quá ăn ý! 💗`,
     `🌊 Mực nước hiện đạt ${clampedFill.toFixed(1)}% · Sóng xanh 💙 và sóng hồng 💗 đang hòa quyện!`,
     `✨ Chạm vào heo pha lê để khuấy động làn sóng của ${nameMale} & ${nameFemale} nha!`,
@@ -468,7 +466,7 @@ export function Interactive3DStage({
                   width: spriteHeight,
                   maxWidth: '92vw',
                   filter:
-                    'drop-shadow(0 0 20px rgba(56, 189, 248, 0.35)) drop-shadow(0 0 20px rgba(244, 63, 94, 0.35)) drop-shadow(0 12px 20px rgba(30, 27, 75, 0.22))',
+                    'drop-shadow(0 0 20px rgba(56, 189, 248, 0.38)) drop-shadow(0 0 20px rgba(244, 63, 94, 0.38)) drop-shadow(0 12px 20px rgba(30, 27, 75, 0.22))',
                 }}
               >
                 {/* 4A. Translucent Frosted Crystal Glass Piggy Shell (Unfilled top stays clear transparent glass) */}
@@ -478,8 +476,8 @@ export function Interactive3DStage({
                   style={{
                     height: '100%',
                     width: '100%',
-                    opacity: 0.38,
-                    filter: 'saturate(0.14) brightness(1.25) contrast(1.15)',
+                    opacity: 0.34,
+                    filter: 'saturate(0.12) brightness(1.28) contrast(1.12)',
                   }}
                   className="block select-none object-contain"
                   draggable={false}
@@ -508,54 +506,54 @@ export function Interactive3DStage({
                       animate={{ height: `${maleWaterY}%` }}
                       transition={{ duration: 0.9, ease: 'easeOut' }}
                     >
-                      {/* Blue Wave 1 (Scrolls Left) */}
+                      {/* Blue Wave 1 (Scrolls Left - Tall 26px dramatic undulating waves!) */}
                       <motion.svg
-                        viewBox="0 0 800 32"
+                        viewBox="0 0 800 36"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-0 h-[18px] w-[200%]"
+                        className="absolute left-0 top-0 h-[24px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                        transition={{ duration: 2.35, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 16 Q 50 0 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(2, 132, 199, 0.86)"
+                          d="M 0 18 Q 50 0 100 18 T 200 18 T 300 18 T 400 18 T 500 18 T 600 18 T 700 18 T 800 18 L 800 36 L 0 36 Z"
+                          fill="rgba(2, 132, 199, 0.9)"
                         />
                       </motion.svg>
 
                       {/* Blue Wave 2 (Scrolls Right) */}
                       <motion.svg
-                        viewBox="0 0 800 32"
+                        viewBox="0 0 800 36"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[3px] h-[18px] w-[200%]"
+                        className="absolute left-0 top-[3px] h-[23px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 1.65, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 16 Q 50 32 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(56, 189, 248, 0.92)"
+                          d="M 0 18 Q 50 36 100 18 T 200 18 T 300 18 T 400 18 T 500 18 T 600 18 T 700 18 T 800 18 L 800 36 L 0 36 Z"
+                          fill="rgba(56, 189, 248, 0.96)"
                         />
                       </motion.svg>
 
-                      {/* Blue Foam Crest Highlight */}
+                      {/* Glowing White-Cyan Wave Crest Foam on Nam's Blue Water */}
                       <motion.svg
-                        viewBox="0 0 800 24"
+                        viewBox="0 0 800 28"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[2px] h-[11px] w-[200%]"
+                        className="absolute left-0 top-[1px] h-[14px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                        transition={{ duration: 1.95, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 1.85, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 12 Q 50 2 100 12 T 200 12 T 300 12 T 400 12 T 500 12 T 600 12 T 700 12 T 800 12 L 800 16 L 0 16 Z"
-                          fill="rgba(186, 230, 253, 0.75)"
+                          d="M 0 14 Q 50 1 100 14 T 200 14 T 300 14 T 400 14 T 500 14 T 600 14 T 700 14 T 800 14 L 800 19 L 0 19 Z"
+                          fill="rgba(224, 242, 254, 0.88)"
                         />
                       </motion.svg>
 
-                      {/* Translucent Blue Water Body (blends with Pink water where they overlap!) */}
+                      {/* Rich Translucent Blue Water Body (blends with Pink water where they overlap!) */}
                       <div
-                        className="absolute inset-x-0 bottom-0 top-[9px]"
+                        className="absolute inset-x-0 bottom-0 top-[11px]"
                         style={{
                           background:
-                            'linear-gradient(90deg, rgba(14,165,233,0.92) 0%, rgba(56,189,248,0.78) 52%, rgba(2,132,199,0.52) 100%)',
+                            'linear-gradient(90deg, rgba(2,132,199,0.96) 0%, rgba(14,165,233,0.88) 48%, rgba(56,189,248,0.62) 100%)',
                         }}
                       />
                     </motion.div>
@@ -569,54 +567,54 @@ export function Interactive3DStage({
                       animate={{ height: `${femaleWaterY}%` }}
                       transition={{ duration: 0.9, ease: 'easeOut' }}
                     >
-                      {/* Pink Wave 1 (Scrolls Right — opposite to Blue Wave 1 so both waves interweave when heights are close!) */}
+                      {/* Pink Wave 1 (Scrolls Right — opposite to Blue Wave 1 so both waves interweave!) */}
                       <motion.svg
-                        viewBox="0 0 800 32"
+                        viewBox="0 0 800 36"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-0 h-[18px] w-[200%]"
+                        className="absolute left-0 top-0 h-[24px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 2.15, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 2.05, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 16 Q 50 32 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(225, 29, 72, 0.82)"
+                          d="M 0 18 Q 50 36 100 18 T 200 18 T 300 18 T 400 18 T 500 18 T 600 18 T 700 18 T 800 18 L 800 36 L 0 36 Z"
+                          fill="rgba(225, 29, 72, 0.86)"
                         />
                       </motion.svg>
 
                       {/* Pink Wave 2 (Scrolls Left) */}
                       <motion.svg
-                        viewBox="0 0 800 32"
+                        viewBox="0 0 800 36"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[3px] h-[18px] w-[200%]"
+                        className="absolute left-0 top-[3px] h-[23px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['0%', '-50%'] }}
-                        transition={{ duration: 1.65, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 1.55, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 16 Q 50 0 100 16 T 200 16 T 300 16 T 400 16 T 500 16 T 600 16 T 700 16 T 800 16 L 800 32 L 0 32 Z"
-                          fill="rgba(251, 113, 133, 0.88)"
+                          d="M 0 18 Q 50 0 100 18 T 200 18 T 300 18 T 400 18 T 500 18 T 600 18 T 700 18 T 800 18 L 800 36 L 0 36 Z"
+                          fill="rgba(251, 113, 133, 0.92)"
                         />
                       </motion.svg>
 
-                      {/* Pink Foam Crest Highlight */}
+                      {/* Glowing White-Rose Wave Crest Foam on Nữ's Pink Water */}
                       <motion.svg
-                        viewBox="0 0 800 24"
+                        viewBox="0 0 800 28"
                         preserveAspectRatio="none"
-                        className="absolute left-0 top-[2px] h-[11px] w-[200%]"
+                        className="absolute left-0 top-[1px] h-[14px] w-[200%]"
                         animate={reducedMotion ? undefined : { x: ['-50%', '0%'] }}
-                        transition={{ duration: 1.85, repeat: Infinity, ease: 'linear' }}
+                        transition={{ duration: 1.75, repeat: Infinity, ease: 'linear' }}
                       >
                         <path
-                          d="M 0 12 Q 50 22 100 12 T 200 12 T 300 12 T 400 12 T 500 12 T 600 12 T 700 12 T 800 12 L 800 16 L 0 16 Z"
-                          fill="rgba(254, 205, 211, 0.78)"
+                          d="M 0 14 Q 50 27 100 14 T 200 14 T 300 14 T 400 14 T 500 14 T 600 14 T 700 14 T 800 14 L 800 19 L 0 19 Z"
+                          fill="rgba(255, 228, 230, 0.88)"
                         />
                       </motion.svg>
 
-                      {/* Translucent Pink Water Body that blends smoothly into Nam's Blue Water across the pig */}
+                      {/* Rich Translucent Pink Water Body that blends smoothly into Nam's Blue Water across the pig */}
                       <div
-                        className="absolute inset-x-0 bottom-0 top-[9px]"
+                        className="absolute inset-x-0 bottom-0 top-[11px]"
                         style={{
                           background:
-                            'linear-gradient(90deg, rgba(244,63,94,0.38) 0%, rgba(251,113,133,0.72) 48%, rgba(225,29,72,0.92) 100%)',
+                            'linear-gradient(90deg, rgba(244,63,94,0.42) 0%, rgba(251,113,133,0.82) 52%, rgba(225,29,72,0.96) 100%)',
                         }}
                       />
                     </motion.div>
@@ -624,25 +622,25 @@ export function Interactive3DStage({
 
                   {/* Effervescent Rising Water Bubbles inside the blended water */}
                   {!reducedMotion &&
-                    maxWaterY > 12 &&
+                    maxWaterY > 18 &&
                     [20, 36, 52, 68, 82].map((leftPct, bIdx) => (
                       <motion.span
                         key={bIdx}
-                        className="pointer-events-none absolute bottom-2 rounded-full bg-white/80 shadow-[0_0_6px_#ffffff]"
+                        className="pointer-events-none absolute bottom-4 rounded-full bg-white/85 shadow-[0_0_6px_#ffffff]"
                         style={{
                           left: `${leftPct}%`,
-                          width: 4 + (bIdx % 3) * 2,
-                          height: 4 + (bIdx % 3) * 2,
+                          width: 4.5 + (bIdx % 3) * 2,
+                          height: 4.5 + (bIdx % 3) * 2,
                         }}
                         animate={{
-                          y: [0, -Math.max(18, spriteHeight * (maxWaterY / 100) - 18)],
-                          x: [0, bIdx % 2 === 0 ? 5 : -5, 0],
-                          opacity: [0, 0.85, 0],
+                          y: [0, -Math.max(20, spriteHeight * (maxWaterY / 100) - 24)],
+                          x: [0, bIdx % 2 === 0 ? 6 : -6, 0],
+                          opacity: [0, 0.9, 0],
                         }}
                         transition={{
-                          duration: 1.9 + (bIdx % 3) * 0.35,
+                          duration: 1.85 + (bIdx % 3) * 0.35,
                           repeat: Infinity,
-                          delay: bIdx * 0.32,
+                          delay: bIdx * 0.3,
                           ease: 'easeInOut',
                         }}
                       />
@@ -655,9 +653,9 @@ export function Interactive3DStage({
                     style={{
                       height: '100%',
                       width: '100%',
-                      opacity: 0.34,
+                      opacity: 0.28,
                       mixBlendMode: 'multiply',
-                      filter: 'contrast(1.25) brightness(1.05)',
+                      filter: 'contrast(1.22) brightness(1.08)',
                     }}
                     className="pointer-events-none absolute inset-0 block select-none object-contain"
                     draggable={false}

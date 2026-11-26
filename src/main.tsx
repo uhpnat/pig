@@ -16,7 +16,14 @@ createRoot(document.getElementById('root')!).render(
 )
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => undefined))
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        void reg.update()
+      })
+      .catch(() => undefined)
+  })
 }
 
 // Native-app lock: prevent iOS pinch-to-zoom, double-tap zoom, and long-press image save context menu
