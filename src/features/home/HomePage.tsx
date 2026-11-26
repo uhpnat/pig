@@ -7,6 +7,7 @@ import { AnimatedNumber } from '@/components/AnimatedNumber'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { GiftBoxSticker, TrophySticker } from '@/components/Stickers'
 import { Avatar, Badge, Button, Card, EmptyState } from '@/components/ui'
+import { monthlyBudget } from '@/domain/engine'
 import { diffDays, vnd } from '@/domain/format'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
@@ -95,6 +96,8 @@ export default function HomePage() {
           theme="meadow"
           spriteHeight={195}
           reducedMotion={motionOff}
+          liquidFillPct={monthPct}
+          liquidLabel={`Tháng ${today.slice(5, 7)}: ${monthPct.toFixed(1)}%`}
         />
 
         {/* Overlapping Glossy Green Progress Card */}
