@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { Avatar } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import type { Journey, MemberId } from '@/domain/types'
-import { IMG } from '@/lib/assets'
 
 interface Props {
   journey: Journey
@@ -36,28 +35,8 @@ export function DuoSlotMachine3D({
       {/* Ambient glowing aura behind the 3D machine */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-3 top-6 bottom-2 rounded-full bg-gradient-to-b from-[#f472b6]/45 via-[#a855f7]/40 to-[#fde047]/40 blur-2xl"
+        className="pointer-events-none absolute inset-x-3 top-2 bottom-2 rounded-full bg-gradient-to-b from-[#f472b6]/45 via-[#a855f7]/40 to-[#fde047]/40 blur-2xl"
       />
-
-      {/* TOP MASCOT: Large Cutout 3D Pig sitting centered on top of the Slot Machine Crown */}
-      <motion.div
-        className="pointer-events-none relative z-20 -mb-8 flex justify-center"
-        animate={
-          reducedMotion
-            ? undefined
-            : rolling
-              ? { y: [0, -12, 0], scaleX: [1, 1.07, 0.94, 1], scaleY: [1, 0.93, 1.07, 1] }
-              : { y: [0, -6, 0] }
-        }
-        transition={{ duration: rolling ? 0.38 : 2.4, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <img
-          src={IMG.spriteHero}
-          alt={journey.pig.name}
-          className="h-[152px] w-auto object-contain"
-          style={{ filter: 'drop-shadow(0 12px 18px rgba(30, 10, 80, 0.38))' }}
-        />
-      </motion.div>
 
       {/* MAIN 3D ARCADE CABINET + RIGHT-HAND 3D LEVER */}
       <div className="relative mx-auto w-full">
