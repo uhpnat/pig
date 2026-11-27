@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Button, Card, Field } from '@/components/ui'
+import { vnd } from '@/domain/format'
+import { confirmedTotals } from '@/domain/stats'
 import { buildPartnerInviteUrl, GAS_BACKEND_CODE } from '@/features/couple/GoogleSheetsCard'
 import { useStore } from '@/hooks/useStore'
 import { extractSpreadsheetId } from '@/services/localRepository'
@@ -17,7 +19,7 @@ import { extractSpreadsheetId } from '@/services/localRepository'
 const UNLOCK_KEY = 'piggy-duo:unlocked:v1'
 
 export function PasscodeGate({ children }: { children: ReactNode }) {
-  const { repo, run, toast } = useStore()
+  const { state, repo, run, toast } = useStore()
   const cfg = repo.getSheetConfig()
   const requiredPin = cfg.passcode
 
@@ -106,15 +108,19 @@ export function PasscodeGate({ children }: { children: ReactNode }) {
         setUnlocked(true)
       }
 
-      // Test connection & pull existing journey from the Sheet if already created
-      await run(repo.syncWithSheet('pull'))
+      // Test connection & pull existing journey from the Sheet (replaceLocal=true so we adopt any existing data on the Sheet!)
+      const loadedState = await run(repo.syncWithSheet('pull', true))
       const updatedCfg = repo.getSheetConfig()
       if (updatedCfg.lastError) {
         setSetupErr(updatedCfg.lastError)
         return
       }
       setJustConnected(true)
-      toast('Đã kết nối và lưu Google Sheet vĩnh viễn vào máy! 🎉')
+      if (loadedState?.journey?.setupDone) {
+        toast(`Đã tìm thấy & tải dữ liệu hành trình “${loadedState.journey.name}” từ Google Sheet! 🎉`)
+      } else {
+        toast('Đã kết nối Google Sheet mới! Hãy thiết lập hành trình đầu tiên nhé 🎉')
+      }
     } finally {
       setConnecting(false)
     }
@@ -155,11 +161,22 @@ export function PasscodeGate({ children }: { children: ReactNode }) {
               <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/90 p-3.5 text-xs font-bold text-emerald-950">
                 <div className="flex items-center gap-1.5 text-sm font-black text-emerald-800">
                   <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
-                  <span>Đã kết nối & lưu vào máy bạn thành công!</span>
+                  <span>
+                    {state.journey?.setupDone
+                      ? `Đã tải dữ liệu sẵn có: “${state.journey.name}”!`
+                      : 'Đã kết nối Google Sheet mới thành công!'}
+                  </span>
                 </div>
-                <p className="mt-1 leading-relaxed text-emerald-800">
-                  Từ lần sau bạn chỉ cần vào thẳng <b>uhpnat.github.io/pig</b> (hoặc mở icon 🐷 ngoài màn hình chính) là vào thẳng app, không bao giờ phải nhập lại link nữa!
-                </p>
+                {state.journey?.setupDone ? (
+                  <p className="mt-1 leading-relaxed text-emerald-800">
+                    Tìm thấy hành trình của <b>{state.journey.members.a.name} & {state.journey.members.b.name}</b> (Mục tiêu:{' '}
+                    <b>{vnd(state.journey.goal)}</b> · Đã góp: <b>{vnd(confirmedTotals(state.contributions).total)}</b>). Bạn sẽ vào thẳng Trang chủ mà không cần tạo lại!
+                  </p>
+                ) : (
+                  <p className="mt-1 leading-relaxed text-emerald-800">
+                    Google Sheet này chưa có hành trình nào. Bấm nút bên dưới để tạo hành trình đầu tiên cho 2 bạn nhé!
+                  </p>
+                )}
               </div>
 
               <div className="rounded-2xl border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-violet-50 p-3.5">
@@ -167,7 +184,7 @@ export function PasscodeGate({ children }: { children: ReactNode }) {
                   💌 Gửi link này cho Người thứ 2 (Người ấy):
                 </p>
                 <p className="mt-1 text-[11.5px] font-bold leading-relaxed text-slate-600">
-                  Người thứ 2 chỉ cần <b>bấm vào link dưới đây đúng 1 lần</b> là máy người ấy sẽ tự động kết nối và lưu vĩnh viễn Google Sheet này luôn!
+                  Người thứ 2 chỉ cần <b>bấm vào link dưới đây đúng 1 lần</b> là máy người ấy sẽ tự động kết nối và nạp toàn bộ dữ liệu Google Sheet này luôn!
                 </p>
                 <div className="mt-2 rounded-xl border border-pink-200 bg-white p-2 font-mono text-[10.5px] font-bold break-all text-slate-700">
                   {partnerUrl}
@@ -200,7 +217,11 @@ export function PasscodeGate({ children }: { children: ReactNode }) {
                 onClick={() => setJustConnected(false)}
               >
                 <Sparkles size={18} />
-                <span>Vào App Nuôi Heo Đất ngay →</span>
+                <span>
+                  {state.journey?.setupDone
+                    ? `Vào thẳng “${state.journey.name}” ngay →`
+                    : 'Bắt đầu tạo hành trình mới →'}
+                </span>
               </Button>
             </div>
           ) : (

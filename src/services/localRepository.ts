@@ -376,9 +376,9 @@ export class LocalRepository implements Repository {
     return this.inFlightPull
   }
 
-  async syncWithSheet(direction: 'push' | 'pull' = 'push'): Promise<AppState> {
+  async syncWithSheet(direction: 'push' | 'pull' = 'push', replaceLocal = false): Promise<AppState> {
     if (direction === 'pull') {
-      const remote = await this.pullFromSheet(true, false)
+      const remote = await this.pullFromSheet(true, replaceLocal)
       if (remote) return remote
       return read()
     }

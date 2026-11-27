@@ -1,5 +1,5 @@
 /* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background-Only Push Suppression + Reliable Chat Auto-Open. */
-const VERSION = 'piggy-duo-v12'
+const VERSION = 'piggy-duo-v13'
 const NAV_CACHE = 'piggy-nav-v1'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png']
 

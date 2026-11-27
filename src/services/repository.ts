@@ -24,7 +24,7 @@ export interface Repository {
   subscribe(cb: (s: AppState) => void): Unsubscribe
   getSheetConfig(): SheetSyncConfig
   setSheetConfig(patch: Partial<Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'>>): void
-  syncWithSheet(direction?: 'push' | 'pull'): Promise<AppState>
+  syncWithSheet(direction?: 'push' | 'pull', replaceLocal?: boolean): Promise<AppState>
 
   saveDraft(draft: DraftSetup | null): Promise<AppState>
   saveJourney(journey: Journey): Promise<AppState>
