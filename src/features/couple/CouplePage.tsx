@@ -13,7 +13,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { MoneyBagSticker, PartySticker, TargetSticker } from '@/components/Stickers'
-import { Avatar, Button, Card, ConfirmDialog, Field, Modal, ProgressBar, Toggle } from '@/components/ui'
+import { Avatar, Button, Card, ConfirmDialog, Field, IconButton, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
 import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
 import { actualShares } from '@/domain/stats'
@@ -119,14 +119,13 @@ export default function CouplePage() {
         <h1 className="text-[22px] font-black tracking-tight text-[#1e1b4b]">
           Của chúng mình <span className="text-[#ff4d79]">❤️</span>
         </h1>
-        <button
-          type="button"
-          aria-label="Cài đặt chung"
+        <IconButton
+          label="Cài đặt chung"
           onClick={() => setSettingsOpen(true)}
-          className="absolute right-4 top-3.5 grid h-10 w-10 cursor-pointer place-items-center rounded-full border-0 bg-white/80 text-[#1e1b4b] shadow-sm transition-transform active:scale-95"
+          className="absolute right-4 top-3.5"
         >
           <Settings size={20} />
-        </button>
+        </IconButton>
       </div>
 
       {/* Separated 3D Cutout Two Pigs on Interactive Romantic Cloud & Meadow Stage */}
@@ -230,8 +229,8 @@ export default function CouplePage() {
           </p>
           <Button
             size="sm"
-            variant="ghost"
-            className="mt-3 !text-[#e11d48] !shadow-[inset_0_0_0_2px_#fecdd3]"
+            variant="outline"
+            className="mt-3"
             onClick={() => {
               setConfirmText('')
               setConfirmErr('')

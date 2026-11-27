@@ -1,8 +1,8 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CoinStackSticker, GiftBoxSticker } from '@/components/Stickers'
-import { Badge, Button, Field, Modal, MoneyInput, ProgressBar } from '@/components/ui'
+import { Badge, Button, Field, Modal, MoneyInput, PageHeader, ProgressBar } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import { useChallenges, useStore } from '@/hooks/useStore'
 import { IMG } from '@/lib/assets'
@@ -49,18 +49,7 @@ export default function ChallengesPage() {
         background: 'linear-gradient(180deg, #ede9fe 0%, #f5efff 42%, #ffeef5 100%)',
       }}
     >
-      {/* Header matching 07_challenges.png */}
-      <div className="relative flex items-center justify-center">
-        <button
-          type="button"
-          aria-label="Quay lại"
-          onClick={() => nav('/')}
-          className="absolute left-0 grid h-10 w-10 cursor-pointer place-items-center rounded-full border-0 bg-white/80 text-[#1e1b4b] shadow-sm"
-        >
-          <ChevronLeft size={20} strokeWidth={2.5} />
-        </button>
-        <h1 className="text-[20px] font-black text-[#172554]">Thử thách tiết kiệm</h1>
-      </div>
+      <PageHeader title="Thử thách tiết kiệm" onBack={() => nav('/')} />
 
       {/* Hero Banner: Thử thách 30 ngày with 3D headband pig matching 07_challenges.png */}
       <div

@@ -6,7 +6,8 @@ import { DuoSlotMachine3D } from '@/components/pig/DuoSlotMachine3D'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { Avatar, Badge, Button, Modal } from '@/components/ui'
 import { vnd } from '@/domain/format'
-import type { Contribution, MemberId } from '@/domain/types'
+import type { MemberId } from '@/domain/types'
+import { useConfirmContribution } from '@/hooks/useConfirmContribution'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { beep, haptic } from '@/lib/fx'
 
@@ -87,25 +88,7 @@ export default function RevealPage() {
     }, out?.created === false ? 0 : wait)
   }
 
-  const confirmByMe = async (c: Contribution) => {
-    const before = state.milestonesReached.length
-    const out = await run(repo.confirmContribution(c.id, myMemberId))
-    if (!out) return
-    haptic(state.settings, 35)
-    const updatedC = out.contributions.find((x) => x.id === c.id)
-    if (updatedC?.status === 'confirmed') {
-      celebrate(['🪙', '🎉', '✨', '💗'])
-      beep(state.settings, 'win')
-      toast(`Đã duyệt hoàn tất (2/2)! Tiền của ${j.members[c.member].name} đã vào heo đất 🐷🎉`)
-    } else {
-      toast(
-        c.member === myMemberId
-          ? `Đã báo nạp (1/2)! Đang chờ ${partnerMember?.name} xác nhận chéo nhé ⏳`
-          : `Đã xác nhận cho ${partnerMember?.name} (1/2)! ⏳`,
-      )
-    }
-    if (out.milestonesReached.length > before) celebrate(['🎉', '🎆', '✨', '🪙'])
-  }
+  const confirmByMe = useConfirmContribution({ withSoundAndHaptic: true })
 
   const displayAmounts = rolling ? ticker : reveal ? reveal.amounts : { a: 0, b: 0 }
 

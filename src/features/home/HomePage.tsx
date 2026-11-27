@@ -1,17 +1,23 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, Calendar, ChevronLeft, ChevronRight, Clock, History, PlusCircle, Sparkles } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AnimatedNumber } from '@/components/AnimatedNumber'
+import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { FinalGoalStage } from '@/components/pig/FinalGoalStage'
 import { MonthlyJarStage } from '@/components/pig/MonthlyJarStage'
-import { Avatar, Badge, Button, Card, Modal } from '@/components/ui'
-import { GenderSelectDialog } from '@/components/GenderSelectDialog'
-import { daysInMonth, diffDays, fmtDate, vnd } from '@/domain/format'
-import type { Contribution } from '@/domain/types'
+import { Avatar } from '@/components/ui'
+import { daysInMonth, diffDays } from '@/domain/format'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
+import type { Contribution } from '@/domain/types'
+import { useConfirmContribution } from '@/hooks/useConfirmContribution'
+import { useCountdown } from '@/hooks/useCountdown'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { beep, haptic } from '@/lib/fx'
+import { DailyConfirmationCard } from './DailyConfirmationCard'
+import { FinalSummaryCard } from './FinalSummaryCard'
+import { MonthHistoryModal } from './MonthHistoryModal'
+import { MonthSummaryCard } from './MonthSummaryCard'
+import { SecondUserDepositModal } from './SecondUserDepositModal'
 import { TopUpDialog } from './TopUpDialog'
 
 function buildMonthList(startDate: string, today: string, contribs: Contribution[]): string[] {
@@ -46,10 +52,6 @@ export default function HomePage() {
   const j = useJourney()
   const {
     state,
-    repo,
-    run,
-    toast,
-    celebrate,
     confirmed,
     progress,
     today,
@@ -62,11 +64,19 @@ export default function HomePage() {
     partnerMember,
   } = useStore()
   const nav = useNavigate()
+
   const [topUp, setTopUp] = useState(false)
   const [genderDialogOpen, setGenderDialogOpen] = useState(false)
   const [depositAlertDismissed, setDepositAlertDismissed] = useState(false)
   const [monthListModalOpen, setMonthListModalOpen] = useState(false)
   const [coinBurstKey, setCoinBurstKey] = useState(0)
+  const [pigMode, setPigMode] = useState<'month' | 'final'>('month')
+
+  const curMonthKey = today.slice(0, 7)
+  const [selectedMonthKey, setSelectedMonthKey] = useState(curMonthKey)
+  useEffect(() => {
+    setSelectedMonthKey(curMonthKey)
+  }, [curMonthKey])
 
   const confirmedCount = useMemo(
     () => state.contributions.filter((c) => c.status === 'confirmed').length,
@@ -74,7 +84,6 @@ export default function HomePage() {
   )
   const prevConfirmedCountRef = useRef<number>(confirmedCount)
 
-  // Whenever a deposit finishes 2/2 confirmation (whether approved locally or synced from partner's device), fly coins into the piggy bank!
   useEffect(() => {
     if (confirmedCount > prevConfirmedCountRef.current) {
       setCoinBurstKey((k) => k + 1)
@@ -83,14 +92,9 @@ export default function HomePage() {
     prevConfirmedCountRef.current = confirmedCount
   }, [confirmedCount, state.settings])
 
-  // Two Pig Modes right on HomePage: 'month' (Heo theo tháng) vs 'final' (Heo cuối kỳ)
-  const [pigMode, setPigMode] = useState<'month' | 'final'>('month')
-  const curMonthKey = today.slice(0, 7)
-  const [selectedMonthKey, setSelectedMonthKey] = useState(curMonthKey)
-
-  useEffect(() => {
-    setSelectedMonthKey(curMonthKey)
-  }, [curMonthKey])
+  const handleConfirmContrib = useConfirmContribution({
+    onFullyConfirmed: () => setCoinBurstKey((k) => k + 1),
+  })
 
   const allMonths = useMemo(
     () => buildMonthList(j.startDate, today, state.contributions),
@@ -109,31 +113,13 @@ export default function HomePage() {
   const partnerDailyC = cs.find((x) => x.member === partnerMemberId)
   const partnerDailyBy = partnerDailyC?.confirmedBy ?? (partnerDailyC?.status === 'confirmed' ? ['a', 'b'] : [])
 
-  // Show popup notification to 2nd user (or whenever today's reveal exists and this user hasn't reported their deposit yet)
   const showSecondUserDepositModal =
     !!reveal &&
     !depositAlertDismissed &&
     (!myDailyBy.includes(myMemberId) ||
       (partnerDailyBy.includes(partnerMemberId) && !partnerDailyBy.includes(myMemberId)))
 
-  const handleConfirmContrib = async (c: Contribution) => {
-    const out = await run(repo.confirmContribution(c.id, myMemberId))
-    if (!out) return
-    const updated = out.contributions.find((x) => x.id === c.id)
-    if (updated?.status === 'confirmed') {
-      setCoinBurstKey((k) => k + 1)
-      celebrate(['🪙', '✨', '🎉', '💰'])
-      toast(
-        `Đã duyệt hoàn tất (2/2)! Đồng xu ${vnd(c.amount)} của ${j.members[c.member].name} đã bay vào heo đất! 🐷🪙`,
-      )
-    } else if (c.member === myMemberId) {
-      toast(`Đã báo nạp ${vnd(c.amount)} (1/2)! Chờ ${partnerMember?.name} xác nhận chéo nhé ⏳`)
-    } else {
-      toast(`Đã xác nhận cho ${partnerMember?.name} (1/2)! ⏳`)
-    }
-  }
-
-  // 1. Selected Monthly Pig Metrics (Heo theo tháng - NO monthly dollar budget cap shown!)
+  // Monthly metrics
   const monthContribs = state.contributions.filter(
     (c) => c.status === 'confirmed' && c.date.startsWith(selectedMonthKey),
   )
@@ -143,17 +129,12 @@ export default function HomePage() {
   const monthShareA = monthSaved > 0 ? (monthA / monthSaved) * 100 : 0
   const monthShareB = monthSaved > 0 ? (monthB / monthSaved) * 100 : 0
 
-  // Monthly water fill % (Heo theo tháng):
-  // - 0% when 0đ is confirmed in that month (pig stays 100% transparent).
-  // - Strictly proportional to that month's progress: max(confirmed deposits / (activeDaysInMonth * 2), monthSaved / (goal / months)).
-  // - Note: Because Monthly Pig is 1 month (e.g. 1/12th of a 12-month goal), its water level is naturally ~12x higher than Final-Term Pig (Heo cuối kỳ)!
   const totalDaysInSelectedMonth = daysInMonth(selectedMonthKey)
   const monthStartStr = `${selectedMonthKey}-01`
   const monthEndStr = `${selectedMonthKey}-${String(totalDaysInSelectedMonth).padStart(2, '0')}`
   const effStart = j.startDate > monthStartStr ? j.startDate : monthStartStr
   const effEnd = j.endDate < monthEndStr ? j.endDate : monthEndStr
   const activeDaysInMonth = Math.max(1, diffDays(effStart, effEnd) + 1)
-  const monthConfirmedCount = monthContribs.length
   const monthMonthlyRef = Math.max(1, j.goal / Math.max(1, j.months))
   const monthFillPct =
     monthSaved <= 0
@@ -161,32 +142,15 @@ export default function HomePage() {
       : Math.min(
           100,
           Math.max(
-            (monthConfirmedCount / Math.max(2, activeDaysInMonth * 2)) * 100,
+            (monthContribs.length / Math.max(2, activeDaysInMonth * 2)) * 100,
             (monthSaved / monthMonthlyRef) * 100,
           ),
         )
 
-  // 2. Final-Term Pig Metrics & Live Countdown (Heo cuối kỳ)
+  // Final-term metrics & live countdown
   const totalShareA = confirmed.total > 0 ? actual.a * 100 : 0
   const totalShareB = confirmed.total > 0 ? actual.b * 100 : 0
-  const targetDateStr = j.endDate
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
-
-  useEffect(() => {
-    const updateCountdown = () => {
-      const targetTime = new Date(`${targetDateStr}T23:59:59+07:00`).getTime()
-      const diff = Math.max(0, targetTime - Date.now())
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000),
-      })
-    }
-    updateCountdown()
-    const timer = setInterval(updateCountdown, 1000)
-    return () => clearInterval(timer)
-  }, [targetDateStr])
+  const timeLeft = useCountdown(j.endDate)
 
   const activeShareA = pigMode === 'month' ? monthShareA : totalShareA
   const activeShareB = pigMode === 'month' ? monthShareB : totalShareB
@@ -203,7 +167,11 @@ export default function HomePage() {
 
   const stage = pigStage(progress)
   const isMyMale = myMember?.gender === 'male'
-  const selectedMonthIdx = allMonths.indexOf(selectedMonthKey)
+
+  const triggerPokeFeedback = () => {
+    beep(state.settings, 'tick')
+    haptic(state.settings, 30)
+  }
 
   return (
     <div
@@ -216,9 +184,8 @@ export default function HomePage() {
             : 'linear-gradient(180deg, #b8e1ff 0%, #e0e7ff 28%, #f3e8ff 54%, #fce7f3 78%, #fde8f1 100%)',
       }}
     >
-      {/* TOP HERO ZONE: Header + Mode Switcher + 3D Pig on Feathered Meadow */}
+      {/* TOP HERO ZONE */}
       <div className="relative">
-        {/* 1. Sleek Top Navigation Bar */}
         <header className="relative z-20 flex items-center justify-between gap-2 px-4">
           <Link
             to="/couple"
@@ -268,35 +235,30 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* 2. Floating Segmented Switcher: Heo theo tháng vs Heo cuối kỳ */}
+        {/* Mode Switcher */}
         <div className="relative z-20 mt-2.5 px-4">
           <div className="mx-auto grid max-w-[330px] grid-cols-2 gap-1 rounded-full border-2 border-white bg-white/85 p-1 shadow-[0_6px_18px_rgba(30,27,75,0.08)] backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => setPigMode('month')}
-              className={`cursor-pointer rounded-full border-0 py-1.5 text-xs font-black transition-all ${
-                pigMode === 'month'
-                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-sm'
-                  : 'bg-transparent text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              📅 Heo theo tháng
-            </button>
-            <button
-              type="button"
-              onClick={() => setPigMode('final')}
-              className={`cursor-pointer rounded-full border-0 py-1.5 text-xs font-black transition-all ${
-                pigMode === 'final'
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-sm'
-                  : 'bg-transparent text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              🎯 Heo cuối kỳ
-            </button>
+            {(
+              [
+                { id: 'month', label: '📅 Heo theo tháng', activeClass: 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-sm' },
+                { id: 'final', label: '🎯 Heo cuối kỳ', activeClass: 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-sm' },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setPigMode(tab.id)}
+                className={`cursor-pointer rounded-full border-0 py-1.5 text-xs font-black transition-all ${
+                  pigMode === tab.id ? tab.activeClass : 'bg-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* 3. HERO CENTERPIECE: 3D Crystal Savings Jar (Month) OR 3D Dream Goal Globe (Final/Year) */}
+        {/* Hero Stage: 3D Crystal Savings Jar (Month) OR 3D Dream Goal Globe (Final/Year) */}
         <div className="relative mt-0.5">
           <AnimatePresence mode="wait">
             {pigMode === 'month' ? (
@@ -327,10 +289,7 @@ export default function HomePage() {
                     gender: memberFemale.gender,
                   }}
                   reducedMotion={motionOff}
-                  onPoke={() => {
-                    beep(state.settings, 'tick')
-                    haptic(state.settings, 30)
-                  }}
+                  onPoke={triggerPokeFeedback}
                 />
               </motion.div>
             ) : (
@@ -361,10 +320,7 @@ export default function HomePage() {
                     gender: memberFemale.gender,
                   }}
                   reducedMotion={motionOff}
-                  onPoke={() => {
-                    beep(state.settings, 'tick')
-                    haptic(state.settings, 30)
-                  }}
+                  onPoke={triggerPokeFeedback}
                 />
               </motion.div>
             )}
@@ -372,7 +328,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 4. CURVED GLASSMORPHIC BOTTOM SHEET */}
+      {/* CURVED GLASSMORPHIC BOTTOM SHEET */}
       <div
         className="relative z-20 -mt-5 flex-1 rounded-t-[36px] border-t-2 border-white px-4 pb-5 pt-3.5 shadow-[0_-12px_32px_rgba(80,140,90,0.12)] backdrop-blur-xl"
         style={{
@@ -383,458 +339,90 @@ export default function HomePage() {
         <div className="mx-auto mb-3 h-1 w-11 rounded-full bg-slate-200/90" />
 
         <div className="space-y-3">
-          {/* 4A. Mode Summary Header inside the Curved Sheet */}
           {pigMode === 'month' ? (
-            <div className="rounded-2xl border border-sky-100/90 bg-gradient-to-r from-sky-50/80 via-white to-pink-50/80 p-3 shadow-sm">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-sky-700">
-                      📅 Heo tháng {selectedMonthKey.slice(5)}/{selectedMonthKey.slice(0, 4)}
-                    </span>
-                    {selectedMonthKey !== curMonthKey && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.2 text-[9.5px] font-black text-amber-800">
-                        Tháng cũ
-                      </span>
-                    )}
-                  </div>
-                  {/* Strictly show ONLY the accumulated amount in this month (NO monthly target amount!) */}
-                  <p className="mt-0.5 text-xl font-black text-[#1e1b4b] tabular-nums">
-                    <AnimatedNumber value={monthSaved} format={(n) => vnd(Math.round(n))} />
-                  </p>
-                </div>
-
-                {/* Month Navigation & History List Trigger */}
-                <div className="flex shrink-0 items-center gap-1">
-                  {allMonths.length > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        disabled={selectedMonthIdx >= allMonths.length - 1}
-                        onClick={() =>
-                          selectedMonthIdx < allMonths.length - 1 &&
-                          setSelectedMonthKey(allMonths[selectedMonthIdx + 1])
-                        }
-                        aria-label="Tháng trước"
-                        className="grid h-7 w-7 cursor-pointer place-items-center rounded-full border border-slate-200 bg-white text-slate-600 disabled:opacity-40"
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={selectedMonthIdx <= 0}
-                        onClick={() =>
-                          selectedMonthIdx > 0 && setSelectedMonthKey(allMonths[selectedMonthIdx - 1])
-                        }
-                        aria-label="Tháng sau"
-                        className="grid h-7 w-7 cursor-pointer place-items-center rounded-full border border-slate-200 bg-white text-slate-600 disabled:opacity-40"
-                      >
-                        <ChevronRight size={14} />
-                      </button>
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setMonthListModalOpen(true)}
-                    className="flex cursor-pointer items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[11px] font-black text-indigo-700 shadow-sm transition-transform active:scale-95"
-                  >
-                    <History size={13} /> DS tháng ({allMonths.length})
-                  </button>
-                </div>
-              </div>
-
-              {/* 2-Person Contribution Breakdown in Selected Month */}
-              <div className="mt-2 flex items-center justify-between text-[11px] font-black">
-                <span className="text-sky-700">
-                  👦 {memberMale.name}: {vnd(activeMoneyMale)} ({activePctMale.toFixed(0)}%)
-                </span>
-                <span className="text-pink-700">
-                  👧 {memberFemale.name}: {vnd(activeMoneyFemale)} ({activePctFemale.toFixed(0)}%)
-                </span>
-              </div>
-              <div className="mt-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-100 p-0.5">
-                {monthSaved > 0 ? (
-                  <>
-                    <div
-                      className="h-full rounded-l-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700"
-                      style={{ width: `${activePctMale}%` }}
-                    />
-                    <div
-                      className="h-full rounded-r-full bg-gradient-to-r from-pink-400 to-rose-500 transition-all duration-700"
-                      style={{ width: `${activePctFemale}%` }}
-                    />
-                  </>
-                ) : (
-                  <div className="h-full w-full rounded-full bg-slate-200/70" />
-                )}
-              </div>
-            </div>
+            <MonthSummaryCard
+              selectedMonthKey={selectedMonthKey}
+              curMonthKey={curMonthKey}
+              allMonths={allMonths}
+              monthSaved={monthSaved}
+              memberMale={memberMale}
+              memberFemale={memberFemale}
+              pctMale={activePctMale}
+              pctFemale={activePctFemale}
+              moneyMale={activeMoneyMale}
+              moneyFemale={activeMoneyFemale}
+              onSelectMonth={setSelectedMonthKey}
+              onOpenHistory={() => setMonthListModalOpen(true)}
+            />
           ) : (
-            <div className="rounded-2xl border border-purple-100/90 bg-gradient-to-r from-purple-50/80 via-white to-pink-50/80 p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-purple-700">
-                    <Clock size={12} /> Quỹ cuối kỳ ({fmtDate(targetDateStr)})
-                  </span>
-                  <p className="mt-0.5 text-lg font-black text-[#1e1b4b] tabular-nums">
-                    <AnimatedNumber value={confirmed.total} format={(n) => vnd(Math.round(n))} />{' '}
-                    <span className="text-xs font-bold text-slate-400">/ {vnd(j.goal)}</span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="inline-block rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-2.5 py-1 text-xs font-black text-white shadow-sm tabular-nums">
-                    🎯 {progress.toFixed(1)}%
-                  </span>
-                  <p className="mt-1 text-[10px] font-extrabold text-slate-500">
-                    👦 {memberMale.name} {activePctMale.toFixed(0)}% · 👧 {memberFemale.name} {activePctFemale.toFixed(0)}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Compact 4-box final countdown */}
-              <div className="mt-2.5 grid grid-cols-4 gap-1.5 text-center">
-                {[
-                  { val: timeLeft.days, label: 'Ngày', color: '#4f46e5' },
-                  { val: timeLeft.hours, label: 'Giờ', color: '#0284c7' },
-                  { val: timeLeft.minutes, label: 'Phút', color: '#9333ea' },
-                  { val: timeLeft.seconds, label: 'Giây', color: '#e11d48' },
-                ].map((b, i) => (
-                  <div key={i} className="rounded-xl border border-white bg-white/90 py-1.5 shadow-sm">
-                    <p className="text-[15px] font-black leading-none tabular-nums" style={{ color: b.color }}>
-                      {String(b.val).padStart(2, '0')}
-                    </p>
-                    <p className="mt-0.5 text-[9px] font-extrabold uppercase text-slate-400">{b.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <FinalSummaryCard
+              targetDateStr={j.endDate}
+              confirmedTotal={confirmed.total}
+              goal={j.goal}
+              progress={progress}
+              memberMale={memberMale}
+              memberFemale={memberFemale}
+              pctMale={activePctMale}
+              pctFemale={activePctFemale}
+              timeLeft={timeLeft}
+            />
           )}
 
-          {/* 4B. XÁC NHẬN TIỀN HÔM NAY (2-person cross-confirmation) */}
-          {goalReached ? (
-            <Card className="!mt-0 text-center">
-              <h2 className="h2">🎉 Hoàn thành mục tiêu!</h2>
-              <p className="muted mt-1">Hai bạn đã chạm đích xuất sắc!</p>
-            </Card>
-          ) : !reveal ? (
-            <div className="rounded-2xl border border-purple-100 bg-white p-3.5 text-center shadow-sm">
-              <p className="text-xs font-black text-purple-700">
-                <Sparkles size={13} className="mr-1 inline" /> Hôm nay chưa mở số tiền
-              </p>
-              <Button
-                variant="violet"
-                className="mt-2.5 w-full !py-3 !text-sm"
-                onClick={() => nav('/reveal')}
-              >
-                🎰 {myMember?.name} kéo cần gạt mở số ngay
-              </Button>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-black text-[#1e1b4b]">🎲 Xác nhận tiền hôm nay</h2>
-                <Badge tone={allDone ? 'ok' : 'warn'}>
-                  {allDone ? 'Đã duyệt đủ 2/2 ✅' : 'Duyệt chéo 2 người ⏳'}
-                </Badge>
-              </div>
-
-              <div className="mt-2.5 grid grid-cols-2 gap-2">
-                {/* My Card */}
-                {(() => {
-                  const myC = myDailyC
-                  const cBy = myDailyBy
-                  const done = myC?.status === 'confirmed'
-                  const iConfirmed = cBy.includes(myMemberId)
-                  return (
-                    <div
-                      className={`rounded-2xl border-2 p-2.5 text-center ${
-                        isMyMale ? 'border-sky-300 bg-sky-50/75' : 'border-pink-300 bg-pink-50/75'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-1 min-w-0">
-                        <Avatar value={myMember?.avatar || 'boy'} size={24} />
-                        <span className="truncate text-xs font-black text-[#1e1b4b]">
-                          {myMember?.name}
-                        </span>
-                        <span className="shrink-0 rounded-full bg-indigo-600 px-1.5 py-0.2 text-[8.5px] font-black text-white">
-                          Bạn
-                        </span>
-                      </div>
-                      <p
-                        className={`mt-1 text-base font-black tabular-nums ${
-                          isMyMale ? 'text-sky-700' : 'text-pink-700'
-                        }`}
-                      >
-                        +{vnd(reveal.amounts[myMemberId])}
-                      </p>
-                      {done ? (
-                        <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-700">
-                          Đã vào quỹ (2/2) ✅
-                        </span>
-                      ) : iConfirmed ? (
-                        <div className="mt-1.5 rounded-xl bg-amber-100/90 px-2 py-1 text-[10px] font-black text-amber-800">
-                          ⏳ Đã nạp (1/2) · Chờ {partnerMember?.name}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => myC && handleConfirmContrib(myC)}
-                          className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-xs font-black text-white shadow-sm active:scale-95 ${
-                            isMyMale
-                              ? 'bg-gradient-to-r from-sky-500 to-blue-600'
-                              : 'bg-gradient-to-r from-pink-500 to-rose-600'
-                          }`}
-                        >
-                          💸 Tôi đã nạp ({cBy.length}/2)
-                        </button>
-                      )}
-                    </div>
-                  )
-                })()}
-
-                {/* Partner Card */}
-                {(() => {
-                  const partnerC = partnerDailyC
-                  const cBy = partnerDailyBy
-                  const done = partnerC?.status === 'confirmed'
-                  const partnerReported = cBy.includes(partnerMemberId)
-                  const iApprovedPartner = cBy.includes(myMemberId)
-                  return (
-                    <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-2.5 text-center">
-                      <div className="flex items-center justify-center gap-1 min-w-0">
-                        <Avatar value={partnerMember?.avatar || 'girl'} size={24} />
-                        <span className="truncate text-xs font-black text-[#1e1b4b]">
-                          {partnerMember?.name}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-base font-black tabular-nums text-purple-800">
-                        +{vnd(reveal.amounts[partnerMemberId])}
-                      </p>
-                      {done ? (
-                        <span className="mt-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-black text-emerald-800">
-                          Đã vào quỹ (2/2) ✅
-                        </span>
-                      ) : iApprovedPartner ? (
-                        <div className="mt-1.5 rounded-xl border border-amber-300 bg-amber-100 px-2 py-1.5 text-[10.5px] font-black text-amber-950">
-                          ⏳ Đã duyệt (1/2) · Chờ {partnerMember?.name}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => partnerC && handleConfirmContrib(partnerC)}
-                          className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 px-2 py-1.5 text-xs font-black text-white shadow-md transition-transform active:scale-95 ${
-                            partnerReported
-                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 animate-pulse'
-                              : 'bg-gradient-to-r from-violet-600 to-indigo-600'
-                          }`}
-                        >
-                          {partnerReported
-                            ? `✅ Duyệt ${partnerMember?.name} (2/2)`
-                            : `✅ Xác nhận cho ${partnerMember?.name}`}
-                        </button>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-
-              {/* Extra Pending Top-Ups needing 2-person cross-confirmation */}
-              {extraPending.length > 0 && (
-                <div className="mt-2.5 space-y-1.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-2">
-                  {extraPending.map((c) => {
-                    const cBy = c.confirmedBy ?? []
-                    const iConfirmed = cBy.includes(myMemberId)
-                    const owner = j.members[c.member]
-                    const other = j.members[c.member === 'a' ? 'b' : 'a']
-                    return (
-                      <div key={c.id} className="flex items-center justify-between gap-2 rounded-xl bg-white px-2.5 py-1.5 shadow-sm">
-                        <span className="truncate text-xs font-black text-[#1e1b4b]">
-                          ➕ {owner.name} nạp +{vnd(c.amount)} ({cBy.length}/2)
-                        </span>
-                        {iConfirmed ? (
-                          <span className="shrink-0 rounded-lg bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
-                            Chờ {other.name}
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleConfirmContrib(c)}
-                            className="shrink-0 cursor-pointer rounded-lg border-0 bg-emerald-600 px-2.5 py-1 text-[10.5px] font-black text-white shadow-sm active:scale-95"
-                          >
-                            ✅ Duyệt (2/2)
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Compact extra deposit & slot machine links */}
-              <div className="mt-2.5 flex items-center justify-between pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setTopUp(true)}
-                  className="flex cursor-pointer items-center gap-1 rounded-full border-0 bg-pink-50 px-3 py-1 text-xs font-black text-pink-600 active:scale-95"
-                >
-                  <PlusCircle size={14} /> Nạp thêm vào quỹ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => nav('/reveal')}
-                  className="cursor-pointer border-0 bg-transparent text-xs font-extrabold text-indigo-600 hover:underline"
-                >
-                  🎰 Xem lồng quay →
-                </button>
-              </div>
-            </div>
-          )}
+          <DailyConfirmationCard
+            goalReached={goalReached}
+            reveal={reveal}
+            allDone={allDone}
+            myMemberId={myMemberId}
+            partnerMemberId={partnerMemberId}
+            myMember={myMember}
+            partnerMember={partnerMember}
+            members={j.members}
+            myDailyC={myDailyC}
+            partnerDailyC={partnerDailyC}
+            myDailyBy={myDailyBy}
+            partnerDailyBy={partnerDailyBy}
+            extraPending={extraPending}
+            onConfirm={handleConfirmContrib}
+            onOpenReveal={() => nav('/reveal')}
+            onOpenTopUp={() => setTopUp(true)}
+          />
         </div>
       </div>
 
       <TopUpDialog open={topUp} onClose={() => setTopUp(false)} />
       <GenderSelectDialog open={genderDialogOpen} onClose={() => setGenderDialogOpen(false)} />
 
-      {/* Month History List Modal ("Danh sách các tháng của Heo") */}
-      <Modal
+      <MonthHistoryModal
         open={monthListModalOpen}
         onClose={() => setMonthListModalOpen(false)}
-        title="📜 Danh sách các tháng của Heo"
-      >
-        <div className="mt-2 space-y-2.5">
-          <p className="text-xs font-bold text-slate-500">
-            Chọn một tháng bất kỳ để xem lại chú heo đất và số tiền 2 bạn đã góp trong tháng đó:
-          </p>
-          <div className="max-h-[55dvh] space-y-2 overflow-y-auto pr-1">
-            {allMonths.map((ym) => {
-              const mCs = state.contributions.filter(
-                (c) => c.status === 'confirmed' && c.date.startsWith(ym),
-              )
-              const mTot = mCs.reduce((s, c) => s + c.amount, 0)
-              const mA = mCs.filter((c) => c.member === 'a').reduce((s, c) => s + c.amount, 0)
-              const mB = mCs.filter((c) => c.member === 'b').reduce((s, c) => s + c.amount, 0)
-              const mMale = isBMale ? mB : mA
-              const mFemale = isBMale ? mA : mB
-              const mPctMale = mTot > 0 ? (mMale / mTot) * 100 : 0
-              const mPctFemale = mTot > 0 ? (mFemale / mTot) * 100 : 0
-              const isSelected = ym === selectedMonthKey
-              const isCurrent = ym === curMonthKey
+        allMonths={allMonths}
+        selectedMonthKey={selectedMonthKey}
+        curMonthKey={curMonthKey}
+        contributions={state.contributions}
+        isBMale={isBMale}
+        memberMale={memberMale}
+        memberFemale={memberFemale}
+        onSelectMonth={(ym) => {
+          setSelectedMonthKey(ym)
+          setPigMode('month')
+        }}
+      />
 
-              return (
-                <button
-                  key={ym}
-                  type="button"
-                  onClick={() => {
-                    setSelectedMonthKey(ym)
-                    setPigMode('month')
-                    setMonthListModalOpen(false)
-                  }}
-                  className={`w-full cursor-pointer rounded-2xl border-2 p-3 text-left transition-all ${
-                    isSelected
-                      ? 'border-indigo-500 bg-indigo-50/70 shadow-sm'
-                      : 'border-slate-100 bg-slate-50/80 hover:bg-slate-100/80'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={15} className="text-indigo-600" />
-                      <span className="text-sm font-black text-[#1e1b4b]">
-                        Tháng {ym.slice(5)}/{ym.slice(0, 4)}
-                      </span>
-                      {isCurrent && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-black text-emerald-700">
-                          Hiện tại
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm font-black text-rose-600 tabular-nums">
-                      {vnd(mTot)}
-                    </span>
-                  </div>
-
-                  <div className="mt-1.5 flex items-center justify-between text-[11px] font-bold text-slate-600">
-                    <span className="text-sky-700">
-                      👦 {memberMale.name}: {vnd(mMale)} ({mPctMale.toFixed(0)}%)
-                    </span>
-                    <span className="text-pink-700">
-                      👧 {memberFemale.name}: {vnd(mFemale)} ({mPctFemale.toFixed(0)}%)
-                    </span>
-                  </div>
-
-                  <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-white">
-                    {mTot > 0 ? (
-                      <>
-                        <div
-                          className="h-full bg-sky-500"
-                          style={{ width: `${mPctMale}%` }}
-                        />
-                        <div
-                          className="h-full bg-pink-500"
-                          style={{ width: `${mPctFemale}%` }}
-                        />
-                      </>
-                    ) : (
-                      <div className="h-full w-full bg-slate-200" />
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => setMonthListModalOpen(false)}>
-            Đóng
-          </Button>
-        </div>
-      </Modal>
-
-      {/* Deposit Alert Popup for 2nd User / Unconfirmed Daily Amount */}
-      <Modal
+      <SecondUserDepositModal
         open={showSecondUserDepositModal}
         onClose={() => setDepositAlertDismissed(true)}
-        title="🔔 Thông báo số tiền phải nạp hôm nay"
-      >
-        {reveal && (
-          <div className="mt-2 text-center">
-            <p className="text-xs font-bold text-slate-600">
-              Hôm nay <b>{j.members[reveal.initiatedBy].name}</b> đã quay random số tiền cho hai bạn!
-            </p>
-            <div className="mt-3 rounded-2xl border-2 border-indigo-300 bg-indigo-50/90 p-3.5">
-              <p className="text-xs font-black text-indigo-950">
-                Số tiền BẠN ({myMember?.name}) cần nạp hôm nay:
-              </p>
-              <p className="mt-1 text-3xl font-black text-indigo-700 tabular-nums">
-                +{vnd(reveal.amounts[myMemberId])}
-              </p>
-              <p className="mt-1 text-[11px] font-bold text-slate-500">
-                Phần của {partnerMember?.name}: <b>+{vnd(reveal.amounts[partnerMemberId])}</b>
-              </p>
-            </div>
-
-            <p className="mt-2.5 rounded-xl border border-amber-200 bg-amber-50 p-2 text-[11px] font-extrabold text-amber-800">
-              🔒 Quy tắc quỹ chung: Khi nạp tiền phải được <b>cả 2 người xác nhận chéo của nhau (2/2)</b> mới được tính là đã duyệt vào heo đất!
-            </p>
-
-            <div className="mt-3.5 space-y-2">
-              {myDailyC && myDailyC.status !== 'confirmed' && !myDailyBy.includes(myMemberId) && (
-                <Button variant="violet" onClick={() => handleConfirmContrib(myDailyC)}>
-                  💸 Tôi đã nạp {vnd(reveal.amounts[myMemberId])} (Báo cho {partnerMember?.name} duyệt)
-                </Button>
-              )}
-              {partnerDailyC &&
-                partnerDailyC.status !== 'confirmed' &&
-                partnerDailyBy.includes(partnerMemberId) &&
-                !partnerDailyBy.includes(myMemberId) && (
-                  <Button variant="pink" onClick={() => handleConfirmContrib(partnerDailyC)}>
-                    ✅ Duyệt xác nhận {partnerMember?.name} đã nạp {vnd(reveal.amounts[partnerMemberId])} (2/2)
-                  </Button>
-                )}
-              <Button variant="ghost" size="sm" onClick={() => setDepositAlertDismissed(true)}>
-                Đã hiểu, đóng thông báo
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        reveal={reveal}
+        members={j.members}
+        myMemberId={myMemberId}
+        partnerMemberId={partnerMemberId}
+        myMember={myMember}
+        partnerMember={partnerMember}
+        myDailyC={myDailyC}
+        partnerDailyC={partnerDailyC}
+        myDailyBy={myDailyBy}
+        partnerDailyBy={partnerDailyBy}
+        onConfirm={handleConfirmContrib}
+      />
     </div>
   )
 }

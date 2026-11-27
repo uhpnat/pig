@@ -1,17 +1,133 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { X } from 'lucide-react'
-import { forwardRef, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
+import { ChevronLeft, Loader2, X } from 'lucide-react'
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useRef,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react'
 import { formatMoneyInput, parseMoney } from '@/domain/format'
 import { IMG, type ImgKey } from '@/lib/assets'
 
-type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'pink' | 'violet' | 'ghost'; size?: 'md' | 'sm'; block?: boolean }
+export type ButtonVariant = 'primary' | 'secondary' | 'pink' | 'violet' | 'ghost' | 'outline' | 'danger'
 
-export function Button({ variant = 'pink', size = 'md', block = true, className = '', ...p }: BtnProps) {
-  const v = variant === 'violet' ? 'btn-violet' : variant === 'ghost' ? 'btn-ghost' : ''
-  return <button type="button" {...p} className={`btn ${v} ${size === 'sm' ? 'btn-sm' : ''} ${block ? '' : '!w-auto'} ${className}`} />
+export type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant
+  size?: 'md' | 'sm'
+  block?: boolean
+  loading?: boolean
+  icon?: ReactNode
 }
 
-export function Card({ className = '', children, ...p }: { className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
+  primary: '',
+  pink: '',
+  secondary: 'btn-violet',
+  violet: 'btn-violet',
+  ghost: 'btn-ghost',
+  outline: 'btn-outline',
+  danger: 'btn-danger',
+}
+
+export function Button({
+  variant = 'pink',
+  size = 'md',
+  block = true,
+  loading = false,
+  icon,
+  disabled,
+  children,
+  className = '',
+  ...p
+}: BtnProps) {
+  const v = VARIANT_CLASS[variant]
+  return (
+    <button
+      type="button"
+      disabled={disabled || loading}
+      {...p}
+      className={`btn inline-flex items-center justify-center gap-1.5 ${v} ${size === 'sm' ? 'btn-sm' : ''} ${block ? '' : '!w-auto'} ${className}`}
+    >
+      {loading ? <Loader2 size={16} className="animate-spin" aria-hidden /> : icon}
+      {children}
+    </button>
+  )
+}
+
+export function IconButton({
+  label,
+  size = 'md',
+  className = '',
+  children,
+  ...p
+}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; size?: 'md' | 'sm' }) {
+  const dim = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10'
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      {...p}
+      className={`grid ${dim} shrink-0 cursor-pointer place-items-center rounded-full border-0 bg-white/85 text-[#1e1b4b] shadow-sm backdrop-blur-md transition-transform active:scale-95 disabled:opacity-40 ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function PageHeader({
+  title,
+  onBack,
+  backLabel = 'Quay lại',
+  right,
+  className = '',
+}: {
+  title: ReactNode
+  onBack?: () => void
+  backLabel?: string
+  right?: ReactNode
+  className?: string
+}) {
+  return (
+    <header className={`relative flex min-h-10 items-center justify-center ${className}`}>
+      {onBack && (
+        <IconButton label={backLabel} onClick={onBack} className="absolute left-0">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+        </IconButton>
+      )}
+      <h1 className="px-12 text-center text-[20px] font-black tracking-tight text-[#172554]">
+        {title}
+      </h1>
+      {right && <div className="absolute right-0">{right}</div>}
+    </header>
+  )
+}
+
+export function SectionHeader({
+  title,
+  right,
+  className = '',
+}: {
+  title: ReactNode
+  right?: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`flex items-center justify-between gap-2 ${className}`}>
+      <h2 className="text-sm font-black text-[#1e1b4b]">{title}</h2>
+      {right}
+    </div>
+  )
+}
+
+export function Divider({ className = '' }: { className?: string }) {
+  return <hr className={`my-3 border-0 border-t border-slate-100 ${className}`} />
+}
+
+export function Card({ className = '', children, ...p }: { className?: string; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
   return <div {...p} className={`card ${className}`}>{children}</div>
 }
 
@@ -27,6 +143,39 @@ export function ProgressBar({ value, className = '', label, track }: { value: nu
   return (
     <div className={`bar ${className}`} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100} aria-label={label} style={track ? { background: track } : undefined}>
       <motion.i initial={{ width: 0 }} animate={{ width: `${Math.max(0, Math.min(100, value))}%` }} transition={{ duration: 0.9, ease: 'easeOut' }} />
+    </div>
+  )
+}
+
+export function MemberSplitBar({
+  pctMale,
+  pctFemale,
+  hasData,
+  heightClass = 'h-2',
+  className = '',
+}: {
+  pctMale: number
+  pctFemale: number
+  hasData: boolean
+  heightClass?: string
+  className?: string
+}) {
+  return (
+    <div className={`flex ${heightClass} w-full overflow-hidden rounded-full bg-slate-100 p-0.5 ${className}`}>
+      {hasData ? (
+        <>
+          <div
+            className="h-full rounded-l-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700"
+            style={{ width: `${pctMale}%` }}
+          />
+          <div
+            className="h-full rounded-r-full bg-gradient-to-r from-pink-400 to-rose-500 transition-all duration-700"
+            style={{ width: `${pctFemale}%` }}
+          />
+        </>
+      ) : (
+        <div className="h-full w-full rounded-full bg-slate-200/70" />
+      )}
     </div>
   )
 }
@@ -140,16 +289,11 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
               background: 'linear-gradient(180deg, #ffffff 0%, #fff5f9 100%)',
             }}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="h2 !text-[#1e1b4b]">{title}</h2>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Đóng"
-                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border-0 bg-[#f3e8ff] text-[#6d28d9]"
-              >
+              <IconButton label="Đóng" size="sm" onClick={onClose} className="!bg-[#f3e8ff] !text-[#6d28d9] !shadow-none">
                 <X size={18} />
-              </button>
+              </IconButton>
             </div>
             {children}
           </motion.div>
@@ -165,7 +309,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Đồng ý
       <p className="muted mt-3 !text-sm leading-relaxed">{message}</p>
       <div className="mt-5 grid grid-cols-2 gap-3">
         <Button variant="ghost" size="sm" onClick={onClose}>Để sau</Button>
-        <Button size="sm" onClick={() => { onConfirm(); onClose() }} className={danger ? '!bg-none !bg-[#e5484d]' : ''}>{confirmLabel}</Button>
+        <Button variant={danger ? 'danger' : 'pink'} size="sm" onClick={() => { onConfirm(); onClose() }}>{confirmLabel}</Button>
       </div>
     </Modal>
   )

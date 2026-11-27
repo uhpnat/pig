@@ -1,10 +1,11 @@
-import { Calendar, ChevronLeft, Search } from 'lucide-react'
+import { Calendar, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CoinStackSticker, MoneyBagSticker, StarSticker } from '@/components/Stickers'
-import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Modal } from '@/components/ui'
+import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, IconButton, Modal, PageHeader } from '@/components/ui'
 import { fmtDate, fmtDateTime, vnd } from '@/domain/format'
 import type { Activity, ActivityType } from '@/domain/types'
+import { useConfirmContribution } from '@/hooks/useConfirmContribution'
 import { useJourney, useStore } from '@/hooks/useStore'
 
 type Filter = 'all' | 'money' | 'challenge' | 'milestone'
@@ -38,7 +39,7 @@ function TimelineIcon({ a, avatar }: { a: Activity; avatar?: string }) {
 
 export default function JournalPage() {
   const j = useJourney()
-  const { state, repo, run, toast, celebrate, myMemberId } = useStore()
+  const { state, repo, run, myMemberId } = useStore()
   const nav = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
   const [showSearch, setShowSearch] = useState(false)
@@ -46,6 +47,7 @@ export default function JournalPage() {
   const [from, setFrom] = useState('')
   const [detail, setDetail] = useState<Activity | null>(null)
   const [voidId, setVoidId] = useState<string | null>(null)
+  const confirmContrib = useConfirmContribution()
 
   const list = useMemo(() => {
     const types = FILTERS.find((f) => f.id === filter)?.types
@@ -61,17 +63,8 @@ export default function JournalPage() {
   const pending = state.contributions.filter((c) => c.status === 'pending')
 
   const confirm = async (id: string) => {
-    const before = state.milestonesReached.length
-    const out = await run(repo.confirmContribution(id, myMemberId))
-    if (out) {
-      const updated = out.contributions.find((x) => x.id === id)
-      if (updated?.status === 'confirmed') {
-        toast('Đã duyệt hoàn tất (2/2) vào quỹ heo đất! 💰🎉')
-        if (out.milestonesReached.length > before) celebrate(['🎉', '🎆', '🪙'])
-      } else {
-        toast('Đã ghi nhận xác nhận của bạn (1/2) – chờ người ấy xác nhận chéo! ⏳')
-      }
-    }
+    const item = state.contributions.find((x) => x.id === id)
+    if (item) await confirmContrib(item)
   }
 
   return (
@@ -82,26 +75,19 @@ export default function JournalPage() {
         background: 'linear-gradient(180deg, #e0f2fe 0%, #f5efff 42%, #ffeef5 100%)',
       }}
     >
-      {/* Header matching 05_savings_journal.png */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          aria-label="Quay lại"
-          onClick={() => nav('/')}
-          className="grid h-10 w-10 cursor-pointer place-items-center rounded-full border-0 bg-white/80 text-[#1e1b4b] shadow-sm"
-        >
-          <ChevronLeft size={20} strokeWidth={2.5} />
-        </button>
-        <h1 className="text-[20px] font-black text-[#172554]">Nhật ký tiết kiệm</h1>
-        <button
-          type="button"
-          aria-label="Tìm kiếm & lọc ngày"
-          onClick={() => setShowSearch((s) => !s)}
-          className="grid h-10 w-10 cursor-pointer place-items-center rounded-full border-0 bg-white/80 text-[#ff3b6b] shadow-sm"
-        >
-          <Calendar size={19} strokeWidth={2.3} />
-        </button>
-      </div>
+      <PageHeader
+        title="Nhật ký tiết kiệm"
+        onBack={() => nav('/')}
+        right={
+          <IconButton
+            label="Tìm kiếm & lọc ngày"
+            onClick={() => setShowSearch((s) => !s)}
+            className="!text-[#ff3b6b]"
+          >
+            <Calendar size={19} strokeWidth={2.3} />
+          </IconButton>
+        }
+      />
 
       {/* 4 Pill Filter Tabs matching 05_savings_journal.png */}
       <div className="mt-3.5 grid grid-cols-4 gap-2" role="group" aria-label="Lọc loại sự kiện">

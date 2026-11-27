@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
 import { Check, Pencil } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Avatar, Button, Modal } from '@/components/ui'
-import type { Gender, MemberId } from '@/domain/types'
+import type { Gender, Member, MemberId } from '@/domain/types'
 import { useStore } from '@/hooks/useStore'
 
 export const ROLE_CONFIG_KEY = 'piggy_role_confirmed_v2'
@@ -11,13 +11,97 @@ interface Props {
   onClose?: () => void
 }
 
+function MemberIdentityCard({
+  member,
+  name,
+  gender,
+  isSelected,
+  inputAriaLabel,
+  onSelect,
+  onNameChange,
+  onGenderChange,
+}: {
+  member: Member
+  name: string
+  gender: Gender
+  isSelected: boolean
+  inputAriaLabel: string
+  onSelect: () => void
+  onNameChange: (val: string) => void
+  onGenderChange: (g: Gender) => void
+}) {
+  return (
+    <div
+      onClick={onSelect}
+      className={`relative cursor-pointer rounded-2xl border-2 p-3 transition-all ${
+        isSelected
+          ? 'border-indigo-500 bg-indigo-50/70 shadow-md ring-2 ring-indigo-200'
+          : 'border-slate-200 bg-white hover:bg-slate-50'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <Avatar value={member.avatar} size={42} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="relative flex-1" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="text"
+                value={name}
+                maxLength={24}
+                aria-label={inputAriaLabel}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="Nhập tên..."
+                className="w-full rounded-lg border border-slate-200/90 bg-white/95 px-2.5 py-1 pr-6 text-sm font-black text-[#1e1b4b] outline-none focus:border-indigo-500"
+              />
+              <Pencil size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-500">
+                {gender === 'male' ? '👦 Nam (Chàng)' : '👧 Nữ (Nàng)'}
+              </span>
+              {isSelected && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-600 px-2 py-0.5 text-[9.5px] font-black text-white">
+                  <Check size={10} /> Đang dùng máy này
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="flex shrink-0 gap-1 rounded-xl bg-slate-100 p-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => onGenderChange('male')}
+            className={`rounded-lg px-2 py-1 text-xs font-black transition-all ${
+              gender === 'male' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            👦 Nam
+          </button>
+          <button
+            type="button"
+            onClick={() => onGenderChange('female')}
+            className={`rounded-lg px-2 py-1 text-xs font-black transition-all ${
+              gender === 'female' ? 'bg-pink-500 text-white shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            👧 Nữ
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
   const { state, repo, run, toast, myMemberId, setMyMemberId } = useStore()
   const j = state.journey
 
   const [configuredInSession, setConfiguredInSession] = useState(false)
 
-  // Always require selection on every load/reload until the user explicitly confirms & saves!
   const isAlreadyConfigured =
     configuredInSession ||
     (typeof window !== 'undefined' &&
@@ -28,18 +112,20 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
   const isOpen = manualOpen !== undefined ? manualOpen : needsConfig
 
   const [selectedUser, setSelectedUser] = useState<MemberId>(myMemberId || 'a')
-  const [genA, setGenA] = useState<Gender>('male')
-  const [genB, setGenB] = useState<Gender>('female')
-  const [nameA, setNameA] = useState('')
-  const [nameB, setNameB] = useState('')
+  const [genders, setGenders] = useState<Record<MemberId, Gender>>({ a: 'male', b: 'female' })
+  const [names, setNames] = useState<Record<MemberId, string>>({ a: '', b: '' })
   const [journeyName, setJourneyName] = useState('')
 
   useEffect(() => {
     if (j && isOpen) {
-      setGenA(j.members.a.gender || 'male')
-      setGenB(j.members.b.gender || 'female')
-      setNameA(j.members.a.name || 'Bạn 1')
-      setNameB(j.members.b.name || 'Bạn 2')
+      setGenders({
+        a: j.members.a.gender || 'male',
+        b: j.members.b.gender || 'female',
+      })
+      setNames({
+        a: j.members.a.name || 'Bạn 1',
+        b: j.members.b.name || 'Bạn 2',
+      })
       setJourneyName(j.name || 'Heo Đất Chung')
       setSelectedUser(myMemberId || 'a')
     }
@@ -47,18 +133,16 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
 
   if (!j) return null
 
-  const handleSetA = (gender: Gender) => {
-    setGenA(gender)
-    setGenB(gender === 'male' ? 'female' : 'male')
-  }
-
-  const handleSetB = (gender: Gender) => {
-    setGenB(gender)
-    setGenA(gender === 'male' ? 'female' : 'male')
+  const handleSetGender = (member: MemberId, gender: Gender) => {
+    const other: MemberId = member === 'a' ? 'b' : 'a'
+    setGenders({
+      [member]: gender,
+      [other]: gender === 'male' ? 'female' : 'male',
+    } as Record<MemberId, Gender>)
+    setSelectedUser(member)
   }
 
   const handleCloseAttempt = () => {
-    // Only allow closing without saving if already configured before (manualOpen)
     if (isAlreadyConfigured || manualOpen) {
       onClose?.()
     } else {
@@ -67,8 +151,8 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
   }
 
   const save = async () => {
-    const cleanA = nameA.trim() || j.members.a.name || 'Chàng'
-    const cleanB = nameB.trim() || j.members.b.name || 'Nàng'
+    const cleanA = names.a.trim() || j.members.a.name || 'Chàng'
+    const cleanB = names.b.trim() || j.members.b.name || 'Nàng'
     const cleanJourney = journeyName.trim() || j.name
 
     try {
@@ -82,33 +166,29 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
       repo.updateJourney({
         name: cleanJourney,
         members: {
-          a: { ...j.members.a, name: cleanA, gender: genA },
-          b: { ...j.members.b, name: cleanB, gender: genB },
+          a: { ...j.members.a, name: cleanA, gender: genders.a },
+          b: { ...j.members.b, name: cleanB, gender: genders.b },
         },
       }),
     )
     if (updated) {
       const activeName = selectedUser === 'a' ? cleanA : cleanB
-      const activeGen = (selectedUser === 'a' ? genA : genB) === 'male' ? 'Nam 👦' : 'Nữ 👧'
+      const activeGen = genders[selectedUser] === 'male' ? 'Nam 👦' : 'Nữ 👧'
       toast(`Đã lưu: Máy này của ${activeName} (${activeGen})! 💖`)
     }
     onClose?.()
   }
 
-  const displaySelectedName = (selectedUser === 'a' ? nameA : nameB).trim() || (selectedUser === 'a' ? j.members.a.name : j.members.b.name)
+  const displaySelectedName =
+    names[selectedUser].trim() || j.members[selectedUser].name
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={handleCloseAttempt}
-      title="📱 Tên & Vai trò của hai bạn"
-    >
+    <Modal open={isOpen} onClose={handleCloseAttempt} title="📱 Tên & Vai trò của hai bạn">
       <div className="mt-1 text-center">
-        <p className="text-xs font-semibold text-slate-500 leading-relaxed">
+        <p className="text-xs font-semibold leading-relaxed text-slate-500">
           Bạn có thể <b>sửa tên</b> của 2 người và chọn ai đang dùng máy này (<b>Nam 👦</b> hay <b>Nữ 👧</b>) ngay bên dưới nhé!
         </p>
 
-        {/* Editable Journey Name */}
         <div className="mt-3 text-left">
           <label className="block text-[11px] font-black uppercase tracking-wider text-slate-400">
             ✏️ Tên hành trình chung
@@ -123,160 +203,28 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
           />
         </div>
 
-        {/* 2 Member Identity & Editable Name Cards */}
         <div className="mt-3 space-y-2.5 text-left">
-          {/* Member A */}
-          <div
-            onClick={() => setSelectedUser('a')}
-            className={`relative cursor-pointer rounded-2xl p-3 border-2 transition-all ${
-              selectedUser === 'a'
-                ? 'border-indigo-500 bg-indigo-50/70 shadow-md ring-2 ring-indigo-200'
-                : 'border-slate-200 bg-white hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <Avatar value={j.members.a.avatar} size={42} className="shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1">
-                    <div className="relative flex-1" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="text"
-                        value={nameA}
-                        maxLength={24}
-                        aria-label="Tên người thứ nhất"
-                        onChange={(e) => setNameA(e.target.value)}
-                        placeholder="Nhập tên..."
-                        className="w-full rounded-lg border border-slate-200/90 bg-white/95 px-2.5 py-1 pr-6 text-sm font-black text-[#1e1b4b] outline-none focus:border-indigo-500"
-                      />
-                      <Pencil size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                    </div>
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold text-slate-500">
-                      {genA === 'male' ? '👦 Nam (Chàng)' : '👧 Nữ (Nàng)'}
-                    </span>
-                    {selectedUser === 'a' && (
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-600 px-2 py-0.5 text-[9.5px] font-black text-white">
-                        <Check size={10} /> Đang dùng máy này
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="flex shrink-0 gap-1 bg-slate-100 p-1 rounded-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSetA('male')
-                    setSelectedUser('a')
-                  }}
-                  className={`rounded-lg px-2 py-1 text-xs font-black transition-all ${
-                    genA === 'male' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-600'
-                  }`}
-                >
-                  👦 Nam
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSetA('female')
-                    setSelectedUser('a')
-                  }}
-                  className={`rounded-lg px-2 py-1 text-xs font-black transition-all ${
-                    genA === 'female' ? 'bg-pink-500 text-white shadow-sm' : 'text-slate-600'
-                  }`}
-                >
-                  👧 Nữ
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Member B */}
-          <div
-            onClick={() => setSelectedUser('b')}
-            className={`relative cursor-pointer rounded-2xl p-3 border-2 transition-all ${
-              selectedUser === 'b'
-                ? 'border-indigo-500 bg-indigo-50/70 shadow-md ring-2 ring-indigo-200'
-                : 'border-slate-200 bg-white hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <Avatar value={j.members.b.avatar} size={42} className="shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1">
-                    <div className="relative flex-1" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="text"
-                        value={nameB}
-                        maxLength={24}
-                        aria-label="Tên người thứ hai"
-                        onChange={(e) => setNameB(e.target.value)}
-                        placeholder="Nhập tên..."
-                        className="w-full rounded-lg border border-slate-200/90 bg-white/95 px-2.5 py-1 pr-6 text-sm font-black text-[#1e1b4b] outline-none focus:border-indigo-500"
-                      />
-                      <Pencil size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                    </div>
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold text-slate-500">
-                      {genB === 'male' ? '👦 Nam (Chàng)' : '👧 Nữ (Nàng)'}
-                    </span>
-                    {selectedUser === 'b' && (
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-600 px-2 py-0.5 text-[9.5px] font-black text-white">
-                        <Check size={10} /> Đang dùng máy này
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="flex shrink-0 gap-1 bg-slate-100 p-1 rounded-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSetB('male')
-                    setSelectedUser('b')
-                  }}
-                  className={`rounded-lg px-2 py-1 text-xs font-black transition-all ${
-                    genB === 'male' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-600'
-                  }`}
-                >
-                  👦 Nam
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSetB('female')
-                    setSelectedUser('b')
-                  }}
-                  className={`rounded-lg px-2 py-1 text-xs font-black transition-all ${
-                    genB === 'female' ? 'bg-pink-500 text-white shadow-sm' : 'text-slate-600'
-                  }`}
-                >
-                  👧 Nữ
-                </button>
-              </div>
-            </div>
-          </div>
+          {(['a', 'b'] as const).map((id) => (
+            <MemberIdentityCard
+              key={id}
+              member={j.members[id]}
+              name={names[id]}
+              gender={genders[id]}
+              isSelected={selectedUser === id}
+              inputAriaLabel={id === 'a' ? 'Tên người thứ nhất' : 'Tên người thứ hai'}
+              onSelect={() => setSelectedUser(id)}
+              onNameChange={(val) => setNames((prev) => ({ ...prev, [id]: val }))}
+              onGenderChange={(g) => handleSetGender(id, g)}
+            />
+          ))}
         </div>
 
-        {/* Action Buttons */}
         <div className="mt-4 space-y-2">
           <Button variant="violet" className="w-full !py-3.5 !text-[15px]" onClick={save}>
-            Tôi là {displaySelectedName} ({(selectedUser === 'a' ? genA : genB) === 'male' ? 'Nam 👦' : 'Nữ 👧'}) – Lưu thay đổi 💕
+            Tôi là {displaySelectedName} ({genders[selectedUser] === 'male' ? 'Nam 👦' : 'Nữ 👧'}) – Lưu thay đổi 💕
           </Button>
           {(isAlreadyConfigured || manualOpen) && (
-            <Button variant="ghost" size="sm" className="w-full !text-slate-400 text-xs" onClick={() => onClose?.()}>
+            <Button variant="ghost" size="sm" className="w-full text-xs !text-slate-400" onClick={() => onClose?.()}>
               Đóng
             </Button>
           )}

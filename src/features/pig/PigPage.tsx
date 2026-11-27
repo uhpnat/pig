@@ -8,12 +8,13 @@ import {
   Sparkles,
   Trophy,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
-import { Badge, Button, Card, Modal } from '@/components/ui'
+import { Badge, Button, Card, IconButton, Modal } from '@/components/ui'
 import { diffDays, fmtDate, vnd } from '@/domain/format'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
+import { useCountdown } from '@/hooks/useCountdown'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { beep, haptic } from '@/lib/fx'
 import { IMG } from '@/lib/assets'
@@ -54,31 +55,7 @@ export default function PigPage() {
 
   // Final Target Date Countdown
   const targetDateStr = j.endDate
-  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  })
-
-  useEffect(() => {
-    const updateCountdown = () => {
-      const targetTime = new Date(`${targetDateStr}T23:59:59+07:00`).getTime()
-      const now = Date.now()
-      const diff = Math.max(0, targetTime - now)
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
-      setTimeLeft({ days, hours, minutes, seconds })
-    }
-
-    updateCountdown()
-    const timer = setInterval(updateCountdown, 1000)
-    return () => clearInterval(timer)
-  }, [targetDateStr])
+  const timeLeft = useCountdown(targetDateStr)
 
   // Total days and time elapsed
   const totalDays = Math.max(1, diffDays(j.startDate, j.endDate))
@@ -130,14 +107,9 @@ export default function PigPage() {
       {/* 1. Header Bar */}
       <header className="relative z-20 flex items-center justify-between px-4">
         {!j.setupDone ? (
-          <button
-            type="button"
-            aria-label="Quay lại"
-            onClick={() => nav('/welcome')}
-            className="grid h-10 w-10 place-items-center rounded-full border-0 bg-white/85 text-[#1e1b4b] shadow-sm"
-          >
+          <IconButton label="Quay lại" onClick={() => nav('/welcome')}>
             <ChevronLeft size={22} strokeWidth={2.5} />
-          </button>
+          </IconButton>
         ) : (
           <button
             type="button"

@@ -1,7 +1,6 @@
-import { ChevronLeft } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Avatar } from '@/components/ui'
+import { Avatar, PageHeader } from '@/components/ui'
 import { fmtDate, millions, pct, vnd } from '@/domain/format'
 import {
   actualShares,
@@ -70,18 +69,7 @@ export default function StatsPage() {
         background: 'linear-gradient(180deg, #e0f2fe 0%, #f5efff 42%, #ffeef5 100%)',
       }}
     >
-      {/* Header matching 06_statistics.png */}
-      <div className="relative flex items-center justify-center">
-        <button
-          type="button"
-          aria-label="Quay lại"
-          onClick={() => nav('/')}
-          className="absolute left-0 grid h-10 w-10 cursor-pointer place-items-center rounded-full border-0 bg-white/80 text-[#1e1b4b] shadow-sm"
-        >
-          <ChevronLeft size={20} strokeWidth={2.5} />
-        </button>
-        <h1 className="text-[20px] font-black text-[#172554]">Thống kê</h1>
-      </div>
+      <PageHeader title="Thống kê" onBack={() => nav('/')} />
 
       {/* 4 Pill Period Tabs matching 06_statistics.png */}
       <div className="mt-4 grid grid-cols-4 gap-2" role="group" aria-label="Khoảng thời gian">

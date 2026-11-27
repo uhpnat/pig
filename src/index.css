@@ -137,6 +137,25 @@ body {
   .btn-ghost::after {
     display: none;
   }
+  .btn-danger {
+    background: linear-gradient(180deg, #fb7185 0%, #e11d48 100%);
+    text-shadow: 0 1px 2px rgba(136, 19, 55, 0.35);
+    box-shadow:
+      0 5px 0 #9f1239,
+      0 12px 22px rgba(225, 29, 72, 0.32),
+      inset 0 2px 0 rgba(255, 255, 255, 0.55);
+  }
+  .btn-outline {
+    background: rgba(255, 255, 255, 0.92);
+    color: #e11d48;
+    text-shadow: none;
+    box-shadow:
+      0 4px 12px rgba(225, 29, 72, 0.1),
+      inset 0 0 0 2px #fecdd3;
+  }
+  .btn-outline::after {
+    display: none;
+  }
   .btn-sm {
     @apply px-4 py-2.5 text-sm;
     box-shadow:
@@ -150,10 +169,17 @@ body {
       0 8px 16px rgba(124, 58, 237, 0.28),
       inset 0 2px 0 rgba(255, 255, 255, 0.6);
   }
-  .btn-sm.btn-ghost {
+  .btn-sm.btn-ghost,
+  .btn-sm.btn-outline {
     box-shadow:
       0 4px 10px rgba(143, 124, 240, 0.12),
       inset 0 0 0 2px #ddd6fe;
+  }
+  .btn-sm.btn-danger {
+    box-shadow:
+      0 4px 0 #9f1239,
+      0 8px 16px rgba(225, 29, 72, 0.28),
+      inset 0 2px 0 rgba(255, 255, 255, 0.55);
   }
   .btn:focus-visible,
   .chip:focus-visible,
