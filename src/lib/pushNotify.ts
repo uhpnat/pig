@@ -90,6 +90,7 @@ export async function pushNtfyNotification(
       ? `${location.origin}${location.pathname}`
       : 'https://uhpnat.github.io/pig/'
   const clickUrl = `${appBase}#${route}`
+  const iconUrl = `${appBase}icon-192.png`
 
   try {
     const res = await fetch('https://ntfy.sh', {
@@ -101,7 +102,16 @@ export async function pushNtfyNotification(
         // Priority 5 (Max/Urgent) triggers immediate Time-Sensitive APNs push on iOS and Heads-Up banner with sound on Android!
         priority: 5,
         tags: ['pig', 'bell'],
+        icon: iconUrl,
         click: clickUrl,
+        actions: [
+          {
+            action: 'view',
+            label: '🐷 Mở Piggy Duo ngay',
+            url: clickUrl,
+            clear: true,
+          },
+        ],
       }),
     })
     return res.ok

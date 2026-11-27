@@ -36,6 +36,7 @@ export default function NotificationsPage() {
 
   const [baseTopic, setBaseTopic] = useState(() => getNtfyBaseTopic())
   const [testingTarget, setTestingTarget] = useState<Gender | null>(null)
+  const [testingNativePwa, setTestingNativePwa] = useState(false)
   const [copiedTarget, setCopiedTarget] = useState<Gender | null>(null)
 
   const isBMale = j.members.b.gender === 'male' || j.members.a.gender === 'female'
@@ -106,20 +107,40 @@ export default function NotificationsPage() {
   const enablePush = async () => {
     const r = await request()
     if (r === 'granted') {
-      toast('Đã bật thông báo đẩy trên thiết bị! 🔔')
+      toast('Đã bật thông báo Logo Piggy Duo trên iPhone! 🔔')
       await fireBrowserNotification(
         '🐷 Piggy Duo đã bật thông báo!',
-        'Mỗi khi hai bạn mở số tiền hoặc xác nhận góp, thông báo sẽ hiện ngay trên màn hình.',
+        'Chạm vào thông báo này sẽ mở thẳng vào app Piggy Duo trên iPhone của bạn.',
         undefined,
-        '/notifications',
+        '/',
       )
     } else if (r === 'denied') {
-      toast('Bạn đã chặn thông báo. Hãy bật lại trong cài đặt trình duyệt.', 'error')
+      toast('Bạn đã chặn thông báo. Hãy bật lại trong Cài đặt iPhone -> Piggy Duo -> Thông báo.', 'error')
     } else if (r === 'unsupported') {
       toast(
-        'Trên iPhone, hãy cài app ntfy ở khung bên trên để nhận thông báo đẩy 24/7 dễ nhất nhé!',
+        'Trên iPhone: bấm nút Chia sẻ (ở Safari) -> "Thêm vào Màn hình chính", sau đó mở Piggy Duo từ Màn hình chính để bật thông báo có Logo Piggy Duo nhé!',
         'error',
       )
+    }
+  }
+
+  const testNativePwaPush = async () => {
+    if (perm !== 'granted') {
+      await enablePush()
+      return
+    }
+    setTestingNativePwa(true)
+    toast('⏱️ Hãy thoát ra Màn hình chính hoặc Khóa máy ngay! Sau 4 giây thông báo có Logo Piggy Duo sẽ hiện lên…')
+    await new Promise((r) => setTimeout(r, 4000))
+    try {
+      await fireBrowserNotification(
+        `🐷 ${j.name}`,
+        `Chạm vào đây để mở thẳng vào app Piggy Duo của ${j.members.a.name} & ${j.members.b.name}! 💗`,
+        undefined,
+        '/',
+      )
+    } finally {
+      setTestingNativePwa(false)
     }
   }
 
@@ -338,18 +359,34 @@ export default function NotificationsPage() {
           onChange={(v) => run(repo.updateSettings({ notifyRecap: v }))}
           label="Tổng kết tuần / tháng"
         />
-        <div className="mt-2 flex items-center gap-3 rounded-2xl bg-white/60 p-3">
-          <BellRing className="shrink-0 text-vio" />
-          <p className="muted flex-1 !text-xs">
+        <div className="mt-2 rounded-2xl border border-pink-100 bg-pink-50/60 p-3">
+          <div className="flex items-center gap-2.5">
+            <BellRing className="shrink-0 text-pink-600" size={18} />
+            <p className="text-xs font-black text-[#1e1b4b]">
+              🐷 Thông báo hiện Logo Piggy Duo & Mở thẳng vào App trên iPhone
+            </p>
+          </div>
+          <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-600">
             {perm === 'granted'
-              ? 'Đã bật thêm thông báo trình duyệt khi đang mở app.'
-              : 'Ngoài app ntfy 24/7 ở trên, bạn có thể bật thêm thông báo trình duyệt.'}
+              ? 'Đã kích hoạt! Khi mở Piggy Duo từ Màn hình chính iPhone, thông báo sẽ mang đúng Logo 🐷 Piggy Duo và chạm vào sẽ mở thẳng vào app.'
+              : 'Để thông báo hiện Logo 🐷 Piggy Duo và chạm vào mở thẳng app trên iPhone: Tại Safari bấm Chia sẻ -> "Thêm vào Màn hình chính", mở app Piggy Duo ngoài màn hình chính rồi bấm nút Bật bên dưới:'}
           </p>
-          {perm === 'default' && (
-            <Button size="sm" block={false} onClick={enablePush}>
-              Bật thêm
-            </Button>
-          )}
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {perm !== 'granted' ? (
+              <Button size="sm" variant="pink" onClick={enablePush}>
+                🔔 Bật thông báo Logo Piggy Duo
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="pink"
+                loading={testingNativePwa}
+                onClick={testNativePwaPush}
+              >
+                {testingNativePwa ? 'Đang đếm 4 giây… (Hãy khóa máy)' : '🐷 Thử thông báo Logo Piggy Duo (sau 4s)'}
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
     </div>
