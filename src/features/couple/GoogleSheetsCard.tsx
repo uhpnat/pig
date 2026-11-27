@@ -1,7 +1,5 @@
 import {
   Check,
-  CloudDownload,
-  CloudUpload,
   Copy,
   ExternalLink,
   FileSpreadsheet,
@@ -214,7 +212,7 @@ export function buildPartnerInviteUrl(appsScriptUrl: string, spreadsheetId?: str
 
 export function GoogleSheetsCard() {
   const j = useJourney()
-  const { repo, run, toast } = useStore()
+  const { repo, toast } = useStore()
   const cfg = repo.getSheetConfig()
   const [gasUrl, setGasUrl] = useState(cfg.appsScriptUrl)
   const [sheetInput, setSheetInput] = useState(cfg.spreadsheetId)
@@ -259,38 +257,6 @@ export function GoogleSheetsCard() {
       toast('Đã sao chép link mời cho người thứ 2! Người ấy bấm vào 1 lần là tự lưu vào máy luôn 💌')
     } catch {
       toast('Không sao chép tự động được, hãy copy thủ công nhé', 'error')
-    }
-  }
-
-  const pushNow = async () => {
-    if (!gasUrl.trim() && cfg.isStaticHost) {
-      setShowSetup(true)
-      setShowGuide(true)
-      toast('Hãy dán Apps Script Web App URL để đồng bộ nhé!', 'error')
-      return
-    }
-    repo.setSheetConfig({ appsScriptUrl: gasUrl, spreadsheetId: sheetInput, passcode })
-    const out = await run(repo.syncWithSheet('push'))
-    if (out) {
-      const nextCfg = repo.getSheetConfig()
-      if (nextCfg.lastError) toast(`Lỗi đồng bộ: ${nextCfg.lastError}`, 'error')
-      else toast('Đã đồng bộ & tách bảng lên Google Sheets thành công! ☁️')
-    }
-  }
-
-  const pullNow = async () => {
-    if (!gasUrl.trim() && cfg.isStaticHost) {
-      setShowSetup(true)
-      setShowGuide(true)
-      toast('Hãy dán Apps Script Web App URL để tải dữ liệu nhé!', 'error')
-      return
-    }
-    repo.setSheetConfig({ appsScriptUrl: gasUrl, spreadsheetId: sheetInput, passcode })
-    const out = await run(repo.syncWithSheet('pull'))
-    if (out) {
-      const nextCfg = repo.getSheetConfig()
-      if (nextCfg.lastError) toast(`Lỗi tải dữ liệu: ${nextCfg.lastError}`, 'error')
-      else toast('Đã tải & hợp nhất dữ liệu mới nhất từ Google Sheets! 📥')
     }
   }
 
@@ -351,19 +317,10 @@ export function GoogleSheetsCard() {
         </p>
         {cfg.lastSyncedAt && (
           <p className="muted mt-1 !text-[11px]">
-            ✅ Đồng bộ lần cuối: {fmtDateTime(cfg.lastSyncedAt, j.timezone)}
+            ✅ Tự động đồng bộ 2 chiều · Lần cuối: {fmtDateTime(cfg.lastSyncedAt, j.timezone)}
           </p>
         )}
         {cfg.lastError && <p className="mt-1 text-[11px] font-bold text-[#a56a00]">⚠️ {cfg.lastError}</p>}
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2.5">
-        <Button size="sm" variant="violet" disabled={cfg.syncing} onClick={pushNow}>
-          <CloudUpload size={15} className="mr-1 inline" /> Đồng bộ lên Sheet
-        </Button>
-        <Button size="sm" variant="ghost" disabled={cfg.syncing} onClick={pullNow}>
-          <CloudDownload size={15} className="mr-1 inline" /> Tải từ Sheet
-        </Button>
       </div>
 
       <button
