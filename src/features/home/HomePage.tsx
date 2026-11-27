@@ -1,7 +1,9 @@
+import { AnimatePresence, motion } from 'framer-motion'
 import { Bell, Calendar, ChevronLeft, ChevronRight, Clock, History, PlusCircle, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
+import { FinalGoalStage } from '@/components/pig/FinalGoalStage'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { Avatar, Badge, Button, Card, Modal } from '@/components/ui'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
@@ -220,7 +222,9 @@ export default function HomePage() {
       style={{
         paddingTop: 'calc(10px + env(safe-area-inset-top, 0px))',
         background:
-          'linear-gradient(180deg, #b8e1ff 0%, #d8f0ff 30%, #e8f8dc 54%, #fdf2f7 78%, #fde8f1 100%)',
+          pigMode === 'month'
+            ? 'linear-gradient(180deg, #b8e1ff 0%, #d8f0ff 30%, #e8f8dc 54%, #fdf2f7 78%, #fde8f1 100%)'
+            : 'linear-gradient(180deg, #b8e1ff 0%, #e0e7ff 28%, #f3e8ff 54%, #fce7f3 78%, #fde8f1 100%)',
       }}
     >
       {/* TOP HERO ZONE: Header + Mode Switcher + 3D Pig on Feathered Meadow */}
@@ -303,37 +307,83 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 3. HERO CENTERPIECE: 3D Crystal Piggy Bank on Smooth Feathered Meadow */}
+        {/* 3. HERO CENTERPIECE: 3D Crystal Piggy (Month) OR 3D Dream Goal Globe (Final/Year) */}
         <div className="relative mt-0.5">
-          <Interactive3DStage
-            spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
-            alt={`${j.pig.name} – ${pigMode === 'month' ? `Heo tháng ${selectedMonthKey}` : 'Heo cuối kỳ'}`}
-            theme="meadow"
-            spriteHeight={255}
-            reducedMotion={motionOff}
-            liquidFillPct={activeFillPct}
-            coinBurstKey={coinBurstKey}
-            membersShare={{
-              a: {
-                name: j.members.a.name,
-                avatar: j.members.a.avatar,
-                amount: activeAmountA,
-                pct: activeShareA,
-                gender: j.members.a.gender,
-              },
-              b: {
-                name: j.members.b.name,
-                avatar: j.members.b.avatar,
-                amount: activeAmountB,
-                pct: activeShareB,
-                gender: j.members.b.gender,
-              },
-            }}
-            onPoke={() => {
-              beep(state.settings, 'tick')
-              haptic(state.settings, 30)
-            }}
-          />
+          <AnimatePresence mode="wait">
+            {pigMode === 'month' ? (
+              <motion.div
+                key="stage-month"
+                initial={motionOff ? false : { opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={motionOff ? undefined : { opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.22 }}
+              >
+                <Interactive3DStage
+                  spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
+                  alt={`${j.pig.name} – Heo tháng ${selectedMonthKey}`}
+                  theme="meadow"
+                  spriteHeight={255}
+                  reducedMotion={motionOff}
+                  liquidFillPct={activeFillPct}
+                  coinBurstKey={coinBurstKey}
+                  membersShare={{
+                    a: {
+                      name: j.members.a.name,
+                      avatar: j.members.a.avatar,
+                      amount: activeAmountA,
+                      pct: activeShareA,
+                      gender: j.members.a.gender,
+                    },
+                    b: {
+                      name: j.members.b.name,
+                      avatar: j.members.b.avatar,
+                      amount: activeAmountB,
+                      pct: activeShareB,
+                      gender: j.members.b.gender,
+                    },
+                  }}
+                  onPoke={() => {
+                    beep(state.settings, 'tick')
+                    haptic(state.settings, 30)
+                  }}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="stage-final"
+                initial={motionOff ? false : { opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={motionOff ? undefined : { opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.22 }}
+              >
+                <FinalGoalStage
+                  journeyName={j.name}
+                  goalAmount={j.goal}
+                  savedAmount={confirmed.total}
+                  progressPct={progress}
+                  memberMale={{
+                    name: memberMale.name,
+                    avatar: memberMale.avatar,
+                    amount: activeMoneyMale,
+                    pct: activePctMale,
+                    gender: memberMale.gender,
+                  }}
+                  memberFemale={{
+                    name: memberFemale.name,
+                    avatar: memberFemale.avatar,
+                    amount: activeMoneyFemale,
+                    pct: activePctFemale,
+                    gender: memberFemale.gender,
+                  }}
+                  reducedMotion={motionOff}
+                  onPoke={() => {
+                    beep(state.settings, 'tick')
+                    haptic(state.settings, 30)
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
