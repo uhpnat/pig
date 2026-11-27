@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatedNumber } from '@/components/AnimatedNumber'
 import { FinalGoalStage } from '@/components/pig/FinalGoalStage'
-import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
+import { MonthlyJarStage } from '@/components/pig/MonthlyJarStage'
 import { Avatar, Badge, Button, Card, Modal } from '@/components/ui'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { daysInMonth, diffDays, fmtDate, vnd } from '@/domain/format'
@@ -12,17 +12,7 @@ import type { Contribution } from '@/domain/types'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import { useJourney, useStore } from '@/hooks/useStore'
 import { beep, haptic } from '@/lib/fx'
-import { IMG } from '@/lib/assets'
 import { TopUpDialog } from './TopUpDialog'
-
-const STYLE_SPRITE: Record<string, string> = {
-  crown: IMG.spriteHero,
-  baby: IMG.spriteHero,
-  round: IMG.spriteShades,
-  glasses: IMG.spriteGlasses,
-  hat: IMG.spriteShades,
-  hoodie: IMG.spriteHoodie,
-}
 
 function buildMonthList(startDate: string, today: string, contribs: Contribution[]): string[] {
   const set = new Set<string>()
@@ -198,7 +188,6 @@ export default function HomePage() {
     return () => clearInterval(timer)
   }, [targetDateStr])
 
-  const activeFillPct = pigMode === 'month' ? monthFillPct : progress
   const activeShareA = pigMode === 'month' ? monthShareA : totalShareA
   const activeShareB = pigMode === 'month' ? monthShareB : totalShareB
   const activeAmountA = pigMode === 'month' ? monthA : t.a
@@ -307,7 +296,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 3. HERO CENTERPIECE: 3D Crystal Piggy (Month) OR 3D Dream Goal Globe (Final/Year) */}
+        {/* 3. HERO CENTERPIECE: 3D Crystal Savings Jar (Month) OR 3D Dream Goal Globe (Final/Year) */}
         <div className="relative mt-0.5">
           <AnimatePresence mode="wait">
             {pigMode === 'month' ? (
@@ -318,30 +307,26 @@ export default function HomePage() {
                 exit={motionOff ? undefined : { opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.22 }}
               >
-                <Interactive3DStage
-                  spriteSrc={STYLE_SPRITE[j.pig.style] || IMG.spriteHero}
-                  alt={`${j.pig.name} – Heo tháng ${selectedMonthKey}`}
-                  theme="meadow"
-                  spriteHeight={255}
-                  reducedMotion={motionOff}
-                  liquidFillPct={activeFillPct}
+                <MonthlyJarStage
+                  monthLabel={`Tháng ${selectedMonthKey.slice(5)}/${selectedMonthKey.slice(0, 4)}`}
+                  fillPct={monthFillPct}
+                  savedAmount={monthSaved}
                   coinBurstKey={coinBurstKey}
-                  membersShare={{
-                    a: {
-                      name: j.members.a.name,
-                      avatar: j.members.a.avatar,
-                      amount: activeAmountA,
-                      pct: activeShareA,
-                      gender: j.members.a.gender,
-                    },
-                    b: {
-                      name: j.members.b.name,
-                      avatar: j.members.b.avatar,
-                      amount: activeAmountB,
-                      pct: activeShareB,
-                      gender: j.members.b.gender,
-                    },
+                  memberMale={{
+                    name: memberMale.name,
+                    avatar: memberMale.avatar,
+                    amount: activeMoneyMale,
+                    pct: activePctMale,
+                    gender: memberMale.gender,
                   }}
+                  memberFemale={{
+                    name: memberFemale.name,
+                    avatar: memberFemale.avatar,
+                    amount: activeMoneyFemale,
+                    pct: activePctFemale,
+                    gender: memberFemale.gender,
+                  }}
+                  reducedMotion={motionOff}
                   onPoke={() => {
                     beep(state.settings, 'tick')
                     haptic(state.settings, 30)
