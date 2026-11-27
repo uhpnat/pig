@@ -1,4 +1,4 @@
-﻿import { AnimatePresence, motion } from 'framer-motion'
+﻿import { AnimatePresence } from 'framer-motion'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { SplashLoader } from '@/components/SplashLoader'
 import { allChallenges } from '@/domain/challenges'
@@ -150,15 +150,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={value}>
-      {value && (
-        <motion.div
-          initial={{ opacity: 0, y: 10, scale: 0.99 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {children}
-        </motion.div>
-      )}
+      {value && children}
       <AnimatePresence>
         {(!value || !splashDone) && <SplashLoader ready={splashReadyAnim} />}
       </AnimatePresence>

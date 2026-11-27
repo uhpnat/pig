@@ -23,7 +23,6 @@ export function AppFrame({ nav }: { nav: boolean }) {
     >
       {/* Fixed full-screen backdrop layer (-z-10) so top & bottom safe-area edges smoothly match the active page without any foreground seam line */}
       <div
-        key={`backdrop-${loc.pathname}`}
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10"
         style={{
