@@ -4,6 +4,7 @@ import { todayIn, uid } from '@/domain/format'
 import { mergeStates } from '@/domain/merge'
 import { buildDemoState } from '@/domain/seed'
 import type { AppState } from '@/domain/types'
+import { notificationRoute, pushNtfyNotification } from '@/lib/pushNotify'
 import type { Repository, SheetSyncConfig, Unsubscribe } from './repository'
 
 const KEY = 'piggy-duo:v1'
@@ -295,10 +296,20 @@ export class LocalRepository implements Repository {
   }
 
   private async mutate(fn: (s: AppState) => AppState): Promise<AppState> {
-    const next = fn(read())
+    const prev = read()
+    const prevTopNotifId = prev.notifications[0]?.id
+    const next = fn(prev)
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
     this.notify(next)
+
+    // If this action created a new notification (deposit 1/2, approval 2/2, chat message, milestone, etc.), push it to ntfy!
+    const newestNotif = next.notifications[0]
+    if (newestNotif && newestNotif.id !== prevTopNotifId) {
+      const { to } = notificationRoute(newestNotif)
+      void pushNtfyNotification(newestNotif.title, newestNotif.message, to)
+    }
+
     // Broadcast instant real-time SSE event (<200ms) AND save to Google Sheets in parallel
     void this.broadcastRealtime(next, false)
     await this.pushToSheet(next, true)
@@ -412,6 +423,10 @@ export class LocalRepository implements Repository {
       localStorage.setItem(KEY, JSON.stringify(out.state))
       this.bc?.postMessage('changed')
       this.notify(out.state)
+      const newestNotif = out.state.notifications[0]
+      if (newestNotif) {
+        void pushNtfyNotification(`🐷 ${newestNotif.title}`, newestNotif.message, '/reveal')
+      }
       void this.broadcastRealtime(out.state, forceReroll)
       await this.pushToSheet(out.state, true, forceReroll)
     }
