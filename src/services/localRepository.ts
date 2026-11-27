@@ -14,17 +14,17 @@ import { buildEncryptedWebPush, type EncryptedWebPushRequest } from '@/lib/webPu
 import type { Repository, SheetSyncConfig, Unsubscribe } from './repository'
 
 const KEY = 'piggy-duo:v1'
-const CFG_KEY = 'piggy-duo:gsheets-cfg:v1'
+const CFG_KEY = 'piggy-duo:gsheets-cfg:v2'
+const LEGACY_CFG_KEY = 'piggy-duo:gsheets-cfg:v1'
+const CFG_CACHE_NAME = 'piggy-nav-v1'
+const CFG_CACHE_URL = './_sheet_config_v2'
 const CHANNEL = 'piggy-duo-sync'
-export const DEFAULT_SPREADSHEET_ID = '1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s'
-export const HARDCODED_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1bWRdtknPrfmjZzwZ-1YPNzEuRUXN9_OMPCcQv0ZXY_s/edit?gid=0#gid=0'
-export const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzFtLT8KLFNhSlfR51NWfJ13KOAHw4K9th17591nJFmvQVLxvjFOlh9BtTlzfLA41ft/exec'
 
-function extractSpreadsheetId(input: string): string {
+export function extractSpreadsheetId(input: string): string {
   const trimmed = (input || '').trim()
   const m = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
   if (m) return m[1]
-  return trimmed || DEFAULT_SPREADSHEET_ID
+  return trimmed
 }
 
 function isLocalhost(): boolean {
@@ -46,48 +46,100 @@ function read(): AppState {
   return A.createInitialState()
 }
 
-function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'> {
-  // Also allow configuring via URL query parameters on first open: ?gas=...&pin=...
-  let urlGas = ''
-  let urlPin = ''
-  if (typeof location !== 'undefined') {
-    const sp = new URLSearchParams(location.search || location.hash.split('?')[1] || '')
-    urlGas = sp.get('gas') || ''
-    urlPin = sp.get('key') || sp.get('pin') || ''
-  }
+type StoredCfg = Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'>
+
+function saveCfgToCacheStorage(cfg: StoredCfg) {
+  if (typeof caches === 'undefined') return
+  if (!cfg.appsScriptUrl && !cfg.spreadsheetId) return
+  void caches
+    .open(CFG_CACHE_NAME)
+    .then((c) => c.put(CFG_CACHE_URL, new Response(JSON.stringify(cfg))))
+    .catch(() => undefined)
+}
+
+async function restoreCfgFromCacheStorage(): Promise<StoredCfg | null> {
+  if (typeof caches === 'undefined') return null
   try {
-    const raw = localStorage.getItem(CFG_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      const isOldBrokenUrl =
-        !parsed.appsScriptUrl ||
-        parsed.appsScriptUrl.includes('AKfycbwLMlr3eqKCDTEPLMlXuggYuKsYk_5UBDq45KPSsO16mu-DwEQJauCSL0FXlb5vvibX') ||
-        parsed.appsScriptUrl.includes('AKfycbyYVJASdTIlS0A6VhJbpdiEKtaraMnO0zOEF1Au0HijooN5Ykz9KtTq6Jfm2RMfipaj')
-      const savedGas = isOldBrokenUrl ? '' : parsed.appsScriptUrl
-      const cfg = {
-        spreadsheetId: DEFAULT_SPREADSHEET_ID,
-        appsScriptUrl: urlGas || savedGas || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL,
-        passcode: urlPin || parsed.passcode || '',
-      }
-      localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
-      return cfg
+    const c = await caches.open(CFG_CACHE_NAME)
+    const res = await c.match(CFG_CACHE_URL)
+    if (!res) return null
+    const parsed = (await res.json()) as StoredCfg
+    if (parsed && (parsed.appsScriptUrl || parsed.spreadsheetId)) {
+      localStorage.setItem(CFG_KEY, JSON.stringify(parsed))
+      return parsed
     }
   } catch {
     /* ignore */
   }
-  const fallback = {
-    spreadsheetId: DEFAULT_SPREADSHEET_ID,
-    appsScriptUrl: urlGas || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL,
-    passcode: urlPin || '',
+  return null
+}
+
+function readCfg(): StoredCfg {
+  // 1. Check URL query parameters (both window.location.search and hash query ?gas=...&sheet=...&pin=...)
+  let urlGas = ''
+  let urlSheet = ''
+  let urlPin = ''
+  if (typeof location !== 'undefined') {
+    const searchParams = new URLSearchParams(location.search || '')
+    const hashQuery = location.hash.includes('?') ? location.hash.slice(location.hash.indexOf('?') + 1) : ''
+    const hashParams = new URLSearchParams(hashQuery)
+
+    urlGas = (searchParams.get('gas') || hashParams.get('gas') || '').trim()
+    urlSheet = extractSpreadsheetId(searchParams.get('sheet') || hashParams.get('sheet') || '')
+    urlPin = (
+      searchParams.get('key') ||
+      searchParams.get('pin') ||
+      hashParams.get('key') ||
+      hashParams.get('pin') ||
+      ''
+    ).trim()
   }
-  if (urlGas || urlPin) localStorage.setItem(CFG_KEY, JSON.stringify(fallback))
-  return fallback
+
+  let saved: StoredCfg = { spreadsheetId: '', appsScriptUrl: '', passcode: '' }
+  try {
+    const raw = localStorage.getItem(CFG_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      saved = {
+        spreadsheetId: extractSpreadsheetId(parsed.spreadsheetId || ''),
+        appsScriptUrl: (parsed.appsScriptUrl || '').trim(),
+        passcode: (parsed.passcode || '').trim(),
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // If URL params are provided (e.g. Person 2 opening Person 1's invite link), persist them permanently and clean the address bar!
+  if (urlGas || urlSheet || urlPin) {
+    const mergedCfg: StoredCfg = {
+      spreadsheetId: urlSheet || saved.spreadsheetId,
+      appsScriptUrl: urlGas || saved.appsScriptUrl,
+      passcode: urlPin || saved.passcode,
+    }
+    try {
+      localStorage.setItem(CFG_KEY, JSON.stringify(mergedCfg))
+      if (mergedCfg.passcode) {
+        sessionStorage.setItem('piggy-duo:unlocked:v1', mergedCfg.passcode)
+        localStorage.setItem('piggy-duo:unlocked:v1', mergedCfg.passcode)
+      }
+      saveCfgToCacheStorage(mergedCfg)
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        const cleanHash = location.hash.split('?')[0] || '#/'
+        window.history.replaceState(null, '', `${location.pathname}${cleanHash}`)
+      }
+    } catch {
+      /* ignore */
+    }
+    return mergedCfg
+  }
+
+  return saved
 }
 
 /**
- * Offline-first repository backed by Google Sheets:
- * - On localhost dev server: uses Vite `/api/gsheets` bridge automatically.
- * - On GitHub Pages / static hosts: uses the user's Google Apps Script Web App URL (avoids HTTP 405 from GitHub Pages).
+ * Offline-first repository backed by the user's private Google Sheet & Apps Script Web App URL.
+ * Zero hardcoded public sheet URLs — only users who configure their own Google Sheet or open the partner's invite link can connect.
  */
 export class LocalRepository implements Repository {
   readonly kind = 'gsheets' as const
@@ -106,17 +158,19 @@ export class LocalRepository implements Repository {
   }
 
   private realtimeTopic(): string {
-    const { spreadsheetId } = readCfg()
-    const cleanId = (spreadsheetId || DEFAULT_SPREADSHEET_ID).replace(/[^a-zA-Z0-9]/g, '').slice(0, 24)
-    return `piggy_duo_rt_${cleanId}`
+    const { spreadsheetId, appsScriptUrl } = readCfg()
+    const seed = (spreadsheetId || appsScriptUrl || 'unconfigured').replace(/[^a-zA-Z0-9]/g, '').slice(-24)
+    return `piggy_duo_rt_${seed}`
   }
 
   /**
    * Instant (<200ms) real-time push over Server-Sent Events (SSE) relay so the partner's phone
-   * sees rolls, 1/2 deposit reports, 2/2 confirmations, and name edits immediately without waiting for polling!
+   * sees rolls, 1/2 deposit reports, 2/2 confirmations, and chat messages immediately!
    */
   private async broadcastRealtime(state: AppState, forceReplace = false): Promise<void> {
     if (typeof fetch === 'undefined') return
+    const { appsScriptUrl, spreadsheetId } = readCfg()
+    if (!appsScriptUrl && !spreadsheetId) return
     try {
       const packet = {
         clientId: this.clientId,
@@ -126,12 +180,12 @@ export class LocalRepository implements Repository {
           ? null
           : {
               journey: state.journey,
-              reveals: state.reveals.slice(0, 5),
-              contributions: state.contributions.slice(0, 20),
-              activity: state.activity.slice(0, 10),
-              notifications: state.notifications.slice(0, 8),
+              reveals: state.reveals.slice(0, 8),
+              contributions: state.contributions.slice(0, 25),
+              activity: state.activity.slice(0, 12),
+              notifications: state.notifications.slice(0, 10),
               milestonesReached: state.milestonesReached,
-              messages: (state.messages ?? []).slice(-30),
+              messages: (state.messages ?? []).slice(-50),
             },
       }
       await fetch(`https://ntfy.sh/${this.realtimeTopic()}`, {
@@ -139,7 +193,7 @@ export class LocalRepository implements Repository {
         body: JSON.stringify(packet),
       })
     } catch {
-      /* Fallback to Google Sheets polling silently if offline or blocked */
+      /* Fallback to Google Sheets silently if offline or blocked */
     }
   }
 
@@ -150,18 +204,24 @@ export class LocalRepository implements Repository {
   getSheetConfig(): SheetSyncConfig {
     const cfg = readCfg()
     const isStaticHost = !isLocalhost()
-    const needsAppsScript = isStaticHost && !cfg.appsScriptUrl
+    const needsAppsScript = isStaticHost ? !cfg.appsScriptUrl : !cfg.appsScriptUrl && !cfg.spreadsheetId
     return { ...cfg, isStaticHost, needsAppsScript, ...this.syncStatus }
   }
 
   setSheetConfig(patch: Partial<Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'>>) {
     const cur = readCfg()
-    const next = {
-      spreadsheetId: patch.spreadsheetId !== undefined ? extractSpreadsheetId(patch.spreadsheetId) : DEFAULT_SPREADSHEET_ID,
-      appsScriptUrl: patch.appsScriptUrl !== undefined ? patch.appsScriptUrl.trim() || DEFAULT_APPS_SCRIPT_URL : cur.appsScriptUrl,
+    const next: StoredCfg = {
+      spreadsheetId: patch.spreadsheetId !== undefined ? extractSpreadsheetId(patch.spreadsheetId) : cur.spreadsheetId,
+      appsScriptUrl: patch.appsScriptUrl !== undefined ? patch.appsScriptUrl.trim() : cur.appsScriptUrl,
       passcode: patch.passcode !== undefined ? patch.passcode.trim() : cur.passcode,
     }
-    localStorage.setItem(CFG_KEY, JSON.stringify(next))
+    try {
+      localStorage.setItem(CFG_KEY, JSON.stringify(next))
+      localStorage.removeItem(LEGACY_CFG_KEY)
+      saveCfgToCacheStorage(next)
+    } catch {
+      /* ignore */
+    }
     this.syncStatus = { ...this.syncStatus, lastError: null }
     this.notify(read())
   }
@@ -173,10 +233,9 @@ export class LocalRepository implements Repository {
       const sep = appsScriptUrl.includes('?') ? '&' : '?'
       return `${appsScriptUrl}${sep}key=${encodeURIComponent(passcode)}`
     }
-    if (isLocalhost()) {
+    if (isLocalhost() && spreadsheetId) {
       return `/api/gsheets?id=${encodeURIComponent(spreadsheetId)}`
     }
-    // On GitHub Pages without an Apps Script URL, do not POST to /api/gsheets (which causes 405 Method Not Allowed)
     return null
   }
 
@@ -193,7 +252,7 @@ export class LocalRepository implements Repository {
         this.syncStatus = {
           ...this.syncStatus,
           syncing: false,
-          lastError: 'Trên GitHub Pages, bạn hãy dán Apps Script Web App URL ở bên dưới để đồng bộ với Google Sheet nhé (tránh lỗi 405 của GitHub).',
+          lastError: 'Hãy kết nối Google Sheet & Apps Script Web App URL để đồng bộ dữ liệu giữa 2 máy nhé!',
         }
         this.notify(read())
       }
@@ -210,13 +269,10 @@ export class LocalRepository implements Repository {
       })
       const text = await res.text()
       if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
-        throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi" hoặc "Bất kỳ ai có tài khoản Google". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
+        throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
       }
       const data = JSON.parse(text || '{}')
       if (!res.ok || data?.ok === false) {
-        if (res.status === 405) {
-          throw new Error('GitHub Pages không nhận POST (405). Hãy dán link Google Apps Script Web App URL (https://script.google.com/macros/s/.../exec) vào ô cấu hình bên dưới nhé!')
-        }
         throw new Error(data?.error || `HTTP ${res.status}`)
       }
       this.syncStatus = { syncing: false, lastSyncedAt: data.syncedAt || new Date().toISOString(), lastError: null }
@@ -232,9 +288,12 @@ export class LocalRepository implements Repository {
     }
   }
 
-  private async pullFromSheet(explicit = false): Promise<AppState | null> {
+  /**
+   * Pulls latest state from Google Sheets and ALWAYS merges it with local state (`mergeStates(cur, remoteState)`)
+   * unless `replaceLocal === true` (so local chat messages or deposits are NEVER wiped out by a slightly older sheet snapshot!).
+   */
+  private async pullFromSheet(explicit = false, replaceLocal = false): Promise<AppState | null> {
     if (typeof fetch === 'undefined') return null
-    // Deduplicate concurrent pull calls (e.g. React StrictMode double-mount)
     if (this.inFlightPull) return this.inFlightPull
 
     const url = this.endpointUrl()
@@ -243,7 +302,7 @@ export class LocalRepository implements Repository {
         this.syncStatus = {
           ...this.syncStatus,
           syncing: false,
-          lastError: 'Trên GitHub Pages, bạn hãy dán Apps Script Web App URL ở bên dưới để tải dữ liệu từ Google Sheet nhé.',
+          lastError: 'Hãy kết nối Google Sheet & Apps Script Web App URL trước khi tải dữ liệu nhé.',
         }
         this.notify(read())
       }
@@ -257,7 +316,7 @@ export class LocalRepository implements Repository {
         const res = await fetch(bustUrl, { method: 'GET', cache: 'no-store' })
         const text = await res.text()
         if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
-          throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi" hoặc "Bất kỳ ai có tài khoản Google". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
+          throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
         }
         const data = JSON.parse(text || '{}')
         if (!res.ok || data?.ok === false) {
@@ -273,7 +332,8 @@ export class LocalRepository implements Repository {
           }
           const cur = read()
           const curJson = JSON.stringify(cur)
-          const merged = explicit || !cur.journey ? remoteState : mergeStates(cur, remoteState)
+          // ALWAYS union-merge local & remote state unless replaceLocal is explicitly requested or local has no journey yet!
+          const merged = replaceLocal || !cur.journey ? remoteState : mergeStates(cur, remoteState)
           const nextJson = JSON.stringify(merged)
 
           if (nextJson !== curJson || explicit) {
@@ -298,10 +358,12 @@ export class LocalRepository implements Repository {
 
   async syncWithSheet(direction: 'push' | 'pull' = 'push'): Promise<AppState> {
     if (direction === 'pull') {
-      const remote = await this.pullFromSheet(true)
+      const remote = await this.pullFromSheet(true, false)
       if (remote) return remote
       return read()
     }
+    // Before pushing manually, pull & merge first so we never overwrite the partner's newer messages or deposits!
+    await this.pullFromSheet(false, false).catch(() => null)
     const cur = read()
     await this.pushToSheet(cur, true)
     return cur
@@ -322,7 +384,6 @@ export class LocalRepository implements Repository {
     const mySub = j.members[activeActor]?.pushSubscription
     const partnerSub = j.members[partnerId]?.pushSubscription
     if (!partnerSub) return null
-    // Safety guard: NEVER send a partner push notification back to the sender's own physical device endpoint!
     if (mySub && mySub.endpoint === partnerSub.endpoint) {
       return null
     }
@@ -357,7 +418,6 @@ export class LocalRepository implements Repository {
     this.bc?.postMessage('changed')
     this.notify(next)
 
-    // Push notification exclusively to the PARTNER's device (both Native Web Push with 🐷 Logo & optional ntfy fallback)
     const newestNotif = next.notifications[0]
     let webPushReq: EncryptedWebPushRequest | null = null
     if (newestNotif && newestNotif.id !== prevTopNotifId) {
@@ -368,18 +428,46 @@ export class LocalRepository implements Repository {
       webPushReq = await this.buildPartnerWebPush(next, actorId, newestNotif.title, newestNotif.message, to)
     }
 
-    // Broadcast instant real-time SSE event (<200ms) AND save to Google Sheets in parallel
+    // 1. Broadcast instant real-time SSE event (<200ms)
     void this.broadcastRealtime(next, false)
-    await this.pushToSheet(next, true, false, webPushReq)
+
+    // 2. Pull & merge latest remote state right before pushing if our last pull was >4s ago,
+    // so even if the partner's Google Apps Script is running an older version without server-side merge,
+    // we NEVER overwrite the partner's chat messages, deposits, or reveals!
+    let stateToPush = next
+    if (this.endpointUrl() && Date.now() - this.lastPullAt > 4000) {
+      const pulled = await this.pullFromSheet(false, false).catch(() => null)
+      if (pulled) {
+        stateToPush = mergeStates(pulled, next)
+        localStorage.setItem(KEY, JSON.stringify(stateToPush))
+      }
+    }
+
+    await this.pushToSheet(stateToPush, true, false, webPushReq)
     return read()
   }
 
   async load() {
-    // Always load fresh data from Google Sheets immediately when entering the app!
-    const remote = await this.pullFromSheet(true)
-    if (remote) return remote
+    // 1. If localStorage config is empty (e.g. user added PWA to iOS Home Screen after configuring in Safari),
+    // automatically restore the saved Google Sheet config from shared Cache Storage!
+    const cfg = readCfg()
+    if (!cfg.appsScriptUrl && !cfg.spreadsheetId) {
+      await restoreCfgFromCacheStorage()
+    } else {
+      saveCfgToCacheStorage(cfg)
+    }
+
+    // 2. Pull and merge from Google Sheet if configured
+    if (this.endpointUrl()) {
+      const remote = await this.pullFromSheet(true, false)
+      if (remote) {
+        // If local had unsynced messages or contributions that weren't on remote yet, push the merged union back
+        void this.pushToSheet(remote, false)
+        return remote
+      }
+    }
     const local = read()
-    if (local.journey) {
+    if (local.journey && this.endpointUrl()) {
       void this.pushToSheet(local, false)
     }
     return local
@@ -393,15 +481,13 @@ export class LocalRepository implements Repository {
       if (document.visibilityState === 'hidden') {
         this.hiddenAt = Date.now()
       } else if (document.visibilityState === 'visible') {
-        // Only pull from Sheet when returning to the app after being hidden in background for >30s
-        if (this.hiddenAt > 0 && Date.now() - this.hiddenAt > 30_000 && Date.now() - this.lastPullAt > 30_000) {
-          void this.pullFromSheet(true)
+        // When returning to the app (e.g. tapping a chat push notification!), pull & merge immediately if hidden > 2s
+        if (this.hiddenAt > 0 && Date.now() - this.hiddenAt > 2_000 && Date.now() - this.lastPullAt > 2_000) {
+          void this.pullFromSheet(true, false)
         }
       }
     }
 
-    // Event-driven Real-Time Server-Sent Events (SSE) stream:
-    // ZERO polling timer — only receives events when the partner actually performs an action!
     let es: EventSource | null = null
     if (typeof EventSource !== 'undefined') {
       try {
@@ -416,7 +502,7 @@ export class LocalRepository implements Repository {
             if (typeof pkt.at === 'number' && pkt.at < this.bootTime - 2000) return
 
             if (pkt.forceReplace) {
-              void this.pullFromSheet(true)
+              void this.pullFromSheet(true, true)
               return
             }
 
@@ -463,12 +549,12 @@ export class LocalRepository implements Repository {
   }
 
   saveDraft(draft: AppState['draft']) { return this.mutate((s) => A.saveDraft(s, draft)) }
-  saveJourney(j: Parameters<Repository['saveJourney']>[0]) { return this.mutate((s, ) => A.saveJourney(s, j)) }
+  saveJourney(j: Parameters<Repository['saveJourney']>[0]) { return this.mutate((s) => A.saveJourney(s, j)) }
   updateJourney(p: Parameters<Repository['updateJourney']>[0]) { return this.mutate((s) => A.updateJourney(s, p)) }
 
   async revealToday(by: Parameters<Repository['revealToday']>[0], forceReroll = false) {
     if (!forceReroll) {
-      await this.pullFromSheet(true).catch(() => null)
+      await this.pullFromSheet(true, false).catch(() => null)
     }
     let cur = read()
     const tz = cur.journey?.timezone

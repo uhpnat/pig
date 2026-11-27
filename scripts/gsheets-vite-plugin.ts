@@ -97,29 +97,73 @@ function buildBatchOps(state: AppState) {
   ]
 
   const notificationRows: string[][] = [
-    ['Mã thông báo', 'Thời gian', 'Loại', 'Tiêu đề', 'Nội dung', 'Đã đọc'],
-    ...state.notifications.slice(0, 100).map((n) => [
+    ['Mã thông báo', 'Thời gian', 'Loại', 'Người tạo', 'Người nhận', 'Tiêu đề', 'Nội dung', 'Đã đọc'],
+    ...state.notifications.slice(0, 60).map((n) => [
       n.id,
       n.at,
       n.type,
+      n.actor ?? '',
+      n.target ?? 'all',
       n.title,
       n.message,
       String(n.read),
     ]),
   ]
 
+  const messageRows: string[][] = [
+    ['Mã tin nhắn', 'Thời gian', 'Mã người gửi', 'Nội dung tin nhắn', 'Đã xem bởi', 'Tên người gửi'],
+    ...(state.messages ?? []).map((m) => [
+      m.id,
+      m.at,
+      m.sender,
+      m.text,
+      (m.readBy ?? [m.sender]).join(','),
+      j ? j.members[m.sender].name : m.sender,
+    ]),
+  ]
+
+  const memberRows: string[][] = [
+    ['ID', 'Tên thành viên', 'Giới tính', 'Vai trò', 'Thu nhập/tháng (VND)', 'Ảnh đại diện', 'Đã bật Push iPhone', 'Endpoint Push'],
+    ...(j
+      ? (['a', 'b'] as const).map((id) => {
+          const m = j.members[id]
+          return [
+            m.id,
+            m.name,
+            m.gender === 'male' ? 'Nam' : 'Nữ',
+            m.role,
+            String(m.income),
+            m.avatar,
+            m.pushSubscription?.endpoint ? 'Đã bật' : 'Chưa bật',
+            m.pushSubscription?.endpoint ?? '',
+          ]
+        })
+      : []),
+  ]
+
+  const compactState: AppState = {
+    ...state,
+    activity: state.activity.slice(0, 60),
+    notifications: state.notifications.slice(0, 40),
+    messages: (state.messages ?? []).slice(-60),
+  }
+
   const appStateRows: string[][] = [
     ['key', 'updated_at', 'json_state'],
-    ['piggy_duo_state_v1', new Date().toISOString(), JSON.stringify(state)],
+    ['piggy_duo_state_v2', new Date().toISOString(), JSON.stringify(compactState)],
   ]
 
   return [
     { op: 'clear', range: 'Journey!A1:Z100' },
     { op: 'write', range: 'Journey!A1', data: journeyRows },
+    { op: 'clear', range: 'Members!A1:Z20' },
+    { op: 'write', range: 'Members!A1', data: memberRows },
     { op: 'clear', range: 'DailyReveals!A1:Z500' },
     { op: 'write', range: 'DailyReveals!A1', data: revealRows },
     { op: 'clear', range: 'Contributions!A1:Z1000' },
     { op: 'write', range: 'Contributions!A1', data: contributionRows },
+    { op: 'clear', range: 'Messages!A1:Z500' },
+    { op: 'write', range: 'Messages!A1', data: messageRows },
     { op: 'clear', range: 'ActivityLog!A1:Z500' },
     { op: 'write', range: 'ActivityLog!A1', data: activityRows },
     { op: 'clear', range: 'Challenges!A1:Z200' },

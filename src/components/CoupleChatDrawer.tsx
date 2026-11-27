@@ -27,6 +27,7 @@ export function CoupleChatDrawer() {
     partnerMember,
     chatOpen,
     setChatOpen,
+    syncState,
   } = useStore()
 
   const [text, setText] = useState('')
@@ -116,7 +117,14 @@ export function CoupleChatDrawer() {
     }
   }, [chatOpen])
 
-  // 3. Auto-scroll to newest message & mark messages as read
+  // 3. Auto-scroll to newest message, pull latest remote messages on open, & mark messages as read
+  useEffect(() => {
+    if (!chatOpen || !j) return
+    void repo.syncWithSheet('pull').then((latest) => {
+      syncState(latest)
+    }).catch(() => undefined)
+  }, [chatOpen, j, repo, syncState])
+
   useEffect(() => {
     if (!chatOpen || !j) return
     const t = setTimeout(() => {

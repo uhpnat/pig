@@ -24,7 +24,7 @@ import { diffDays, durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domai
 import { actualShares } from '@/domain/stats'
 import { useChallenges, useJourney, useStore } from '@/hooks/useStore'
 import { EditRulesDialog } from './EditRulesDialog'
-import { GoogleSheetsCard } from './GoogleSheetsCard'
+import { buildPartnerInviteUrl, GoogleSheetsCard } from './GoogleSheetsCard'
 import { InstallGuide } from './InstallGuide'
 
 const MODE = { proportional: 'Theo thu nhập', equal: 'Chia đều', custom: 'Tuỳ chỉnh' } as const
@@ -535,10 +535,11 @@ export default function CouplePage() {
           <Button
             size="sm"
             onClick={() => {
-              copy(`${location.origin}${location.pathname}`)
+              const cfg = repo.getSheetConfig()
+              copy(buildPartnerInviteUrl(cfg.appsScriptUrl, cfg.spreadsheetId, cfg.passcode))
             }}
           >
-            📋 Sao chép link ứng dụng ({location.origin}{location.pathname})
+            📋 Copy link mời cho Người thứ 2 (kèm sẵn Google Sheet)
           </Button>
         </div>
       </Modal>
