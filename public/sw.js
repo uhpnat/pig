@@ -1,5 +1,5 @@
 /* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background-Only Push Suppression + Reliable Chat Auto-Open. */
-const VERSION = 'piggy-duo-v11'
+const VERSION = 'piggy-duo-v12'
 const NAV_CACHE = 'piggy-nav-v1'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png']
 
@@ -43,8 +43,8 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       Promise.all([
         fetch(req).then((r) => r.json()).catch(() => ({
-          name: 'Piggy Duo – Heo đất của đôi mình',
-          short_name: 'Piggy Duo',
+          name: 'Our Little Bank',
+          short_name: 'Our Little Bank',
           start_url: './',
           scope: './',
           display: 'standalone',
@@ -104,8 +104,8 @@ self.addEventListener('message', (e) => {
 
   if (msg.type === 'SCHEDULE_NOTIFICATION') {
     const delayMs = Math.max(0, Math.min(25000, Number(msg.delayMs) || 0))
-    const title = msg.title || '🐷 Piggy Duo'
-    const body = msg.body || 'Chạm để mở thẳng vào App Piggy Duo!'
+    const title = msg.title || 'Our Little Bank'
+    const body = msg.body || 'Chạm để mở thẳng vào App Our Little Bank!'
     const route = msg.route || '/'
     const tag = msg.tag || 'piggy-test-notif'
 
@@ -130,7 +130,7 @@ self.addEventListener('message', (e) => {
  * - Collapses notifications by category tag (`piggy-chat` vs `piggy-update`) so notifications never spam or pile up!
  */
 self.addEventListener('push', (e) => {
-  let data = { title: '🐷 Piggy Duo', body: 'Người ấy vừa cập nhật heo đất!', route: '/' }
+  let data = { title: 'Our Little Bank', body: 'Người ấy vừa cập nhật quỹ chung!', route: '/' }
   if (e.data) {
     try {
       const parsed = e.data.json()

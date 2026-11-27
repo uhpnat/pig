@@ -80,19 +80,17 @@ export function SplashLoader({ ready = false }: SplashLoaderProps) {
               ? { duration: 0.38, ease: 'easeOut' }
               : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
           }
-          className="relative grid h-28 w-28 place-items-center rounded-[36px] border-[3px] border-white bg-white/85 shadow-[0_18px_40px_rgba(124,58,237,0.22),inset_0_4px_12px_rgba(255,255,255,0.95)] backdrop-blur-md"
+          className="relative grid h-28 w-28 place-items-center overflow-hidden rounded-[32px] border-[3px] border-white bg-white/85 shadow-[0_18px_40px_rgba(124,58,237,0.22),inset_0_4px_12px_rgba(255,255,255,0.95)] backdrop-blur-md"
         >
-          <span className="text-5xl drop-shadow-sm">{ready ? '🎉' : '🐷'}</span>
-          <motion.span
-            aria-hidden
-            animate={{ rotate: 360 }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-            className="pointer-events-none absolute -inset-2 rounded-[42px] border-2 border-dashed border-purple-300/65"
+          <img
+            src="./apple-touch-icon.png"
+            alt="Our Little Bank"
+            className="h-full w-full object-cover"
           />
         </motion.div>
 
         <h1 className="mt-5 text-[24px] font-black tracking-tight text-[#1e1b4b]">
-          Piggy Duo <span className="text-[#ff3b6b]">💗</span>
+          Our Little Bank <span className="text-[#ff3b6b]">💗</span>
         </h1>
         <p className="mt-1 text-xs font-extrabold text-indigo-700/85">
           {ready

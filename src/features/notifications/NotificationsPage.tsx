@@ -95,7 +95,7 @@ export default function NotificationsPage() {
             <div className="min-w-0">
               <p className="truncate text-xs font-black text-[#1e1b4b]">
                 {pushReady
-                  ? '✅ Đã bật Thông báo đẩy Logo 🐷 Piggy Duo'
+                  ? '✅ Đã bật Thông báo đẩy Our Little Bank'
                   : '🔔 Bật / Thử thông báo đẩy trên iPhone'}
               </p>
               <p className="truncate text-[10.5px] font-bold text-slate-500">

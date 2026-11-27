@@ -1,7 +1,7 @@
 {
-  "name": "Piggy Duo – Heo đất của đôi mình",
-  "short_name": "Piggy Duo",
-  "description": "Heo đất chung cho hai người.",
+  "name": "Our Little Bank",
+  "short_name": "Our Little Bank",
+  "description": "Quỹ tiết kiệm chung của đôi mình.",
   "lang": "vi",
   "start_url": "./",
   "scope": "./",

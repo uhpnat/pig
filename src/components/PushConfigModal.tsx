@@ -80,10 +80,10 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
           '/',
         )
       } else if (r === 'denied') {
-        toast('Bạn đã chặn thông báo. Hãy vào Cài đặt iPhone -> Thông báo -> Piggy Duo để bật lại nhé.', 'error')
+        toast('Bạn đã chặn thông báo. Hãy vào Cài đặt iPhone -> Thông báo -> Our Little Bank để bật lại nhé.', 'error')
       } else {
         toast(
-          'Trên iPhone: Hãy mở Piggy Duo từ biểu tượng 🐷 ngoài Màn hình chính (không mở trong Safari) rồi bấm Bật nhé!',
+          'Trên iPhone: Hãy mở Our Little Bank từ biểu tượng ngoài Màn hình chính (không mở trong Safari) rồi bấm Bật nhé!',
           'error',
         )
       }
@@ -99,7 +99,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
     }
     setTestingSelf(true)
     const title = `🐷 ${j.name} · Thông báo cho ${myMember?.name}`
-    const body = `Chạm vào thông báo này để mở thẳng vào App Piggy Duo! 💗`
+    const body = `Chạm vào thông báo này để mở thẳng vào App Our Little Bank! 💗`
     const cfg = repo.getSheetConfig()
 
     const scheduledInSw = await scheduleServiceWorkerNotification(title, body, '/?chat=1', 4000)
@@ -131,7 +131,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
     try {
       const cfg = repo.getSheetConfig()
       const title = `🐷 ${myMember?.name} gọi ${partnerMember?.name} ơi!`
-      const body = `Chạm vào đây để mở thẳng vào App Piggy Duo của đôi mình nhé! 💗`
+      const body = `Chạm vào đây để mở thẳng vào App Our Little Bank của đôi mình nhé! 💗`
       await triggerServerWebPush(
         cfg.appsScriptUrl || '/api/gsheets',
         partnerSub,
@@ -153,7 +153,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
           <div className="flex items-center gap-2.5">
             <img
               src="./apple-touch-icon.png"
-              alt="Piggy Duo Logo"
+              alt="Our Little Bank Logo"
               className="h-10 w-10 shrink-0 rounded-xl border border-pink-200 object-cover shadow-sm"
             />
             <div className="min-w-0 flex-1">
@@ -173,7 +173,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
                 <span>Đang mở bằng Safari (chưa phải App Màn hình chính)</span>
               </div>
               <p className="mt-1 leading-relaxed">
-                Tại Safari bấm <b>Chia sẻ</b> (<Share size={11} className="inline" />) → <b>Thêm vào MH chính</b>, rồi mở biểu tượng <b>🐷 Piggy Duo</b> ngoài màn hình chính để bật thông báo nhé!
+                Tại Safari bấm <b>Chia sẻ</b> (<Share size={11} className="inline" />) → <b>Thêm vào MH chính</b>, rồi mở biểu tượng <b>Our Little Bank</b> ngoài màn hình chính để bật thông báo nhé!
               </p>
             </div>
           ) : (
@@ -182,7 +182,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
               <span>
                 {perm === 'granted' && hasMySub
                   ? `Đã kết nối thông báo tự động cho máy ${myMember?.name}`
-                  : 'Đang mở từ App 🐷 Piggy Duo ngoài Màn hình chính'}
+                  : 'Đang mở từ App Our Little Bank ngoài Màn hình chính'}
               </span>
             </div>
           )}

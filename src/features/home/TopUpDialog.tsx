@@ -29,7 +29,7 @@ export function TopUpDialog({ open, onClose }: { open: boolean; onClose: () => v
 
   return (
     <Modal open={open} onClose={onClose} title="Nạp thêm tiền">
-      <p className="muted mt-1 !text-xs">Dành cho khoản góp ngoài kết quả hằng ngày. Piggy Duo không chuyển tiền thật.</p>
+      <p className="muted mt-1 !text-xs">Dành cho khoản góp ngoài kết quả hằng ngày. Our Little Bank chỉ ghi nhận sổ quỹ, không chuyển tiền thật.</p>
       <span className="label">Ai nạp?</span>
       <div className="flex gap-2">
         {(['a', 'b'] as const).map((k) => (
