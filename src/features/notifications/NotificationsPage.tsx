@@ -31,6 +31,7 @@ import {
   isStandalonePwa,
   scheduleServiceWorkerNotification,
   subscribeNativeWebPush,
+  triggerServerWebPush,
 } from '@/lib/webPush'
 
 const ICON: Record<NotificationType, string> = {
@@ -140,6 +141,18 @@ export default function NotificationsPage() {
     const body = `Chạm vào thông báo này để vào thẳng App Piggy Duo (không qua Safari)! 💗`
 
     const scheduledInSw = await scheduleServiceWorkerNotification(title, body, '/', 4000)
+    // Also trigger a server-side 4-second delayed Apple Web Push via Google Apps Script if pushSubscription exists!
+    const mySub = myMember?.pushSubscription
+    const cfg = repo.getSheetConfig()
+    if (mySub?.endpoint) {
+      void triggerServerWebPush(
+        cfg.appsScriptUrl || '/api/gsheets',
+        mySub,
+        { title, body, route: '/' },
+        4000,
+        cfg.passcode,
+      )
+    }
     toast('⏱️ Thoát ra Màn hình chính hoặc Khóa máy ngay! Sau 4 giây thông báo Logo 🐷 Piggy Duo sẽ nổ…')
 
     setTimeout(async () => {

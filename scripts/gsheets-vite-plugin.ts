@@ -159,7 +159,20 @@ export function gsheetsBridgePlugin(): Plugin {
             const parsed = JSON.parse(body || '{}') as {
               state?: AppState
               spreadsheetId?: string
-              webPush?: { endpoint: string; headers: Record<string, string>; bodyBase64: string }
+              pushOnly?: boolean
+              webPush?: { endpoint: string; headers: Record<string, string>; bodyBase64: string; delayMs?: number }
+            }
+            if (parsed.pushOnly && parsed.webPush?.endpoint && parsed.webPush?.bodyBase64) {
+              if (parsed.webPush.delayMs && parsed.webPush.delayMs > 0) {
+                await new Promise((r) => setTimeout(r, Math.min(15000, parsed.webPush!.delayMs!)))
+              }
+              const r = await fetch(parsed.webPush.endpoint, {
+                method: 'POST',
+                headers: parsed.webPush.headers,
+                body: Buffer.from(parsed.webPush.bodyBase64, 'base64'),
+              })
+              res.end(JSON.stringify({ ok: true, webPushResult: { sent: true, status: r.status } }))
+              return
             }
             const targetId = parsed.spreadsheetId || spreadsheetId
             if (!parsed.state) {

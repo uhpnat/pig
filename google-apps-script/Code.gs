@@ -83,7 +83,7 @@ function mergeAppState(existing, incoming) {
     return String(y.at).localeCompare(String(x.at));
   });
 
-  // 4. Hợp nhất Challenges & Milestones
+    // 4. Hợp nhất Challenges, Milestones & Couple Chat Messages
   var cs = Object.assign({}, existing.challengeStatus || {}, incoming.challengeStatus || {});
   Object.keys(cs).forEach(function(k) {
     if ((existing.challengeStatus && existing.challengeStatus[k] === 'completed') ||
@@ -98,7 +98,47 @@ function mergeAppState(existing, incoming) {
   (existing.milestonesReached || []).concat(incoming.milestonesReached || []).forEach(function(m) { msMap[m] = true; });
   out.milestonesReached = Object.keys(msMap).map(Number).sort(function(a, b) { return a - b; });
 
+  // 5. Hợp nhất Chat Messages & bảo toàn pushSubscription của từng thành viên (Nam / Nữ)
+  var msgMap = {};
+  (existing.messages || []).concat(incoming.messages || []).forEach(function(m) {
+    if (m && m.id) msgMap[m.id] = m;
+  });
+  out.messages = Object.keys(msgMap).map(function(k) { return msgMap[k]; }).sort(function(a, b) {
+    return String(a.at).localeCompare(String(b.at));
+  }).slice(-80);
+
+  if (out.journey && out.journey.members && existing.journey && existing.journey.members) {
+    ['a', 'b'].forEach(function(id) {
+      var eSub = existing.journey.members[id] && existing.journey.members[id].pushSubscription;
+      var iSub = incoming.journey.members[id] && incoming.journey.members[id].pushSubscription;
+      if (eSub && iSub) {
+        out.journey.members[id].pushSubscription = String(iSub.updatedAt) >= String(eSub.updatedAt) ? iSub : eSub;
+      } else if (eSub || iSub) {
+        out.journey.members[id].pushSubscription = iSub || eSub;
+      }
+    });
+  }
+
   return out;
+}
+
+function sendWebPushPacket(wp) {
+  if (!wp || !wp.endpoint || !wp.bodyBase64) return { sent: false };
+  try {
+    if (wp.delayMs && Number(wp.delayMs) > 0) {
+      Utilities.sleep(Math.min(15000, Number(wp.delayMs)));
+    }
+    var rawBytes = Utilities.base64Decode(wp.bodyBase64);
+    var resp = UrlFetchApp.fetch(wp.endpoint, {
+      method: 'post',
+      headers: wp.headers || {},
+      payload: rawBytes,
+      muteHttpExceptions: true
+    });
+    return { sent: true, status: resp.getResponseCode() };
+  } catch (err) {
+    return { sent: false, error: String(err) };
+  }
 }
 
 function doGet(e) {
@@ -124,6 +164,11 @@ function doPost(e) {
     var payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (!checkPasscode(payload.passcode)) {
       return jsonOut({ ok: false, error: 'Sai mã khoá bảo mật (SECRET_PASSCODE)' });
+    }
+    // Hỗ trợ lệnh chỉ bắn Apple Web Push (ví dụ khi bấm Thử thông báo 4 giây lúc đã tắt/khóa máy)
+    if (payload.pushOnly && payload.webPush) {
+      var pushRes = sendWebPushPacket(payload.webPush);
+      return jsonOut({ ok: true, webPushResult: pushRes });
     }
     var incoming = payload.state;
     if (!incoming) {
@@ -194,8 +239,14 @@ function doPost(e) {
     });
     aSheet.getRange(1, 1, aRows.length, 8).setValues(aRows);
 
+    // 6. Bắn thông báo Apple Web Push (web.push.apple.com) sang iPhone người ấy kể cả khi app đang đóng băng nhiều tiếng!
+    var webPushResult = null;
+    if (payload.webPush) {
+      webPushResult = sendWebPushPacket(payload.webPush);
+    }
+
     // Trả luôn state đã merge về để máy vừa bấm cập nhật theo máy kia ngay lập tức!
-    return jsonOut({ ok: true, syncedAt: now, state: state });
+    return jsonOut({ ok: true, syncedAt: now, state: state, webPushResult: webPushResult });
   } finally {
     lock.releaseLock();
   }

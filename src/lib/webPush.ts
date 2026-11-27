@@ -177,6 +177,7 @@ export interface EncryptedWebPushRequest {
   endpoint: string
   headers: Record<string, string>
   bodyBase64: string
+  delayMs?: number
 }
 
 /**
@@ -187,6 +188,7 @@ export interface EncryptedWebPushRequest {
 export async function buildEncryptedWebPush(
   sub: WebPushSubscription,
   payload: { title: string; body: string; route?: string },
+  delayMs?: number,
 ): Promise<EncryptedWebPushRequest | null> {
   if (typeof crypto === 'undefined' || !crypto.subtle) return null
   try {
@@ -274,8 +276,40 @@ export async function buildEncryptedWebPush(
         Urgency: 'high',
       },
       bodyBase64: bytesToBase64(bodyBytes),
+      ...(delayMs ? { delayMs } : {}),
     }
   } catch {
     return null
+  }
+}
+
+/**
+ * Sends a server-side `pushOnly` Web Push request via the Google Apps Script / Vite bridge
+ * so Apple APNs (`web.push.apple.com`) wakes up the device even when the app is frozen or force-closed!
+ */
+export async function triggerServerWebPush(
+  endpointUrl: string | null,
+  sub: WebPushSubscription,
+  payload: { title: string; body: string; route?: string },
+  delayMs = 0,
+  passcode = '',
+): Promise<{ sent: boolean; status?: number }> {
+  if (!endpointUrl || typeof fetch === 'undefined') return { sent: false }
+  try {
+    const webPush = await buildEncryptedWebPush(sub, payload, delayMs)
+    if (!webPush) return { sent: false }
+    const isGas = endpointUrl.includes('script.google.com')
+    const res = await fetch(endpointUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': isGas ? 'text/plain;charset=utf-8' : 'application/json' },
+      body: JSON.stringify({ pushOnly: true, passcode, webPush }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (data?.webPushResult?.sent) {
+      return { sent: true, status: data.webPushResult.status }
+    }
+    return { sent: false }
+  } catch {
+    return { sent: false }
   }
 }

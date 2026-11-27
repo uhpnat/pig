@@ -30,6 +30,23 @@ function doPost(e) {
   try {
     var payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (!checkPass(payload.passcode)) return jsonOut({ ok: false, error: 'Sai mã khoá' });
+    function sendPush(wp) {
+      if (!wp || !wp.endpoint || !wp.bodyBase64) return null;
+      try {
+        if (wp.delayMs && Number(wp.delayMs) > 0) Utilities.sleep(Math.min(15000, Number(wp.delayMs)));
+        var rawBytes = Utilities.base64Decode(wp.bodyBase64);
+        var r = UrlFetchApp.fetch(wp.endpoint, {
+          method: 'post',
+          headers: wp.headers || {},
+          payload: rawBytes,
+          muteHttpExceptions: true
+        });
+        return { sent: true, status: r.getResponseCode() };
+      } catch (err) { return { sent: false, error: String(err) }; }
+    }
+    if (payload.pushOnly && payload.webPush) {
+      return jsonOut({ ok: true, webPushResult: sendPush(payload.webPush) });
+    }
     var state = payload.state;
     if (!state) return jsonOut({ ok: false, error: 'Missing state' });
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -37,18 +54,8 @@ function doPost(e) {
     var appSheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
     appSheet.clearContents();
     appSheet.getRange(1, 1, 2, 3).setValues([['key', 'updated_at', 'json_state'], ['piggy_duo_state_v1', now, JSON.stringify(state)]]);
-    if (payload.webPush && payload.webPush.endpoint && payload.webPush.bodyBase64) {
-      try {
-        var rawBytes = Utilities.base64Decode(payload.webPush.bodyBase64);
-        UrlFetchApp.fetch(payload.webPush.endpoint, {
-          method: 'post',
-          headers: payload.webPush.headers || {},
-          payload: rawBytes,
-          muteHttpExceptions: true
-        });
-      } catch (err) {}
-    }
-    return jsonOut({ ok: true, syncedAt: now });
+    var wpRes = payload.webPush ? sendPush(payload.webPush) : null;
+    return jsonOut({ ok: true, syncedAt: now, webPushResult: wpRes });
   } finally { lock.releaseLock(); }
 }`
 
