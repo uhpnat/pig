@@ -59,8 +59,8 @@ export default function OnboardingPage() {
       setStep(0)
       return toast('Còn thông tin chưa hợp lệ', 'error')
     }
-    const done = await run(repo.saveJourney(valuesToJourney(getValues(), base, false)))
-    if (done) nav('/pig')
+    const done = await run(repo.saveJourney(valuesToJourney(getValues(), base, true)))
+    if (done) nav('/')
   }
 
   const loadDemo = async () => {
@@ -374,7 +374,7 @@ export default function OnboardingPage() {
                 <PlanPreviewCard plan={plan} journey={draftJourney} />
               </div>
               <Button className="mt-4 !py-4 !text-[18px]" onClick={confirm}>
-                Tiếp tục tạo heo 🐷
+                Bắt đầu hành trình tiết kiệm ✨
               </Button>
             </>
           )}

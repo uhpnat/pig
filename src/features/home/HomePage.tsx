@@ -6,8 +6,8 @@ import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { FinalGoalStage } from '@/components/pig/FinalGoalStage'
 import { MonthlyJarStage } from '@/components/pig/MonthlyJarStage'
 import { Avatar, FadeInItem } from '@/components/ui'
-import { daysInMonth, diffDays } from '@/domain/format'
-import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
+import { daysInMonth, diffDays, pct } from '@/domain/format'
+import { actualShares, confirmedTotals } from '@/domain/stats'
 import type { Contribution } from '@/domain/types'
 import { useConfirmContribution } from '@/hooks/useConfirmContribution'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -167,7 +167,6 @@ export default function HomePage() {
   const activeMoneyMale = isBMale ? activeAmountB : activeAmountA
   const activeMoneyFemale = isBMale ? activeAmountA : activeAmountB
 
-  const stage = pigStage(progress)
   const isMyMale = myMember?.gender === 'male'
 
   const triggerPokeFeedback = () => {
@@ -200,7 +199,7 @@ export default function HomePage() {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-xs font-black leading-tight text-[#1e1b4b]">{j.name}</p>
-                <p className="truncate text-[10px] font-extrabold text-pink-600">{stage.label}</p>
+                <p className="truncate text-[10px] font-extrabold text-pink-600">Đạt {pct(progress)} mục tiêu</p>
               </div>
             </Link>
 

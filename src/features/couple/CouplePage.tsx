@@ -424,12 +424,9 @@ export default function CouplePage() {
             </Card>
           )}
 
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
+          <div className="pt-1">
             <Button size="sm" onClick={() => { setPlanOpen(false); setEdit(true) }}>
               ✏️ Sửa mục tiêu & thu nhập
-            </Button>
-            <Button size="sm" variant="violet" onClick={() => { setPlanOpen(false); nav('/pig') }}>
-              🐷 Đổi kiểu heo
             </Button>
           </div>
         </div>

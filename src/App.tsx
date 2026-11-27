@@ -10,7 +10,6 @@ import HomePage from '@/features/home/HomePage'
 import JournalPage from '@/features/journal/JournalPage'
 import NotificationsPage from '@/features/notifications/NotificationsPage'
 import OnboardingPage from '@/features/onboarding/OnboardingPage'
-import PigPage from '@/features/pig/PigPage'
 import RevealPage from '@/features/reveal/RevealPage'
 
 const StatsPage = lazy(() => import('@/features/stats/StatsPage'))
@@ -19,11 +18,10 @@ function Page({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-/** Redirects to onboarding / pig creation until the journey is fully set up. */
+/** Redirects to onboarding until the journey is fully set up. */
 function Gate({ children }: { children: ReactNode }) {
   const { journey } = useStore()
-  if (!journey) return <Navigate to="/welcome" replace />
-  if (!journey.setupDone) return <Navigate to="/pig" replace />
+  if (!journey || !journey.setupDone) return <Navigate to="/welcome" replace />
   return <>{children}</>
 }
 
@@ -33,8 +31,7 @@ function Gate({ children }: { children: ReactNode }) {
  */
 function HomeGate({ children }: { children: ReactNode }) {
   const { journey, state, today, goalReached } = useStore()
-  if (!journey) return <Navigate to="/welcome" replace />
-  if (!journey.setupDone) return <Navigate to="/pig" replace />
+  if (!journey || !journey.setupDone) return <Navigate to="/welcome" replace />
 
   const isRoleConfigured =
     typeof window !== 'undefined' &&
@@ -58,7 +55,6 @@ function WelcomeGate() {
 export const ROUTE_THEME: Record<string, { top: string; bottom: string }> = {
   '/': { top: '#b8e1ff', bottom: '#fde8f1' },
   '/reveal': { top: '#5b3dc8', bottom: '#fde8f1' },
-  '/pig': { top: '#dbeafe', bottom: '#fce7f3' },
   '/couple': { top: '#fde8f1', bottom: '#fdf2f7' },
   '/welcome': { top: '#f3e8ff', bottom: '#fff7fa' },
   '/journal': { top: '#e0f2fe', bottom: '#ffeef5' },
@@ -92,7 +88,6 @@ export default function App() {
       <Routes>
         <Route element={<FullLayout />}>
           <Route path="/welcome" element={<WelcomeGate />} />
-          <Route path="/pig" element={<PigGate />} />
           <Route path="/reveal" element={<Gate><Page><RevealPage /></Page></Gate>} />
           <Route path="/stats" element={<Gate><Page><Suspense fallback={<div className="p-8 text-center font-black text-vio">Đang tải biểu đồ…</div>}><StatsPage /></Suspense></Page></Gate>} />
           <Route path="/notifications" element={<Gate><Page><NotificationsPage /></Page></Gate>} />
@@ -107,11 +102,5 @@ export default function App() {
       </Routes>
     </PasscodeGate>
   )
-}
-
-function PigGate() {
-  const { journey } = useStore()
-  if (!journey) return <Navigate to="/welcome" replace />
-  return <Page><PigPage /></Page>
 }
 
