@@ -1,6 +1,6 @@
 import * as A from '@/domain/actions'
 import { secureRand } from '@/domain/engine'
-import { todayIn } from '@/domain/format'
+import { todayIn, uid } from '@/domain/format'
 import { mergeStates } from '@/domain/merge'
 import { buildDemoState } from '@/domain/seed'
 import type { AppState } from '@/domain/types'
@@ -84,12 +84,50 @@ function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'p
  */
 export class LocalRepository implements Repository {
   readonly kind = 'gsheets' as const
+  private readonly clientId = uid('cli')
   private bc: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL) : null
   private listeners = new Set<(s: AppState) => void>()
   private syncStatus: Pick<SheetSyncConfig, 'lastSyncedAt' | 'lastError' | 'syncing'> = {
     lastSyncedAt: null,
     lastError: null,
     syncing: false,
+  }
+
+  private realtimeTopic(): string {
+    const { spreadsheetId } = readCfg()
+    const cleanId = (spreadsheetId || DEFAULT_SPREADSHEET_ID).replace(/[^a-zA-Z0-9]/g, '').slice(0, 24)
+    return `piggy_duo_rt_${cleanId}`
+  }
+
+  /**
+   * Instant (<200ms) real-time push over Server-Sent Events (SSE) relay so the partner's phone
+   * sees rolls, 1/2 deposit reports, 2/2 confirmations, and name edits immediately without waiting for polling!
+   */
+  private async broadcastRealtime(state: AppState, forceReplace = false): Promise<void> {
+    if (typeof fetch === 'undefined') return
+    try {
+      const packet = {
+        clientId: this.clientId,
+        at: Date.now(),
+        forceReplace,
+        partial: forceReplace
+          ? null
+          : {
+              journey: state.journey,
+              reveals: state.reveals.slice(0, 5),
+              contributions: state.contributions.slice(0, 20),
+              activity: state.activity.slice(0, 10),
+              notifications: state.notifications.slice(0, 8),
+              milestonesReached: state.milestonesReached,
+            },
+      }
+      await fetch(`https://ntfy.sh/${this.realtimeTopic()}`, {
+        method: 'POST',
+        body: JSON.stringify(packet),
+      })
+    } catch {
+      /* Fallback to Google Sheets polling silently if offline or blocked */
+    }
   }
 
   private notify(s: AppState) {
@@ -242,7 +280,8 @@ export class LocalRepository implements Repository {
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
     this.notify(next)
-    // Save immediately to Google Sheets on every user operation and return the synced state
+    // Broadcast instant real-time SSE event (<200ms) AND save to Google Sheets in parallel
+    void this.broadcastRealtime(next, false)
     await this.pushToSheet(next, true)
     return read()
   }
@@ -268,12 +307,64 @@ export class LocalRepository implements Repository {
     const onWindowFocus = () => {
       void this.pullFromSheet(true)
     }
-    // Realtime polling every 6 seconds while tab is visible so partner's actions appear live
+
+    // 1. Instant Real-Time Server-Sent Events (SSE) stream (<200ms cross-device latency)
+    let es: EventSource | null = null
+    let pullVerifyTimer: ReturnType<typeof setTimeout> | undefined
+    if (typeof EventSource !== 'undefined') {
+      try {
+        es = new EventSource(`https://ntfy.sh/${this.realtimeTopic()}/sse`)
+        es.onmessage = (ev) => {
+          try {
+            const outer = JSON.parse(ev.data || '{}')
+            if (outer.event && outer.event !== 'message') return
+            const payloadStr = typeof outer.message === 'string' ? outer.message : ev.data
+            const pkt = JSON.parse(payloadStr || '{}')
+            if (!pkt || pkt.clientId === this.clientId) return
+
+            if (pkt.forceReplace) {
+              void this.pullFromSheet(true)
+              return
+            }
+
+            if (pkt.partial) {
+              const cur = read()
+              const incoming: AppState = {
+                ...cur,
+                journey: pkt.partial.journey ?? cur.journey,
+                reveals: pkt.partial.reveals ?? cur.reveals,
+                contributions: pkt.partial.contributions ?? cur.contributions,
+                activity: pkt.partial.activity ?? cur.activity,
+                notifications: pkt.partial.notifications ?? cur.notifications,
+                milestonesReached: pkt.partial.milestonesReached ?? cur.milestonesReached,
+              }
+              const merged = mergeStates(cur, incoming)
+              localStorage.setItem(KEY, JSON.stringify(merged))
+              this.bc?.postMessage('changed')
+              this.notify(merged)
+            }
+
+            // Reconcile full state with Google Sheets shortly after real-time push
+            clearTimeout(pullVerifyTimer)
+            pullVerifyTimer = setTimeout(() => {
+              void this.pullFromSheet(false)
+            }, 1200)
+          } catch {
+            /* ignore malformed SSE frames */
+          }
+        }
+      } catch {
+        /* fallback to polling if EventSource is unavailable */
+      }
+    }
+
+    // 2. Fast fallback polling every 3 seconds while tab is visible
     const timer = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !this.syncStatus.syncing) {
         void this.pullFromSheet(false)
       }
-    }, 6000)
+    }, 3000)
+
     this.bc?.addEventListener('message', onMsg)
     window.addEventListener('storage', onStorage)
     window.addEventListener('visibilitychange', onFocus)
@@ -281,6 +372,8 @@ export class LocalRepository implements Repository {
     window.addEventListener('pageshow', onWindowFocus)
     return () => {
       clearInterval(timer)
+      clearTimeout(pullVerifyTimer)
+      es?.close()
       this.listeners.delete(cb)
       this.bc?.removeEventListener('message', onMsg)
       window.removeEventListener('storage', onStorage)
@@ -309,6 +402,7 @@ export class LocalRepository implements Repository {
       localStorage.setItem(KEY, JSON.stringify(out.state))
       this.bc?.postMessage('changed')
       this.notify(out.state)
+      void this.broadcastRealtime(out.state, forceReroll)
       await this.pushToSheet(out.state, true, forceReroll)
     }
     return { ...out, state: read() }
@@ -320,6 +414,7 @@ export class LocalRepository implements Repository {
     const next = A.resetTodayReveal(cur, todayIn(tz))
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
+    void this.broadcastRealtime(next, true)
     await this.pushToSheet(next, true, true)
     return next
   }
@@ -334,6 +429,7 @@ export class LocalRepository implements Repository {
     const next = A.clearSavingsDataKeepConfig(cur)
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
+    void this.broadcastRealtime(next, true)
     await this.pushToSheet(next, true, true)
     return next
   }
