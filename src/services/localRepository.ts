@@ -249,18 +249,23 @@ export class LocalRepository implements Repository {
         }
         // When user explicitly pulls (e.g. Pull-to-Refresh or "Tải từ Sheet"), trust Google Sheet as source of truth so deleted rows stay deleted!
         const cur = read()
+        const curJson = JSON.stringify(cur)
         const merged = explicit || !cur.journey ? remoteState : mergeStates(cur, remoteState)
-        localStorage.setItem(KEY, JSON.stringify(merged))
-        this.bc?.postMessage('changed')
-        this.notify(merged)
+        const nextJson = JSON.stringify(merged)
+
+        // Only update storage & trigger React re-render if data actually changed (or user explicitly requested a refresh)!
+        if (nextJson !== curJson || explicit) {
+          localStorage.setItem(KEY, nextJson)
+          this.bc?.postMessage('changed')
+          this.notify(merged)
+        }
         return merged
       }
       return null
     } catch (e) {
       this.syncStatus = { ...this.syncStatus, syncing: false, lastError: e instanceof Error ? e.message : String(e) }
+      if (explicit) this.notify(read())
       return null
-    } finally {
-      this.notify(read())
     }
   }
 
@@ -329,6 +334,7 @@ export class LocalRepository implements Repository {
 
             if (pkt.partial) {
               const cur = read()
+              const curJson = JSON.stringify(cur)
               const incoming: AppState = {
                 ...cur,
                 journey: pkt.partial.journey ?? cur.journey,
@@ -339,16 +345,19 @@ export class LocalRepository implements Repository {
                 milestonesReached: pkt.partial.milestonesReached ?? cur.milestonesReached,
               }
               const merged = mergeStates(cur, incoming)
-              localStorage.setItem(KEY, JSON.stringify(merged))
-              this.bc?.postMessage('changed')
-              this.notify(merged)
+              const nextJson = JSON.stringify(merged)
+              if (nextJson !== curJson) {
+                localStorage.setItem(KEY, nextJson)
+                this.bc?.postMessage('changed')
+                this.notify(merged)
+              }
             }
 
             // Reconcile full state with Google Sheets shortly after real-time push
             clearTimeout(pullVerifyTimer)
             pullVerifyTimer = setTimeout(() => {
               void this.pullFromSheet(false)
-            }, 1200)
+            }, 1500)
           } catch {
             /* ignore malformed SSE frames */
           }
@@ -358,12 +367,12 @@ export class LocalRepository implements Repository {
       }
     }
 
-    // 2. Fast fallback polling every 3 seconds while tab is visible
+    // 2. Gentle fallback polling every 12 seconds while tab is visible (0 re-renders if data is unchanged!)
     const timer = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !this.syncStatus.syncing) {
         void this.pullFromSheet(false)
       }
-    }, 3000)
+    }, 12000)
 
     this.bc?.addEventListener('message', onMsg)
     window.addEventListener('storage', onStorage)
