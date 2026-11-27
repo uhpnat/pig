@@ -3,8 +3,13 @@ import { secureRand } from '@/domain/engine'
 import { todayIn, uid } from '@/domain/format'
 import { mergeStates } from '@/domain/merge'
 import { buildDemoState } from '@/domain/seed'
-import type { AppState } from '@/domain/types'
-import { notificationRoute, pushNtfyNotification } from '@/lib/pushNotify'
+import type { AppState, MemberId } from '@/domain/types'
+import {
+  getNtfyTopicForGender,
+  getPartnerGender,
+  notificationRoute,
+  pushNtfyNotification,
+} from '@/lib/pushNotify'
 import type { Repository, SheetSyncConfig, Unsubscribe } from './repository'
 
 const KEY = 'piggy-duo:v1'
@@ -295,7 +300,7 @@ export class LocalRepository implements Repository {
     return cur
   }
 
-  private async mutate(fn: (s: AppState) => AppState): Promise<AppState> {
+  private async mutate(fn: (s: AppState) => AppState, actorId?: MemberId): Promise<AppState> {
     const prev = read()
     const prevTopNotifId = prev.notifications[0]?.id
     const next = fn(prev)
@@ -303,11 +308,13 @@ export class LocalRepository implements Repository {
     this.bc?.postMessage('changed')
     this.notify(next)
 
-    // If this action created a new notification (deposit 1/2, approval 2/2, chat message, milestone, etc.), push it to ntfy!
+    // Push notification exclusively to the PARTNER's gender topic (_nam or _nu) so the sender's own phone doesn't ring!
     const newestNotif = next.notifications[0]
     if (newestNotif && newestNotif.id !== prevTopNotifId) {
       const { to } = notificationRoute(newestNotif)
-      void pushNtfyNotification(newestNotif.title, newestNotif.message, to)
+      const targetGender = getPartnerGender(next.journey, actorId)
+      const targetTopic = getNtfyTopicForGender(targetGender)
+      void pushNtfyNotification(newestNotif.title, newestNotif.message, to, targetTopic)
     }
 
     // Broadcast instant real-time SSE event (<200ms) AND save to Google Sheets in parallel
@@ -425,7 +432,9 @@ export class LocalRepository implements Repository {
       this.notify(out.state)
       const newestNotif = out.state.notifications[0]
       if (newestNotif) {
-        void pushNtfyNotification(`🐷 ${newestNotif.title}`, newestNotif.message, '/reveal')
+        const targetGender = getPartnerGender(out.state.journey, by)
+        const targetTopic = getNtfyTopicForGender(targetGender)
+        void pushNtfyNotification(`🐷 ${newestNotif.title}`, newestNotif.message, '/reveal', targetTopic)
       }
       void this.broadcastRealtime(out.state, forceReroll)
       await this.pushToSheet(out.state, true, forceReroll)
@@ -460,16 +469,16 @@ export class LocalRepository implements Repository {
   }
 
   confirmContribution(id: string, by?: Parameters<Repository['confirmContribution']>[1]) {
-    return this.mutate((s) => A.confirmContribution(s, id, new Date().toISOString(), by))
+    return this.mutate((s) => A.confirmContribution(s, id, new Date().toISOString(), by), by)
   }
   addContribution(m: Parameters<Repository['addContribution']>[0], amount: number, notes: string) {
-    return this.mutate((s) => A.addContribution(s, m, amount, notes, todayIn(s.journey?.timezone)))
+    return this.mutate((s) => A.addContribution(s, m, amount, notes, todayIn(s.journey?.timezone)), m)
   }
   voidContribution(id: string) { return this.mutate((s) => A.voidContribution(s, id)) }
   startChallenge(id: string) { return this.mutate((s) => A.startChallenge(s, id)) }
   addCustomChallenge(t: string, n: number) { return this.mutate((s) => A.addCustomChallenge(s, t, n)) }
   sendChatMessage(sender: Parameters<Repository['sendChatMessage']>[0], text: string) {
-    return this.mutate((s) => A.sendChatMessage(s, sender, text))
+    return this.mutate((s) => A.sendChatMessage(s, sender, text), sender)
   }
   markChatRead(by: Parameters<Repository['markChatRead']>[0]) {
     return this.mutate((s) => A.markChatRead(s, by))

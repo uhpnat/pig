@@ -1,25 +1,52 @@
-import type { AppNotification, AppSettings } from '@/domain/types'
+import type { AppNotification, AppSettings, Gender, Journey, MemberId } from '@/domain/types'
 
 export const NTFY_TOPIC_KEY = 'piggy_ntfy_topic_v1'
 export const DEFAULT_NTFY_TOPIC = 'piggy_vi_tram'
 
-export function getNtfyTopic(): string {
+export function getNtfyBaseTopic(): string {
   if (typeof window === 'undefined') return DEFAULT_NTFY_TOPIC
   try {
-    return (localStorage.getItem(NTFY_TOPIC_KEY) || '').trim() || DEFAULT_NTFY_TOPIC
+    const raw = (localStorage.getItem(NTFY_TOPIC_KEY) || '').trim()
+    return raw.replace(/_(nam|nu)$/i, '') || DEFAULT_NTFY_TOPIC
   } catch {
     return DEFAULT_NTFY_TOPIC
   }
 }
 
-export function setNtfyTopic(topic: string): string {
-  const clean = topic.trim().replace(/[^a-zA-Z0-9_-]/g, '') || DEFAULT_NTFY_TOPIC
+export function setNtfyBaseTopic(topic: string): string {
+  const clean =
+    topic
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g, '')
+      .replace(/_(nam|nu)$/i, '') || DEFAULT_NTFY_TOPIC
   try {
     localStorage.setItem(NTFY_TOPIC_KEY, clean)
   } catch {
     /* ignore */
   }
   return clean
+}
+
+/** Returns the dedicated ntfy topic for Male (`_nam`) or Female (`_nu`). */
+export function getNtfyTopicForGender(gender: Gender, baseOverride?: string): string {
+  const base = (baseOverride || getNtfyBaseTopic()).trim() || DEFAULT_NTFY_TOPIC
+  return `${base}_${gender === 'male' ? 'nam' : 'nu'}`
+}
+
+/**
+ * Given the Journey and the member who just performed an action (`actorId`),
+ * returns the partner's gender so we push the notification to the PARTNER's phone (`_nam` or `_nu`)!
+ */
+export function getPartnerGender(journey: Journey | null, actorId?: MemberId): Gender {
+  if (!journey) return 'female'
+  const activeActor: MemberId =
+    actorId ||
+    (typeof window !== 'undefined' && localStorage.getItem('piggy_my_member') === 'b' ? 'b' : 'a')
+  const partnerId: MemberId = activeActor === 'a' ? 'b' : 'a'
+  const partner = journey.members[partnerId]
+  if (partner?.gender) return partner.gender
+  const actor = journey.members[activeActor]
+  return actor?.gender === 'male' ? 'female' : 'male'
 }
 
 /** Maps a notification type to the corresponding in-app route. */
@@ -46,17 +73,17 @@ export function notificationRoute(n: Pick<AppNotification, 'type' | 'title'>): {
 }
 
 /**
- * Sends a rich Vietnamese Push Notification to the `ntfy` mobile app (iOS / Android) via `https://ntfy.sh`.
+ * Sends a rich Vietnamese Push Notification to the target `ntfy` topic (`_nam` or `_nu`) via `https://ntfy.sh`.
  * Works 24/7 even when the Piggy Duo web app is completely closed!
  */
 export async function pushNtfyNotification(
   title: string,
   message: string,
   route = '/',
-  topicOverride?: string,
+  targetTopic?: string,
 ): Promise<boolean> {
   if (typeof fetch === 'undefined') return false
-  const topic = (topicOverride || getNtfyTopic()).trim()
+  const topic = (targetTopic || getNtfyTopicForGender('female')).trim()
   if (!topic) return false
   const appBase =
     typeof location !== 'undefined' && location.origin.includes('github.io')
