@@ -1,5 +1,5 @@
 /* Piggy Duo service worker: network-first so new deployments always appear immediately, falling back to cache offline. */
-const VERSION = 'piggy-duo-v5'
+const VERSION = 'piggy-duo-v6'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
 
 self.addEventListener('install', (e) => {
@@ -37,33 +37,33 @@ self.addEventListener('fetch', (e) => {
 })
 
 self.addEventListener('push', (e) => {
-  const data = e.data ? e.data.json() : { title: 'Piggy Duo', body: 'Heo đang chờ bạn!', url: './' }
+  const data = e.data ? e.data.json() : { title: 'Piggy Duo', body: 'Heo đang chờ bạn!', route: '/' }
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: './icon-192.png',
       badge: './icon-192.png',
-      data: { url: data.url || './' },
+      data: { route: data.route || '/' },
     }),
   )
 })
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const relUrl = e.notification.data && e.notification.data.url ? e.notification.data.url : './'
-  const targetUrl = new URL(relUrl, self.registration.scope).href
+  const route = (e.notification.data && e.notification.data.route) ? e.notification.data.route : '/'
+  // Always use the exact root registration scope URL (no #hash) for openWindow so iOS opens the standalone Home Screen PWA instead of Safari!
+  const rootScopeUrl = self.registration.scope
+
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
-        if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
-          if ('navigate' in client) {
-            client.navigate(targetUrl)
-          }
+        if ('focus' in client) {
+          client.postMessage({ type: 'PIGGY_NAVIGATE', route })
           return client.focus()
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl)
+        return self.clients.openWindow(rootScopeUrl)
       }
     }),
   )

@@ -79,7 +79,7 @@ export function notificationRoute(n: Pick<AppNotification, 'type' | 'title'>): {
 export async function pushNtfyNotification(
   title: string,
   message: string,
-  route = '/',
+  _route = '/',
   targetTopic?: string,
 ): Promise<boolean> {
   if (typeof fetch === 'undefined') return false
@@ -89,7 +89,8 @@ export async function pushNtfyNotification(
     typeof location !== 'undefined' && location.origin.includes('github.io')
       ? `${location.origin}${location.pathname}`
       : 'https://uhpnat.github.io/pig/'
-  const clickUrl = `${appBase}#${route}`
+  // Keep clickUrl strictly equal to the clean PWA start_url (without trailing #hash)
+  const clickUrl = appBase
   const iconUrl = `${appBase}icon-192.png`
 
   try {
@@ -125,7 +126,6 @@ export async function pushNtfyNotification(
  */
 export async function fireBrowserNotification(title: string, body: string, tag?: string, route = '/') {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
-  const hashUrl = `./#${route}`
   try {
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration()
@@ -135,7 +135,7 @@ export async function fireBrowserNotification(title: string, body: string, tag?:
           icon: './icon-192.png',
           badge: './icon-192.png',
           tag: tag || `piggy-${Date.now()}`,
-          data: { url: hashUrl },
+          data: { route },
         })
         return
       }

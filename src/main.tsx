@@ -24,6 +24,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       })
       .catch(() => undefined)
   })
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'PIGGY_NAVIGATE' && typeof e.data.route === 'string') {
+      window.location.hash = `#${e.data.route}`
+    }
+  })
 }
 
 // Native-app lock: prevent iOS pinch-to-zoom, double-tap zoom, and long-press image save context menu
