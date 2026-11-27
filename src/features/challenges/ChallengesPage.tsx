@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CoinStackSticker, GiftBoxSticker } from '@/components/Stickers'
-import { Badge, Button, Field, Modal, MoneyInput, PageHeader, ProgressBar } from '@/components/ui'
+import { Badge, Button, FadeInItem, Field, Modal, MoneyInput, PageHeader, ProgressBar } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import { useChallenges, useStore } from '@/hooks/useStore'
 import { IMG } from '@/lib/assets'
@@ -52,53 +52,57 @@ export default function ChallengesPage() {
       <PageHeader title="Thử thách tiết kiệm" onBack={() => nav('/')} />
 
       {/* Hero Banner: Thử thách 30 ngày with 3D headband pig matching 07_challenges.png */}
-      <div
-        className="mt-4 flex items-center justify-between overflow-hidden rounded-[28px] border-2 border-white p-4 shadow-[0_14px_30px_rgba(79,70,229,.28)]"
-        style={{ background: 'linear-gradient(125deg, #2563eb 0%, #7c3aed 55%, #ec4899 100%)' }}
-      >
-        <div className="min-w-0 flex-1 pr-2">
-          <h2 className="text-[20px] font-black leading-tight text-white">Thử thách 30 ngày</h2>
-          <p className="mt-1 text-[13px] font-bold leading-snug text-white/95">
-            Góp ít nhất 50.000đ/ngày để nhận thưởng!
-          </p>
-          <button
-            type="button"
-            onClick={() => start('days30')}
-            className="btn mt-3 !w-auto !px-6 !py-2 !text-[14px]"
-          >
-            Tham gia
-          </button>
+      <FadeInItem delay={0.05} y={14}>
+        <div
+          className="mt-4 flex items-center justify-between overflow-hidden rounded-[28px] border-2 border-white p-4 shadow-[0_14px_30px_rgba(79,70,229,.28)]"
+          style={{ background: 'linear-gradient(125deg, #2563eb 0%, #7c3aed 55%, #ec4899 100%)' }}
+        >
+          <div className="min-w-0 flex-1 pr-2">
+            <h2 className="text-[20px] font-black leading-tight text-white">Thử thách 30 ngày</h2>
+            <p className="mt-1 text-[13px] font-bold leading-snug text-white/95">
+              Góp ít nhất 50.000đ/ngày để nhận thưởng!
+            </p>
+            <button
+              type="button"
+              onClick={() => start('days30')}
+              className="btn mt-3 !w-auto !px-6 !py-2 !text-[14px]"
+            >
+              Tham gia
+            </button>
+          </div>
+          <img
+            src={IMG.chal}
+            alt="Heo thử thách 30 ngày"
+            className="-my-2 -mr-2 h-28 w-28 shrink-0 rounded-2xl object-cover drop-shadow-md"
+          />
         </div>
-        <img
-          src={IMG.chal}
-          alt="Heo thử thách 30 ngày"
-          className="-my-2 -mr-2 h-28 w-28 shrink-0 rounded-2xl object-cover drop-shadow-md"
-        />
-      </div>
+      </FadeInItem>
 
       {/* Section 1: Nhiệm vụ hôm nay */}
-      <h2 className="mt-5 text-[16px] font-black text-[#172554]">Nhiệm vụ hôm nay</h2>
-      <div className="mt-2.5 flex items-center justify-between rounded-[24px] border-2 border-white bg-white/95 px-4 py-3.5 shadow-[0_10px_24px_rgba(143,124,240,.13)]">
-        <div className="flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fffbeb] shadow-inner">
-            <CoinStackSticker size={36} />
-          </span>
-          <div>
-            <p className="text-[15px] font-black text-[#172554]">Góp ít nhất 50.000đ</p>
-            <p className="text-xs font-bold text-[#64748b]">Mở số tiền hôm nay cùng người ấy</p>
+      <FadeInItem delay={0.11} y={14}>
+        <h2 className="mt-5 text-[16px] font-black text-[#172554]">Nhiệm vụ hôm nay</h2>
+        <div className="mt-2.5 flex items-center justify-between rounded-[24px] border-2 border-white bg-white/95 px-4 py-3.5 shadow-[0_10px_24px_rgba(143,124,240,.13)]">
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fffbeb] shadow-inner">
+              <CoinStackSticker size={36} />
+            </span>
+            <div>
+              <p className="text-[15px] font-black text-[#172554]">Góp ít nhất 50.000đ</p>
+              <p className="text-xs font-bold text-[#64748b]">Mở số tiền hôm nay cùng người ấy</p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => nav('/reveal')}
+            className="btn !w-auto !px-4 !py-2 !text-[13px]"
+          >
+            Thực hiện
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => nav('/reveal')}
-          className="btn !w-auto !px-4 !py-2 !text-[13px]"
-        >
-          Thực hiện
-        </button>
-      </div>
+      </FadeInItem>
 
       {/* Section 2: Các thử thách khác */}
-      <div className="mt-5 flex items-center justify-between">
+      <FadeInItem delay={0.16} y={14} className="mt-5 flex items-center justify-between">
         <h2 className="text-[16px] font-black text-[#172554]">Các thử thách khác</h2>
         <button
           type="button"
@@ -107,33 +111,34 @@ export default function ChallengesPage() {
         >
           + Tự tạo thử thách
         </button>
-      </div>
+      </FadeInItem>
 
       <div className="mt-2.5 space-y-2.5">
-        {items.map(({ def, value, status }) => {
+        {items.map(({ def, value, status }, idx) => {
           const pctVal = Math.min(100, (value / def.target) * 100)
           return (
-            <button
-              key={def.id}
-              type="button"
-              onClick={() => setDetailId(def.id)}
-              className="flex w-full cursor-pointer items-center gap-3.5 rounded-[24px] border-2 border-white bg-white/95 px-4 py-3.5 text-left shadow-[0_8px_22px_rgba(143,124,240,.12)] transition-transform active:scale-[0.99]"
-              style={{ fontFamily: 'inherit' }}
-            >
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#fff1f2] shadow-inner">
-                <GiftBoxSticker size={34} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-[15px] font-black text-[#172554]">{def.title}</p>
-                  {status === 'completed' && <Badge>Hoàn thành</Badge>}
+            <FadeInItem key={def.id} delay={0.2 + idx * 0.05} y={12}>
+              <button
+                type="button"
+                onClick={() => setDetailId(def.id)}
+                className="flex w-full cursor-pointer items-center gap-3.5 rounded-[24px] border-2 border-white bg-white/95 px-4 py-3.5 text-left shadow-[0_8px_22px_rgba(143,124,240,.12)] transition-transform active:scale-[0.99]"
+                style={{ fontFamily: 'inherit' }}
+              >
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#fff1f2] shadow-inner">
+                  <GiftBoxSticker size={34} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-[15px] font-black text-[#172554]">{def.title}</p>
+                    {status === 'completed' && <Badge>Hoàn thành</Badge>}
+                  </div>
+                  <p className="mt-0.5 text-xs font-extrabold text-[#64748b]">
+                    Thưởng: {def.reward.icon} {def.reward.label} · Tiến độ {Math.round(pctVal)}%
+                  </p>
                 </div>
-                <p className="mt-0.5 text-xs font-extrabold text-[#64748b]">
-                  Thưởng: {def.reward.icon} {def.reward.label} · Tiến độ {Math.round(pctVal)}%
-                </p>
-              </div>
-              <ChevronRight size={20} className="shrink-0 text-[#94a3b8]" />
-            </button>
+                <ChevronRight size={20} className="shrink-0 text-[#94a3b8]" />
+              </button>
+            </FadeInItem>
           )
         })}
       </div>

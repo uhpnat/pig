@@ -6,7 +6,6 @@ import {
   useId,
   useRef,
   type ButtonHTMLAttributes,
-  type HTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
 } from 'react'
@@ -78,6 +77,31 @@ export function IconButton({
   )
 }
 
+export function FadeInItem({
+  delay = 0,
+  y = 14,
+  scale = 0.985,
+  className = '',
+  children,
+}: {
+  delay?: number
+  y?: number
+  scale?: number
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y, scale }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
 export function PageHeader({
   title,
   onBack,
@@ -92,7 +116,12 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <header className={`relative flex min-h-10 items-center justify-center ${className}`}>
+    <motion.header
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className={`relative flex min-h-10 items-center justify-center ${className}`}
+    >
       {onBack && (
         <IconButton label={backLabel} onClick={onBack} className="absolute left-0">
           <ChevronLeft size={20} strokeWidth={2.5} />
@@ -102,7 +131,7 @@ export function PageHeader({
         {title}
       </h1>
       {right && <div className="absolute right-0">{right}</div>}
-    </header>
+    </motion.header>
   )
 }
 
@@ -127,8 +156,26 @@ export function Divider({ className = '' }: { className?: string }) {
   return <hr className={`my-3 border-0 border-t border-slate-100 ${className}`} />
 }
 
-export function Card({ className = '', children, ...p }: { className?: string; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
-  return <div {...p} className={`card ${className}`}>{children}</div>
+export function Card({
+  className = '',
+  delay = 0.08,
+  children,
+}: {
+  className?: string
+  delay?: number
+  children: ReactNode
+  style?: React.CSSProperties
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={`card ${className}`}
+    >
+      {children}
+    </motion.div>
+  )
 }
 
 export function Chip({ on, className = '', ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { on?: boolean }) {

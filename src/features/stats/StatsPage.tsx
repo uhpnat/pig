@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Avatar, PageHeader } from '@/components/ui'
+import { Avatar, FadeInItem, PageHeader } from '@/components/ui'
 import { fmtDate, millions, pct, vnd } from '@/domain/format'
 import {
   actualShares,
@@ -72,7 +72,7 @@ export default function StatsPage() {
       <PageHeader title="Thống kê" onBack={() => nav('/')} />
 
       {/* 4 Pill Period Tabs matching 06_statistics.png */}
-      <div className="mt-4 grid grid-cols-4 gap-2" role="group" aria-label="Khoảng thời gian">
+      <FadeInItem delay={0.05} y={10} className="mt-4 grid grid-cols-4 gap-2">
         {PERIOD_TABS.map((t) => {
           const active = period === t.id
           return (
@@ -91,10 +91,14 @@ export default function StatsPage() {
             </button>
           )
         })}
-      </div>
+      </FadeInItem>
 
       {/* Card 1: Tổng tiền đã tiết kiệm */}
-      <div className="mt-4 flex items-center justify-between rounded-[28px] border-2 border-white bg-gradient-to-br from-white via-white to-[#e0f2fe] p-5 shadow-[0_12px_28px_rgba(143,124,240,.14)]">
+      <FadeInItem
+        delay={0.11}
+        y={14}
+        className="mt-4 flex items-center justify-between rounded-[28px] border-2 border-white bg-gradient-to-br from-white via-white to-[#e0f2fe] p-5 shadow-[0_12px_28px_rgba(143,124,240,.14)]"
+      >
         <div>
           <p className="text-[14px] font-black text-[#1e1b4b]">Tổng tiền đã tiết kiệm</p>
           <p className="mt-1 text-[32px] font-black leading-none tracking-tight text-[#172554]">
@@ -110,10 +114,14 @@ export default function StatsPage() {
           <span className="h-8 w-3 rounded-md bg-gradient-to-b from-[#60a5fa] to-[#3b82f6]" />
           <span className="h-11 w-3 rounded-md bg-gradient-to-b from-[#38bdf8] to-[#2563eb]" />
         </div>
-      </div>
+      </FadeInItem>
 
       {/* Card 2: Tỷ lệ đóng góp */}
-      <div className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-5 shadow-[0_12px_28px_rgba(143,124,240,.14)]">
+      <FadeInItem
+        delay={0.17}
+        y={14}
+        className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-5 shadow-[0_12px_28px_rgba(143,124,240,.14)]"
+      >
         <h2 className="text-[16px] font-black text-[#172554]">Tỷ lệ đóng góp</h2>
         <div className="mt-3.5 space-y-3.5">
           {(['a', 'b'] as const).map((k, idx) => {
@@ -142,10 +150,14 @@ export default function StatsPage() {
             )
           })}
         </div>
-      </div>
+      </FadeInItem>
 
       {/* Card 3: Tiến độ theo tháng matching 06_statistics.png */}
-      <div className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-5 shadow-[0_12px_28px_rgba(143,124,240,.14)]">
+      <FadeInItem
+        delay={0.23}
+        y={14}
+        className="mt-4 rounded-[28px] border-2 border-white bg-white/95 p-5 shadow-[0_12px_28px_rgba(143,124,240,.14)]"
+      >
         <div className="flex items-center justify-between">
           <h2 className="text-[16px] font-black text-[#172554]">Tiến độ theo tháng</h2>
           <span className="rounded-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-3 py-1 text-xs font-black text-white shadow">
@@ -180,7 +192,7 @@ export default function StatsPage() {
             Dự kiến hoàn thành mục tiêu {vnd(j.goal)} vào khoảng <b>{fmtDate(d.eta.date)}</b>
           </p>
         )}
-      </div>
+      </FadeInItem>
     </div>
   )
 }

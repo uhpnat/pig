@@ -13,7 +13,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
 import { MoneyBagSticker, PartySticker, TargetSticker } from '@/components/Stickers'
-import { Avatar, Button, Card, ConfirmDialog, Field, IconButton, Modal, ProgressBar, Toggle } from '@/components/ui'
+import { Avatar, Button, Card, ConfirmDialog, FadeInItem, Field, IconButton, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
 import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
 import { actualShares } from '@/domain/stats'
@@ -115,7 +115,7 @@ export default function CouplePage() {
       }}
     >
       {/* Top Bar matching the mockup */}
-      <div className="relative z-10 flex items-center justify-center px-4 pb-2 pt-3.5">
+      <FadeInItem delay={0} y={-10} className="relative z-10 flex items-center justify-center px-4 pb-2 pt-3.5">
         <h1 className="text-[22px] font-black tracking-tight text-[#1e1b4b]">
           Của chúng mình <span className="text-[#ff4d79]">❤️</span>
         </h1>
@@ -126,57 +126,65 @@ export default function CouplePage() {
         >
           <Settings size={20} />
         </IconButton>
-      </div>
+      </FadeInItem>
 
       {/* Separated 3D Cutout Two Pigs on Interactive Romantic Cloud & Meadow Stage */}
-      <div
+      <FadeInItem
+        delay={0.05}
+        y={12}
         className="relative overflow-hidden pt-1"
-        style={{ background: 'linear-gradient(180deg, #fde8f1 0%, #fbcfe8 55%, #dcfce7 100%)' }}
       >
-        <Interactive3DStage
-          spriteSrc={IMG.spriteDuo}
-          alt="Hai chú heo đất 3D của đôi mình"
-          theme="romantic"
-          spriteHeight={215}
-          reducedMotion={state.settings.animations === 'off'}
-        />
-      </div>
+        <div style={{ background: 'linear-gradient(180deg, #fde8f1 0%, #fbcfe8 55%, #dcfce7 100%)' }}>
+          <Interactive3DStage
+            spriteSrc={IMG.spriteDuo}
+            alt="Hai chú heo đất 3D của đôi mình"
+            theme="romantic"
+            spriteHeight={215}
+            reducedMotion={state.settings.animations === 'off'}
+          />
+        </div>
+      </FadeInItem>
 
       {/* Overlapping Soft Pastel Bottom Sheet */}
       <div
         className="relative -mt-6 rounded-t-[36px] px-4 pb-6 pt-5 shadow-[0_-10px_30px_rgba(255,140,180,.18)]"
         style={{ background: 'linear-gradient(180deg, #fff9fb 0%, #fdf2f7 100%)' }}
       >
-        {/* Subtitle slogan matching 08_shared_journey.png */}
-        <p className="text-center text-[15px] font-black leading-snug text-[#172554]">
-          Cùng nhau, chúng ta có thể
-          <br />
-          đạt được nhiều hơn! <span className="text-[#ff4d8d]">💕</span>
-        </p>
+        <FadeInItem delay={0.11} y={12}>
+          <p className="text-center text-[15px] font-black leading-snug text-[#172554]">
+            Cùng nhau, chúng ta có thể
+            <br />
+            đạt được nhiều hơn! <span className="text-[#ff4d8d]">💕</span>
+          </p>
 
-        {/* Couple Avatars Pill (Click to edit names & roles) */}
-        <div className="mt-2.5 flex items-center justify-center gap-3">
-          {(['a', 'b'] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setGenderDialogOpen(true)}
-              className="flex cursor-pointer items-center gap-2 rounded-full border border-white bg-white px-3.5 py-1.5 shadow-sm transition-transform active:scale-95"
-            >
-              <Avatar value={j.members[k].avatar} size={34} />
-              <div className="text-left">
-                <p className="flex items-center gap-1 text-xs font-black text-[#1e1b4b]">
-                  <span>{j.members[k].name}</span>
-                  <span className="text-[10px] text-indigo-500">✏️</span>
-                </p>
-                <p className="text-[11px] font-bold text-[#ff5c85]">{vnd(confirmed[k])}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+          {/* Couple Avatars Pill (Click to edit names & roles) */}
+          <div className="mt-2.5 flex items-center justify-center gap-3">
+            {(['a', 'b'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setGenderDialogOpen(true)}
+                className="flex cursor-pointer items-center gap-2 rounded-full border border-white bg-white px-3.5 py-1.5 shadow-sm transition-transform active:scale-95"
+              >
+                <Avatar value={j.members[k].avatar} size={34} />
+                <div className="text-left">
+                  <p className="flex items-center gap-1 text-xs font-black text-[#1e1b4b]">
+                    <span>{j.members[k].name}</span>
+                    <span className="text-[10px] text-indigo-500">✏️</span>
+                  </p>
+                  <p className="text-[11px] font-bold text-[#ff5c85]">{vnd(confirmed[k])}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </FadeInItem>
 
         {/* Highlight Card: Tổng tiền 2 người đã góp */}
-        <div className="mt-3.5 flex items-center justify-between rounded-[26px] border-2 border-white bg-white px-4 py-3.5 shadow-[0_10px_28px_rgba(143,124,240,.14)]">
+        <FadeInItem
+          delay={0.16}
+          y={14}
+          className="mt-3.5 flex items-center justify-between rounded-[26px] border-2 border-white bg-white px-4 py-3.5 shadow-[0_10px_28px_rgba(143,124,240,.14)]"
+        >
           <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#fff8e1] shadow-inner">
             <MoneyBagSticker size={44} />
           </div>
@@ -190,10 +198,14 @@ export default function CouplePage() {
             </p>
           </div>
           <PartySticker size={40} className="shrink-0" />
-        </div>
+        </FadeInItem>
 
         {/* iOS-Style Grouped Menu Card */}
-        <div className="mt-4 overflow-hidden rounded-[28px] border border-white bg-white shadow-[0_12px_30px_rgba(143,124,240,.13)]">
+        <FadeInItem
+          delay={0.21}
+          y={14}
+          className="mt-4 overflow-hidden rounded-[28px] border border-white bg-white shadow-[0_12px_30px_rgba(143,124,240,.13)]"
+        >
           {menuRows.map((row, idx) => (
             <button
               key={row.label}
@@ -214,15 +226,19 @@ export default function CouplePage() {
               <ChevronRight size={20} className="shrink-0 text-[#9ca3af]" />
             </button>
           ))}
-        </div>
+        </FadeInItem>
 
         {/* Google Sheets Sync Status Card */}
-        <div className="mt-4">
+        <FadeInItem delay={0.26} y={14} className="mt-4">
           <GoogleSheetsCard />
-        </div>
+        </FadeInItem>
 
         {/* Quick Data Reset Action Card (Keep Initial Config) */}
-        <div className="mt-3.5 rounded-[26px] border-2 border-white bg-white/95 p-4 shadow-[0_10px_24px_rgba(143,124,240,.12)]">
+        <FadeInItem
+          delay={0.31}
+          y={14}
+          className="mt-3.5 rounded-[26px] border-2 border-white bg-white/95 p-4 shadow-[0_10px_24px_rgba(143,124,240,.12)]"
+        >
           <p className="text-[14px] font-black text-[#172554]">🧹 Làm mới dữ liệu tiết kiệm</p>
           <p className="mt-0.5 text-xs font-bold text-[#64748b]">
             Xoá lịch sử mở số, các khoản đã góp & nhật ký để bắt đầu lại từ 0đ nhưng vẫn giữ nguyên cấu hình hành trình, thu nhập & heo đất ban đầu.
@@ -239,7 +255,7 @@ export default function CouplePage() {
           >
             🔄 Xoá dữ liệu tiết kiệm (Giữ lại cấu hình)
           </Button>
-        </div>
+        </FadeInItem>
       </div>
 
       {/* Modal 1: Mục tiêu & Kế hoạch */}

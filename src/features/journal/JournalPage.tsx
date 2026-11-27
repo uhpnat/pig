@@ -2,7 +2,7 @@ import { Calendar, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CoinStackSticker, MoneyBagSticker, StarSticker } from '@/components/Stickers'
-import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, IconButton, Modal, PageHeader } from '@/components/ui'
+import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, FadeInItem, IconButton, Modal, PageHeader } from '@/components/ui'
 import { fmtDate, fmtDateTime, vnd } from '@/domain/format'
 import type { Activity, ActivityType } from '@/domain/types'
 import { useConfirmContribution } from '@/hooks/useConfirmContribution'
@@ -90,7 +90,7 @@ export default function JournalPage() {
       />
 
       {/* 4 Pill Filter Tabs matching 05_savings_journal.png */}
-      <div className="mt-3.5 grid grid-cols-4 gap-2" role="group" aria-label="Lọc loại sự kiện">
+      <FadeInItem delay={0.05} y={10} className="mt-3.5 grid grid-cols-4 gap-2">
         {FILTERS.map((f) => {
           const active = filter === f.id
           return (
@@ -109,7 +109,7 @@ export default function JournalPage() {
             </button>
           )
         })}
-      </div>
+      </FadeInItem>
 
       {showSearch && (
         <div className="mt-3 grid grid-cols-1 gap-2 rounded-2xl bg-white/85 p-3 shadow-sm">
@@ -187,36 +187,37 @@ export default function JournalPage() {
               aria-hidden
               className="pointer-events-none absolute bottom-5 left-6 top-3 w-0.5 bg-[#bae6fd]"
             />
-            {list.map((a) => {
+            {list.map((a, idx) => {
               const m = a.member ? j.members[a.member] : undefined
               const cleanTitle = a.title.replace(/^[^\p{L}\p{N}]+/u, '')
               return (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => setDetail(a)}
-                  className="relative flex w-full cursor-pointer items-center gap-3.5 border-0 bg-transparent p-0 text-left"
-                  style={{ fontFamily: 'inherit' }}
-                >
-                  <TimelineIcon a={a} avatar={m?.avatar} />
-                  <div className="min-w-0 flex-1 rounded-[22px] border border-white bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(143,124,240,.12)]">
-                    <p className="text-[15px] font-black text-[#172554]">{cleanTitle}</p>
-                    {a.amount != null && a.type !== 'reveal' ? (
-                      <p className="mt-0.5 text-[14px] font-black text-[#16a34a]">+{vnd(a.amount)}</p>
-                    ) : a.description ? (
-                      <p
-                        className={`mt-0.5 text-[13px] font-extrabold ${
-                          a.type === 'reveal' ? 'text-[#16a34a]' : 'text-[#334155]'
-                        }`}
-                      >
-                        {a.description}
+                <FadeInItem key={a.id} delay={Math.min(0.35, 0.1 + idx * 0.04)} y={12}>
+                  <button
+                    type="button"
+                    onClick={() => setDetail(a)}
+                    className="relative flex w-full cursor-pointer items-center gap-3.5 border-0 bg-transparent p-0 text-left"
+                    style={{ fontFamily: 'inherit' }}
+                  >
+                    <TimelineIcon a={a} avatar={m?.avatar} />
+                    <div className="min-w-0 flex-1 rounded-[22px] border border-white bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(143,124,240,.12)]">
+                      <p className="text-[15px] font-black text-[#172554]">{cleanTitle}</p>
+                      {a.amount != null && a.type !== 'reveal' ? (
+                        <p className="mt-0.5 text-[14px] font-black text-[#16a34a]">+{vnd(a.amount)}</p>
+                      ) : a.description ? (
+                        <p
+                          className={`mt-0.5 text-[13px] font-extrabold ${
+                            a.type === 'reveal' ? 'text-[#16a34a]' : 'text-[#334155]'
+                          }`}
+                        >
+                          {a.description}
+                        </p>
+                      ) : null}
+                      <p className="mt-0.5 text-[11px] font-bold text-[#64748b]">
+                        {fmtDateTime(a.at, j.timezone)}
                       </p>
-                    ) : null}
-                    <p className="mt-0.5 text-[11px] font-bold text-[#64748b]">
-                      {fmtDateTime(a.at, j.timezone)}
-                    </p>
-                  </div>
-                </button>
+                    </div>
+                  </button>
+                </FadeInItem>
               )
             })}
           </div>

@@ -1,5 +1,4 @@
-﻿import { motion } from 'framer-motion'
-import { lazy, Suspense, useEffect, type ReactNode } from 'react'
+﻿import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { FullLayout, TabLayout } from '@/components/Layout'
 import { ROLE_CONFIG_KEY } from '@/components/GenderSelectDialog'
@@ -17,17 +16,7 @@ import RevealPage from '@/features/reveal/RevealPage'
 const StatsPage = lazy(() => import('@/features/stats/StatsPage'))
 
 function Page({ children }: { children: ReactNode }) {
-  const { motionOff } = useStore()
-  if (motionOff) return <>{children}</>
-  return (
-    <motion.div
-      initial={{ opacity: 0.82 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.12, ease: 'easeOut' }}
-    >
-      {children}
-    </motion.div>
-  )
+  return <>{children}</>
 }
 
 /** Redirects to onboarding / pig creation until the journey is fully set up. */

@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { FinalGoalStage } from '@/components/pig/FinalGoalStage'
 import { MonthlyJarStage } from '@/components/pig/MonthlyJarStage'
-import { Avatar } from '@/components/ui'
+import { Avatar, FadeInItem } from '@/components/ui'
 import { daysInMonth, diffDays } from '@/domain/format'
 import { actualShares, confirmedTotals, pigStage } from '@/domain/stats'
 import type { Contribution } from '@/domain/types'
@@ -186,57 +186,59 @@ export default function HomePage() {
     >
       {/* TOP HERO ZONE */}
       <div className="relative">
-        <header className="relative z-20 flex items-center justify-between gap-2 px-4">
-          <Link
-            to="/couple"
-            className="flex min-w-0 items-center gap-2 rounded-full border border-white/90 bg-white/85 py-1 pl-1.5 pr-3 shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
-          >
-            <div className="flex items-center">
-              <Avatar value={j.members.a.avatar} size={30} className="z-10 ring-2 ring-white" />
-              <Avatar value={j.members.b.avatar} size={30} className="-ml-2 ring-2 ring-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-black leading-tight text-[#1e1b4b]">{j.name}</p>
-              <p className="truncate text-[10px] font-extrabold text-pink-600">{stage.label}</p>
-            </div>
-          </Link>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setGenderDialogOpen(true)}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-xs font-black shadow-sm backdrop-blur-md transition-transform active:scale-95 ${
-                isMyMale ? 'bg-sky-50/95 text-sky-900' : 'bg-pink-50/95 text-pink-900'
-              }`}
+        <FadeInItem delay={0} y={-10}>
+          <header className="relative z-20 flex items-center justify-between gap-2 px-4">
+            <Link
+              to="/couple"
+              className="flex min-w-0 items-center gap-2 rounded-full border border-white/90 bg-white/85 py-1 pl-1.5 pr-3 shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
             >
-              <span>{isMyMale ? '👦' : '👧'}</span>
-              <span className="max-w-[78px] truncate">{myMember?.name}</span>
-              <span
-                className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-black ${
-                  isMyMale ? 'bg-sky-200/80 text-sky-800' : 'bg-pink-200/80 text-pink-800'
+              <div className="flex items-center">
+                <Avatar value={j.members.a.avatar} size={30} className="z-10 ring-2 ring-white" />
+                <Avatar value={j.members.b.avatar} size={30} className="-ml-2 ring-2 ring-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-black leading-tight text-[#1e1b4b]">{j.name}</p>
+                <p className="truncate text-[10px] font-extrabold text-pink-600">{stage.label}</p>
+              </div>
+            </Link>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setGenderDialogOpen(true)}
+                className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-xs font-black shadow-sm backdrop-blur-md transition-transform active:scale-95 ${
+                  isMyMale ? 'bg-sky-50/95 text-sky-900' : 'bg-pink-50/95 text-pink-900'
                 }`}
               >
-                ✏️ Sửa
-              </span>
-            </button>
-
-            <Link
-              to="/notifications"
-              aria-label={`Thông báo${unread ? `, ${unread} chưa đọc` : ''}`}
-              className="relative grid h-9 w-9 place-items-center rounded-full border border-white/90 bg-white/85 text-[#1e1b4b] shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
-            >
-              <Bell size={18} />
-              {unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-[#ff3b6b] px-1 text-[9px] font-black text-white">
-                  {unread}
+                <span>{isMyMale ? '👦' : '👧'}</span>
+                <span className="max-w-[78px] truncate">{myMember?.name}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-black ${
+                    isMyMale ? 'bg-sky-200/80 text-sky-800' : 'bg-pink-200/80 text-pink-800'
+                  }`}
+                >
+                  ✏️ Sửa
                 </span>
-              )}
-            </Link>
-          </div>
-        </header>
+              </button>
+
+              <Link
+                to="/notifications"
+                aria-label={`Thông báo${unread ? `, ${unread} chưa đọc` : ''}`}
+                className="relative grid h-9 w-9 place-items-center rounded-full border border-white/90 bg-white/85 text-[#1e1b4b] shadow-sm backdrop-blur-md no-underline transition-transform active:scale-95"
+              >
+                <Bell size={18} />
+                {unread > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-[#ff3b6b] px-1 text-[9px] font-black text-white">
+                    {unread}
+                  </span>
+                )}
+              </Link>
+            </div>
+          </header>
+        </FadeInItem>
 
         {/* Mode Switcher */}
-        <div className="relative z-20 mt-2.5 px-4">
+        <FadeInItem delay={0.05} y={10} className="relative z-20 mt-2.5 px-4">
           <div className="mx-auto grid max-w-[330px] grid-cols-2 gap-1 rounded-full border-2 border-white bg-white/85 p-1 shadow-[0_6px_18px_rgba(30,27,75,0.08)] backdrop-blur-md">
             {(
               [
@@ -256,10 +258,10 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-        </div>
+        </FadeInItem>
 
         {/* Hero Stage: 3D Crystal Savings Jar (Month) OR 3D Dream Goal Globe (Final/Year) */}
-        <div className="relative mt-0.5">
+        <FadeInItem delay={0.1} y={14} scale={0.96} className="relative mt-0.5">
           <AnimatePresence mode="wait">
             {pigMode === 'month' ? (
               <motion.div
@@ -325,11 +327,14 @@ export default function HomePage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </FadeInItem>
       </div>
 
       {/* CURVED GLASSMORPHIC BOTTOM SHEET */}
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.38, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-20 -mt-5 flex-1 rounded-t-[36px] border-t-2 border-white px-4 pb-5 pt-3.5 shadow-[0_-12px_32px_rgba(80,140,90,0.12)] backdrop-blur-xl"
         style={{
           background:
@@ -339,55 +344,59 @@ export default function HomePage() {
         <div className="mx-auto mb-3 h-1 w-11 rounded-full bg-slate-200/90" />
 
         <div className="space-y-3">
-          {pigMode === 'month' ? (
-            <MonthSummaryCard
-              selectedMonthKey={selectedMonthKey}
-              curMonthKey={curMonthKey}
-              allMonths={allMonths}
-              monthSaved={monthSaved}
-              memberMale={memberMale}
-              memberFemale={memberFemale}
-              pctMale={activePctMale}
-              pctFemale={activePctFemale}
-              moneyMale={activeMoneyMale}
-              moneyFemale={activeMoneyFemale}
-              onSelectMonth={setSelectedMonthKey}
-              onOpenHistory={() => setMonthListModalOpen(true)}
-            />
-          ) : (
-            <FinalSummaryCard
-              targetDateStr={j.endDate}
-              confirmedTotal={confirmed.total}
-              goal={j.goal}
-              progress={progress}
-              memberMale={memberMale}
-              memberFemale={memberFemale}
-              pctMale={activePctMale}
-              pctFemale={activePctFemale}
-              timeLeft={timeLeft}
-            />
-          )}
+          <FadeInItem delay={0.18} y={12}>
+            {pigMode === 'month' ? (
+              <MonthSummaryCard
+                selectedMonthKey={selectedMonthKey}
+                curMonthKey={curMonthKey}
+                allMonths={allMonths}
+                monthSaved={monthSaved}
+                memberMale={memberMale}
+                memberFemale={memberFemale}
+                pctMale={activePctMale}
+                pctFemale={activePctFemale}
+                moneyMale={activeMoneyMale}
+                moneyFemale={activeMoneyFemale}
+                onSelectMonth={setSelectedMonthKey}
+                onOpenHistory={() => setMonthListModalOpen(true)}
+              />
+            ) : (
+              <FinalSummaryCard
+                targetDateStr={j.endDate}
+                confirmedTotal={confirmed.total}
+                goal={j.goal}
+                progress={progress}
+                memberMale={memberMale}
+                memberFemale={memberFemale}
+                pctMale={activePctMale}
+                pctFemale={activePctFemale}
+                timeLeft={timeLeft}
+              />
+            )}
+          </FadeInItem>
 
-          <DailyConfirmationCard
-            goalReached={goalReached}
-            reveal={reveal}
-            allDone={allDone}
-            myMemberId={myMemberId}
-            partnerMemberId={partnerMemberId}
-            myMember={myMember}
-            partnerMember={partnerMember}
-            members={j.members}
-            myDailyC={myDailyC}
-            partnerDailyC={partnerDailyC}
-            myDailyBy={myDailyBy}
-            partnerDailyBy={partnerDailyBy}
-            extraPending={extraPending}
-            onConfirm={handleConfirmContrib}
-            onOpenReveal={() => nav('/reveal')}
-            onOpenTopUp={() => setTopUp(true)}
-          />
+          <FadeInItem delay={0.24} y={14}>
+            <DailyConfirmationCard
+              goalReached={goalReached}
+              reveal={reveal}
+              allDone={allDone}
+              myMemberId={myMemberId}
+              partnerMemberId={partnerMemberId}
+              myMember={myMember}
+              partnerMember={partnerMember}
+              members={j.members}
+              myDailyC={myDailyC}
+              partnerDailyC={partnerDailyC}
+              myDailyBy={myDailyBy}
+              partnerDailyBy={partnerDailyBy}
+              extraPending={extraPending}
+              onConfirm={handleConfirmContrib}
+              onOpenReveal={() => nav('/reveal')}
+              onOpenTopUp={() => setTopUp(true)}
+            />
+          </FadeInItem>
         </div>
-      </div>
+      </motion.div>
 
       <TopUpDialog open={topUp} onClose={() => setTopUp(false)} />
       <GenderSelectDialog open={genderDialogOpen} onClose={() => setGenderDialogOpen(false)} />
