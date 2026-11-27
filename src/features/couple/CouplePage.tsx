@@ -1,25 +1,27 @@
+import { motion } from 'framer-motion'
 import {
+  BarChart3,
   ChevronRight,
   Clock,
   Copy,
   Download,
   Heart,
+  Pencil,
   RefreshCw,
   Settings,
   Smartphone,
+  Sparkles,
   UserPlus,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Interactive3DStage } from '@/components/pig/Interactive3DStage'
+import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { MoneyBagSticker, PartySticker, TargetSticker } from '@/components/Stickers'
-import { Avatar, Button, Card, ConfirmDialog, FadeInItem, Field, IconButton, Modal, ProgressBar, Toggle } from '@/components/ui'
+import { Avatar, Button, Card, ConfirmDialog, FadeInItem, Field, IconButton, MemberSplitBar, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
-import { durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
+import { diffDays, durationLabel, fmtDate, fmtDateTime, pct, vnd } from '@/domain/format'
 import { actualShares } from '@/domain/stats'
 import { useChallenges, useJourney, useStore } from '@/hooks/useStore'
-import { IMG } from '@/lib/assets'
-import { GenderSelectDialog } from '@/components/GenderSelectDialog'
 import { EditRulesDialog } from './EditRulesDialog'
 import { GoogleSheetsCard } from './GoogleSheetsCard'
 import { InstallGuide } from './InstallGuide'
@@ -28,7 +30,7 @@ const MODE = { proportional: 'Theo thu nhập', equal: 'Chia đều', custom: 'T
 
 export default function CouplePage() {
   const j = useJourney()
-  const { state, repo, run, confirmed, progress, toast } = useStore()
+  const { state, repo, run, confirmed, progress, today, toast, celebrate } = useStore()
   const nav = useNavigate()
   const [edit, setEdit] = useState(false)
   const [install, setInstall] = useState(false)
@@ -40,6 +42,7 @@ export default function CouplePage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [genderDialogOpen, setGenderDialogOpen] = useState(false)
+  const [heartPulse, setHeartPulse] = useState(false)
 
   const done = useChallenges().filter((c) => c.status === 'completed')
   const s = state.settings
@@ -47,6 +50,13 @@ export default function CouplePage() {
   const plan = plannedShares(j)
   const actual = actualShares(state.contributions)
   const changes = state.activity.filter((a) => a.type === 'settings').slice(0, 5)
+
+  const daysTogether = Math.max(1, diffDays(j.startDate, today) + 1)
+  const isBMale = j.members.b.gender === 'male' || j.members.a.gender === 'female'
+  const pctA = confirmed.total > 0 ? actual.a * 100 : 50
+  const pctB = confirmed.total > 0 ? actual.b * 100 : 50
+  const pctMale = isBMale ? pctB : pctA
+  const pctFemale = isBMale ? pctA : pctB
 
   const copy = async (text: string) => {
     try {
@@ -128,56 +138,146 @@ export default function CouplePage() {
         </IconButton>
       </FadeInItem>
 
-      {/* Separated 3D Cutout Two Pigs on Interactive Romantic Cloud & Meadow Stage */}
-      <FadeInItem
-        delay={0.05}
-        y={12}
-        className="relative overflow-hidden pt-1"
-      >
-        <div style={{ background: 'linear-gradient(180deg, #fde8f1 0%, #fbcfe8 55%, #dcfce7 100%)' }}>
-          <Interactive3DStage
-            spriteSrc={IMG.spriteDuo}
-            alt="Hai chú heo đất 3D của đôi mình"
-            theme="romantic"
-            spriteHeight={215}
-            reducedMotion={state.settings.animations === 'off'}
+      {/* Custom Romantic 3D Couple Sanctuary & Heart Bridge Hero (No Piggy Bank!) */}
+      <FadeInItem delay={0.05} y={14} className="relative px-4 pt-2">
+        <div
+          className="relative overflow-hidden rounded-[32px] border-2 border-white p-4 shadow-[0_16px_36px_rgba(236,72,153,0.18)]"
+          style={{
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(253,242,248,0.94) 48%, rgba(243,232,255,0.94) 100%)',
+          }}
+        >
+          {/* Ambient Glow Orbs */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -left-10 -top-10 h-36 w-36 rounded-full bg-sky-300/25 blur-2xl"
           />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-10 -right-10 h-36 w-36 rounded-full bg-pink-300/30 blur-2xl"
+          />
+
+          {/* Top Journey Ribbon */}
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-pink-200/80 bg-white/90 px-3 py-1 text-[11px] font-black text-pink-700 shadow-sm">
+              <Sparkles size={12} className="text-pink-500" /> {j.name}
+            </span>
+            <span className="rounded-full bg-gradient-to-r from-rose-500 to-purple-600 px-3 py-1 text-[11px] font-black text-white shadow-sm">
+              💞 {daysTogether} ngày đồng hành
+            </span>
+          </div>
+
+          {/* Center Couple Avatar Bridge */}
+          <div className="relative z-10 mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            {(['a', 'b'] as const).map((k, idx) => {
+              const m = j.members[k]
+              const isMale = m.gender === 'male'
+              const sharePct = confirmed.total > 0 ? actual[k] * 100 : 0
+              return (
+                <div key={k} className={idx === 1 ? 'order-3' : 'order-1'}>
+                  <button
+                    type="button"
+                    onClick={() => setGenderDialogOpen(true)}
+                    className={`group flex w-full cursor-pointer flex-col items-center rounded-2xl border-2 border-white p-2.5 text-center shadow-sm transition-transform active:scale-95 ${
+                      isMale
+                        ? 'bg-gradient-to-b from-sky-50/90 to-white'
+                        : 'bg-gradient-to-b from-pink-50/90 to-white'
+                    }`}
+                  >
+                    <div className="relative">
+                      <Avatar
+                        value={m.avatar}
+                        size={58}
+                        className={`ring-[3px] ${isMale ? 'ring-sky-400' : 'ring-pink-400'}`}
+                      />
+                      <span
+                        className={`absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full border-2 border-white text-xs shadow-sm ${
+                          isMale ? 'bg-sky-500 text-white' : 'bg-pink-500 text-white'
+                        }`}
+                      >
+                        {isMale ? '👦' : '👧'}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex max-w-full items-center justify-center gap-1">
+                      <span className="truncate text-sm font-black text-[#1e1b4b]">{m.name}</span>
+                      <Pencil size={11} className="shrink-0 text-indigo-500 opacity-80" />
+                    </div>
+
+                    <p
+                      className={`mt-0.5 text-xs font-black tabular-nums ${
+                        isMale ? 'text-sky-700' : 'text-pink-600'
+                      }`}
+                    >
+                      {vnd(confirmed[k])}
+                    </p>
+                    <span
+                      className={`mt-1 rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums ${
+                        isMale ? 'bg-sky-100 text-sky-800' : 'bg-pink-100 text-pink-800'
+                      }`}
+                    >
+                      Đóng góp {sharePct.toFixed(0)}%
+                    </span>
+                  </button>
+                </div>
+              )
+            })}
+
+            {/* Center Pulsing 3D Love Heart Connector */}
+            <div className="order-2 flex flex-col items-center justify-center px-1">
+              <motion.button
+                type="button"
+                aria-label="Thả tim cho đôi mình"
+                onClick={() => {
+                  setHeartPulse(true)
+                  celebrate(['💖', '💕', '✨', '🥰'])
+                  setTimeout(() => setHeartPulse(false), 500)
+                }}
+                animate={
+                  s.animations === 'off'
+                    ? undefined
+                    : heartPulse
+                      ? { scale: [1, 1.35, 0.9, 1.15, 1] }
+                      : { scale: [1, 1.1, 1], y: [0, -3, 0] }
+                }
+                transition={
+                  heartPulse
+                    ? { duration: 0.45 }
+                    : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+                }
+                className="relative grid h-13 w-13 cursor-pointer place-items-center rounded-2xl border-2 border-white bg-gradient-to-br from-rose-500 via-pink-500 to-purple-600 p-3 text-white shadow-[0_8px_20px_rgba(244,63,94,0.35)]"
+              >
+                <Heart size={24} fill="currentColor" />
+              </motion.button>
+              <span className="mt-1.5 text-[10px] font-black text-rose-500">Chạm thả tim</span>
+            </div>
+          </div>
+
+          {/* Synergy Progress Bar inside Hero */}
+          <div className="relative z-10 mt-3.5 rounded-2xl border border-white/90 bg-white/80 p-2.5 shadow-sm">
+            <div className="flex items-center justify-between text-[11px] font-black">
+              <span className="text-slate-600">⚡ Sức mạnh đồng lòng</span>
+              <button
+                type="button"
+                onClick={() => nav('/stats')}
+                className="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent text-[11px] font-black text-indigo-600 hover:underline"
+              >
+                <BarChart3 size={12} /> Xem thống kê →
+              </button>
+            </div>
+            <MemberSplitBar
+              pctMale={pctMale}
+              pctFemale={pctFemale}
+              hasData={confirmed.total > 0}
+              heightClass="h-2.5"
+              className="mt-1.5"
+            />
+          </div>
         </div>
       </FadeInItem>
 
-      {/* Overlapping Soft Pastel Bottom Sheet */}
-      <div
-        className="relative -mt-6 rounded-t-[36px] px-4 pb-6 pt-5 shadow-[0_-10px_30px_rgba(255,140,180,.18)]"
-        style={{ background: 'linear-gradient(180deg, #fff9fb 0%, #fdf2f7 100%)' }}
-      >
-        <FadeInItem delay={0.11} y={12}>
-          <p className="text-center text-[15px] font-black leading-snug text-[#172554]">
-            Cùng nhau, chúng ta có thể
-            <br />
-            đạt được nhiều hơn! <span className="text-[#ff4d8d]">💕</span>
-          </p>
-
-          {/* Couple Avatars Pill (Click to edit names & roles) */}
-          <div className="mt-2.5 flex items-center justify-center gap-3">
-            {(['a', 'b'] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setGenderDialogOpen(true)}
-                className="flex cursor-pointer items-center gap-2 rounded-full border border-white bg-white px-3.5 py-1.5 shadow-sm transition-transform active:scale-95"
-              >
-                <Avatar value={j.members[k].avatar} size={34} />
-                <div className="text-left">
-                  <p className="flex items-center gap-1 text-xs font-black text-[#1e1b4b]">
-                    <span>{j.members[k].name}</span>
-                    <span className="text-[10px] text-indigo-500">✏️</span>
-                  </p>
-                  <p className="text-[11px] font-bold text-[#ff5c85]">{vnd(confirmed[k])}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </FadeInItem>
+      {/* Main Content Container */}
+      <div className="relative mt-2 px-4 pb-6">
 
         {/* Highlight Card: Tổng tiền 2 người đã góp */}
         <FadeInItem
