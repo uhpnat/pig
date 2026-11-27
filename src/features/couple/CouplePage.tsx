@@ -16,6 +16,7 @@ import {
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
+import { PushConfigModal } from '@/components/PushConfigModal'
 import { MoneyBagSticker, PartySticker, TargetSticker } from '@/components/Stickers'
 import { Avatar, Button, Card, ConfirmDialog, FadeInItem, Field, IconButton, MemberSplitBar, Modal, ProgressBar, Toggle } from '@/components/ui'
 import { incomeShares, plannedShares } from '@/domain/engine'
@@ -42,6 +43,7 @@ export default function CouplePage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [genderDialogOpen, setGenderDialogOpen] = useState(false)
+  const [pushConfigOpen, setPushConfigOpen] = useState(false)
   const [heartPulse, setHeartPulse] = useState(false)
 
   const done = useChallenges().filter((c) => c.status === 'completed')
@@ -99,6 +101,13 @@ export default function CouplePage() {
       label: 'Lịch sử góp tiền',
       sub: `${state.contributions.filter((c) => c.status === 'confirmed').length} khoản đã xác nhận`,
       onClick: () => nav('/journal'),
+    },
+    {
+      icon: <span className="text-[20px] leading-none">🔔</span>,
+      bg: 'bg-[#fce7f3]',
+      label: 'Cài đặt thông báo đẩy iPhone',
+      sub: 'Bật thông báo Logo 🐷 Piggy Duo & Mở thẳng vào App',
+      onClick: () => setPushConfigOpen(true),
     },
     {
       icon: <Settings size={20} className="text-[#4f46e5]" />,
@@ -444,8 +453,8 @@ export default function CouplePage() {
           />
 
           <div className="mt-4 grid gap-2.5 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => { setSettingsOpen(false); nav('/notifications') }}>
-              🔔 Tuỳ chọn thông báo đẩy
+            <Button variant="ghost" size="sm" onClick={() => { setSettingsOpen(false); setPushConfigOpen(true) }}>
+              🔔 Cài đặt thông báo đẩy trên iPhone
             </Button>
             <Button variant="ghost" size="sm" onClick={() => { setSettingsOpen(false); setInstall(true) }}>
               <Smartphone size={16} className="mr-1 inline" /> Hướng dẫn cài app ra màn hình chính
@@ -611,6 +620,7 @@ export default function CouplePage() {
       />
 
       <GenderSelectDialog open={genderDialogOpen} onClose={() => setGenderDialogOpen(false)} />
+      <PushConfigModal open={pushConfigOpen} onClose={() => setPushConfigOpen(false)} />
     </div>
   )
 }
