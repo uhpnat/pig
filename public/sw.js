@@ -1,5 +1,5 @@
 /* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background-Only Push Suppression + Reliable Chat Auto-Open. */
-const VERSION = 'piggy-duo-v10'
+const VERSION = 'piggy-duo-v11'
 const NAV_CACHE = 'piggy-nav-v1'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png']
 
@@ -34,6 +34,42 @@ self.addEventListener('fetch', (e) => {
   // Always bypass cache for version.json so the app detects new deployments immediately!
   if (url.pathname.endsWith('/version.json')) {
     e.respondWith(fetch(req, { cache: 'no-store' }))
+    return
+  }
+
+  // Dynamically inject the saved Partner Invite Link (?gas=...&sheet=...) into manifest.webmanifest's start_url
+  // so when the user taps "Add to Home Screen" in iOS Safari / Android Chrome, the Home Screen icon ALWAYS launches with the Google Sheet link embedded!
+  if (url.pathname.endsWith('/manifest.webmanifest')) {
+    e.respondWith(
+      Promise.all([
+        fetch(req).then((r) => r.json()).catch(() => ({
+          name: 'Piggy Duo – Heo đất của đôi mình',
+          short_name: 'Piggy Duo',
+          start_url: './',
+          scope: './',
+          display: 'standalone',
+          orientation: 'portrait',
+          background_color: '#86c5ff',
+          theme_color: '#86c5ff',
+          icons: [
+            { src: './icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: './icon-512.png', sizes: '512x512', type: 'image/png' },
+          ],
+        })),
+        caches.open(NAV_CACHE).then((c) => c.match('./_sheet_config_v2')).then((r) => (r ? r.json() : null)).catch(() => null),
+      ]).then(([manifest, cfg]) => {
+        if (cfg && cfg.appsScriptUrl) {
+          const params = new URLSearchParams()
+          params.set('gas', cfg.appsScriptUrl)
+          if (cfg.spreadsheetId) params.set('sheet', cfg.spreadsheetId)
+          if (cfg.passcode) params.set('pin', cfg.passcode)
+          manifest.start_url = `./?${params.toString()}`
+        }
+        return new Response(JSON.stringify(manifest), {
+          headers: { 'Content-Type': 'application/manifest+json; charset=utf-8' },
+        })
+      }),
+    )
     return
   }
 

@@ -49,12 +49,33 @@ function read(): AppState {
 type StoredCfg = Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'passcode'>
 
 function saveCfgToCacheStorage(cfg: StoredCfg) {
+  syncInviteUrlAndManifest(cfg)
   if (typeof caches === 'undefined') return
   if (!cfg.appsScriptUrl && !cfg.spreadsheetId) return
   void caches
     .open(CFG_CACHE_NAME)
     .then((c) => c.put(CFG_CACHE_URL, new Response(JSON.stringify(cfg))))
     .catch(() => undefined)
+}
+
+function syncInviteUrlAndManifest(cfg: StoredCfg) {
+  if (typeof window === 'undefined' || !cfg.appsScriptUrl) return
+  try {
+    const params = new URLSearchParams()
+    params.set('gas', cfg.appsScriptUrl)
+    if (cfg.spreadsheetId) params.set('sheet', cfg.spreadsheetId)
+    if (cfg.passcode) params.set('pin', cfg.passcode)
+    const queryStr = `?${params.toString()}`
+
+    // Keep `?gas=...&sheet=...` in the browser's address bar (`location.search`) so when the user taps
+    // Safari's Share -> "Add to Home Screen", the Home Screen icon bookmarks the Partner Invite URL directly!
+    if (window.location.search !== queryStr && window.history?.replaceState) {
+      const cleanHash = window.location.hash.split('?')[0] || '#/'
+      window.history.replaceState(null, '', `${window.location.pathname}${queryStr}${cleanHash}`)
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function restoreCfgFromCacheStorage(): Promise<StoredCfg | null> {
@@ -110,7 +131,7 @@ function readCfg(): StoredCfg {
     /* ignore */
   }
 
-  // If URL params are provided (e.g. Person 2 opening Person 1's invite link), persist them permanently and clean the address bar!
+  // If URL params are provided (e.g. Person 2 opening Person 1's invite link), persist them permanently and keep them in the URL bar so "Add to Home Screen" bookmarks the full invite link!
   if (urlGas || urlSheet || urlPin) {
     const mergedCfg: StoredCfg = {
       spreadsheetId: urlSheet || saved.spreadsheetId,
@@ -124,16 +145,15 @@ function readCfg(): StoredCfg {
         localStorage.setItem('piggy-duo:unlocked:v1', mergedCfg.passcode)
       }
       saveCfgToCacheStorage(mergedCfg)
-      if (typeof window !== 'undefined' && window.history?.replaceState) {
-        const cleanHash = location.hash.split('?')[0] || '#/'
-        window.history.replaceState(null, '', `${location.pathname}${cleanHash}`)
-      }
     } catch {
       /* ignore */
     }
     return mergedCfg
   }
 
+  if (saved.appsScriptUrl) {
+    syncInviteUrlAndManifest(saved)
+  }
   return saved
 }
 
