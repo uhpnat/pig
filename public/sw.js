@@ -1,5 +1,5 @@
 /* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background-Only Push Suppression + Reliable Chat Auto-Open. */
-const VERSION = 'piggy-duo-v9'
+const VERSION = 'piggy-duo-v10'
 const NAV_CACHE = 'piggy-nav-v1'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png']
 
@@ -30,6 +30,12 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return
   const url = new URL(req.url)
   if (url.origin !== location.origin) return
+
+  // Always bypass cache for version.json so the app detects new deployments immediately!
+  if (url.pathname.endsWith('/version.json')) {
+    e.respondWith(fetch(req, { cache: 'no-store' }))
+    return
+  }
 
   // Network-first for all same-origin requests so updates on GitHub Pages take effect immediately on reload!
   e.respondWith(

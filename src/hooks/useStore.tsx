@@ -114,17 +114,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { if (state) applyTheme(state.settings.theme) }, [state?.settings.theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Automatically sync this device's Native Web Push subscription to the active member profile
-  // ONLY AFTER the user has explicitly confirmed which member (Nam or Nữ) is using this phone!
-  // Also automatically removes this device's endpoint from the partner's profile so 1 phone is never registered as both Nam & Nữ!
+  // Automatically sync this device's Native Web Push subscription to the active member profile (`myMemberId`)
+  // and remove this device's endpoint from the partner's profile so 1 phone is never registered as both members!
   const pushSyncedForRef = useRef<string>('')
   useEffect(() => {
     const j = state?.journey
     if (!j || typeof window === 'undefined' || typeof Notification === 'undefined' || Notification.permission !== 'granted') return
-    const isRoleExplicitlyConfirmed =
-      localStorage.getItem('piggy_role_confirmed_v2') === 'true' &&
-      (localStorage.getItem(DEVICE_ROLE_KEY) === 'a' || localStorage.getItem(DEVICE_ROLE_KEY) === 'b')
-    if (!isRoleExplicitlyConfirmed) return
     if (pushSyncedForRef.current === myMemberId) return
     pushSyncedForRef.current = myMemberId
 

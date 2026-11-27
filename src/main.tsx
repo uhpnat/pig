@@ -5,6 +5,8 @@ import App from './App'
 import { StoreProvider } from './hooks/useStore'
 import './index.css'
 
+declare const __APP_BUILD_ID__: string
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
@@ -15,17 +17,91 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+/**
+ * Automatic Live Update & Auto-Reload System:
+ * 1. Polls `./version.json?_t=...` (with `cache: 'no-store'`) on startup, whenever the user returns to the app (`visibilitychange` / `focus`), and every 45 seconds.
+ * 2. When a newer `buildId` is deployed on GitHub Pages (or a new Service Worker takes control via `controllerchange`),
+ *    automatically purges stale caches and reloads the app so the phone NEVER stays stuck on an old version!
+ */
+let reloadingForUpdate = false
+
+async function triggerCleanReload() {
+  if (reloadingForUpdate) return
+  reloadingForUpdate = true
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(
+        keys
+          .filter((k) => k !== 'piggy-nav-v1')
+          .map((k) => caches.delete(k)),
+      )
+    }
+  } catch {
+    /* ignore */
+  }
+  window.location.reload()
+}
+
+async function checkForNewDeployment(reg?: ServiceWorkerRegistration | null) {
+  if (reloadingForUpdate) return
+  try {
+    if (reg) {
+      void reg.update().catch(() => undefined)
+    } else if ('serviceWorker' in navigator) {
+      const existing = await navigator.serviceWorker.getRegistration()
+      void existing?.update().catch(() => undefined)
+    }
+
+    if (!import.meta.env.PROD) return
+    const res = await fetch(`./version.json?_t=${Date.now()}`, { cache: 'no-store' })
+    if (!res.ok) return
+    const data = (await res.json()) as { buildId?: string }
+    const currentBuildId = typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : ''
+    if (data?.buildId && currentBuildId && data.buildId !== currentBuildId) {
+      await triggerCleanReload()
+    }
+  } catch {
+    /* ignore network offline */
+  }
+}
+
 if ('serviceWorker' in navigator) {
+  const hadControllerInitially = Boolean(navigator.serviceWorker.controller)
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Only auto-reload when an existing Service Worker is replaced by a newly deployed one
+    if (hadControllerInitially) {
+      void triggerCleanReload()
+    }
+  })
+
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('./sw.js', { updateViaCache: 'none' })
       .then((reg) => {
-        void reg.update()
+        void checkForNewDeployment(reg)
         const active = reg.active || navigator.serviceWorker.controller
         active?.postMessage({ type: 'CLIENT_READY' })
       })
       .catch(() => undefined)
   })
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      void checkForNewDeployment()
+    }
+  })
+  window.addEventListener('focus', () => {
+    void checkForNewDeployment()
+  })
+  // Periodic background check every 45s while the app is open on screen
+  setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      void checkForNewDeployment()
+    }
+  }, 45_000)
+
   navigator.serviceWorker.addEventListener('message', (e) => {
     if (e.data && e.data.type === 'PIGGY_NAVIGATE' && typeof e.data.route === 'string') {
       const route = e.data.route as string
