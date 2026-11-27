@@ -76,12 +76,16 @@ export default function NotificationsPage() {
     }
   }
 
-  const testGenderPush = async (gender: Gender) => {
+  const testGenderPush = async (gender: Gender, delaySec = 0) => {
     const cleanBase = setNtfyBaseTopic(baseTopic)
     setBaseTopic(cleanBase)
     const fullTopic = getNtfyTopicForGender(gender, cleanBase)
     const targetName = gender === 'male' ? memberMale.name : memberFemale.name
     setTestingTarget(gender)
+    if (delaySec > 0) {
+      toast(`⏱️ Hãy thoát ra Màn hình chính hoặc Khóa máy ngay! Chuông sẽ nổ sau ${delaySec} giây…`)
+      await new Promise((r) => setTimeout(r, delaySec * 1000))
+    }
     try {
       const ok = await pushNtfyNotification(
         `🐷 Chuông thử cho ${targetName} (${gender === 'male' ? 'Nam 👦' : 'Nữ 👧'})`,
@@ -90,7 +94,7 @@ export default function NotificationsPage() {
         fullTopic,
       )
       if (ok) {
-        toast(`Đã bắn thông báo tới máy ${targetName} (${fullTopic})! 📲`)
+        toast(`Đã bắn thông báo khẩn (Priority 5) tới máy ${targetName} (${fullTopic})! 📲`)
       } else {
         toast('Không kết nối được ntfy.sh, kiểm tra mạng rồi thử lại nhé', 'error')
       }
@@ -226,11 +230,11 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     disabled={testingTarget === item.gender}
-                    onClick={() => testGenderPush(item.gender)}
+                    onClick={() => testGenderPush(item.gender, 4)}
                     className="flex shrink-0 cursor-pointer items-center gap-1 rounded-xl border-0 bg-gradient-to-r from-indigo-600 to-purple-600 px-2.5 py-1.5 text-[11px] font-black text-white shadow-sm active:scale-95 disabled:opacity-50"
                   >
                     <Send size={12} />
-                    <span>Thử chuông</span>
+                    <span>{testingTarget === item.gender ? 'Đợi 4s…' : 'Thử (sau 4s)'}</span>
                   </button>
                 </div>
               </div>

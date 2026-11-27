@@ -98,8 +98,9 @@ export async function pushNtfyNotification(
         topic,
         title,
         message,
-        priority: 4,
-        tags: ['pig'],
+        // Priority 5 (Max/Urgent) triggers immediate Time-Sensitive APNs push on iOS and Heads-Up banner with sound on Android!
+        priority: 5,
+        tags: ['pig', 'bell'],
         click: clickUrl,
       }),
     })
