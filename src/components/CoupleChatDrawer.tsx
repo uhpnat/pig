@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, CheckCheck, ChevronDown, MessageCircleHeart, Send } from 'lucide-react'
+import { Check, CheckCheck, MessageCircleHeart, Send, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Avatar } from '@/components/ui'
+import { Avatar, IconButton } from '@/components/ui'
 import { fmtDateTime } from '@/domain/format'
 import { useStore } from '@/hooks/useStore'
 import { beep, haptic } from '@/lib/fx'
@@ -14,6 +14,7 @@ const QUICK_REPLIES = [
 ]
 
 const QUICK_EMOJIS = ['❤️', '🐷', '💸', '🥰', '🎉', '🔥', '😘', '✨']
+const CLOSE_DRAG_THRESHOLD = 72
 
 export function CoupleChatDrawer() {
   const {
@@ -31,14 +32,27 @@ export function CoupleChatDrawer() {
   const [text, setText] = useState('')
   const [inputFocused, setInputFocused] = useState(false)
   const [vvBox, setVvBox] = useState<{ top: number; height: number; kbOpen: boolean } | null>(null)
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+
+  const dragStartYRef = useRef<number | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const messages = state.messages ?? []
 
+  const closeChat = () => {
+    inputRef.current?.blur()
+    setDragY(0)
+    setDragging(false)
+    setChatOpen(false)
+  }
+
   // 1. Freeze background page scroll 100% while Chat is open so swiping inside chat NEVER moves HomePage!
   useEffect(() => {
     if (!chatOpen || typeof document === 'undefined') return
+    setDragY(0)
+    setDragging(false)
     const scrollY = window.scrollY
     const body = document.body
     const html = document.documentElement
@@ -76,7 +90,6 @@ export function CoupleChatDrawer() {
     const syncViewport = () => {
       if (!vv) return
       const screenH = window.screen?.height || window.innerHeight
-      // On iOS Safari, window.innerHeight often shrinks with vv.height, so check against screen.height too
       const isKb =
         window.innerHeight - vv.height > 65 ||
         screenH - vv.height > 260
@@ -120,14 +133,40 @@ export function CoupleChatDrawer() {
 
   const kbActive = inputFocused || Boolean(vvBox?.kbOpen)
 
+  // Pull-down-to-close gesture handlers on the top grabber & header
+  const onSheetDragStart = (e: React.TouchEvent) => {
+    dragStartYRef.current = e.touches[0].clientY
+    setDragging(true)
+  }
+
+  const onSheetDragMove = (e: React.TouchEvent) => {
+    if (dragStartYRef.current === null) return
+    const dy = e.touches[0].clientY - dragStartYRef.current
+    if (dy > 0) {
+      setDragY(dy)
+    } else {
+      setDragY(0)
+    }
+  }
+
+  const onSheetDragEnd = () => {
+    if (dragStartYRef.current === null) return
+    dragStartYRef.current = null
+    setDragging(false)
+    if (dragY >= CLOSE_DRAG_THRESHOLD) {
+      haptic(state.settings, 15)
+      closeChat()
+    } else {
+      setDragY(0)
+    }
+  }
+
   // Sends message and keeps the virtual keyboard open continuously
   const send = (rawContent?: string) => {
     const liveVal = rawContent !== undefined ? rawContent : (inputRef.current?.value ?? text)
     const clean = liveVal.trim()
 
-    // Always keep focus on the input so the keyboard NEVER closes when pressing Send!
     inputRef.current?.focus()
-
     if (!clean) return
 
     setText('')
@@ -149,196 +188,235 @@ export function CoupleChatDrawer() {
     <AnimatePresence>
       {chatOpen && (
         <motion.div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Nhắn tin với ${partnerMember?.name ?? 'Người ấy'}`}
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-x-0 z-[95] mx-auto flex w-full max-w-[440px] flex-col overflow-hidden bg-gradient-to-b from-[#e0f2fe] via-white to-[#fff5f9] shadow-2xl"
+          className="fixed inset-x-0 z-[95] mx-auto flex w-full max-w-[440px] flex-col justify-end bg-[#1e1b4b]/45 backdrop-blur-[2px]"
           style={
             vvBox
-              ? {
-                  top: `${vvBox.top}px`,
-                  height: `${vvBox.height}px`,
-                  paddingTop: 'env(safe-area-inset-top, 0px)',
-                  paddingBottom: kbActive ? '0px' : 'env(safe-area-inset-bottom, 0px)',
-                }
-              : {
-                  inset: 0,
-                  paddingTop: 'env(safe-area-inset-top, 0px)',
-                  paddingBottom: kbActive ? '0px' : 'env(safe-area-inset-bottom, 0px)',
-                }
+              ? { top: `${vvBox.top}px`, height: `${vvBox.height}px` }
+              : { inset: 0 }
           }
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={closeChat}
         >
-          {/* 1. Fixed Top Chat Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-sky-100 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur-md">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <Avatar value={partnerMember?.avatar || 'girl'} size={36} />
-              <div className="min-w-0">
-                <h2 className="truncate text-sm font-black text-[#1e1b4b]">
-                  💬 {partnerMember?.name ?? 'Người ấy'}
-                </h2>
-                <p className="flex items-center gap-1 text-[10.5px] font-bold text-emerald-600">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Chat Real-Time · Bạn là {myMember?.name}
-                </p>
+          {/* Bottom Sheet Card with Top Gap & Pull-Down-to-Close Gesture */}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Nhắn tin với ${partnerMember?.name ?? 'Người ấy'}`}
+            onClick={(e) => e.stopPropagation()}
+            initial={{ y: '100%' }}
+            animate={{ y: dragY }}
+            exit={{ y: '100%' }}
+            transition={
+              dragging
+                ? { duration: 0 }
+                : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }
+            }
+            className="flex w-full flex-col overflow-hidden rounded-t-[32px] border-t-2 border-white bg-gradient-to-b from-white via-white to-[#fff5f9] shadow-[0_-14px_38px_rgba(30,27,75,0.28)]"
+            style={{
+              // Always leave a top gap so the rounded sheet & backdrop show at the top, while sitting 0px flush on the keyboard at the bottom!
+              height: kbActive ? 'calc(100% - 42px)' : '82%',
+              maxHeight: 'calc(100% - 42px)',
+              paddingBottom: kbActive ? '0px' : 'calc(8px + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            {/* 1. Drag-to-Close Grabber Handle + Header */}
+            <div
+              onTouchStart={onSheetDragStart}
+              onTouchMove={onSheetDragMove}
+              onTouchEnd={onSheetDragEnd}
+              onTouchCancel={onSheetDragEnd}
+              className="shrink-0 cursor-grab select-none border-b border-pink-100/80 bg-white/95 px-4 pb-2.5 pt-2 active:cursor-grabbing"
+              style={{ touchAction: 'none' }}
+            >
+              {/* Pill Drag Handle */}
+              <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-slate-300/90" />
+
+              <div className="flex items-center justify-between">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Avatar value={partnerMember?.avatar || 'girl'} size={34} />
+                  <div className="min-w-0">
+                    <h2 className="truncate text-sm font-black text-[#1e1b4b]">
+                      💬 {partnerMember?.name ?? 'Người ấy'}
+                    </h2>
+                    <p className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Vuốt thanh này xuống để đóng · Bạn là {myMember?.name}
+                    </p>
+                  </div>
+                </div>
+                <IconButton
+                  label="Đóng khung chat"
+                  size="sm"
+                  onClick={closeChat}
+                  className="!bg-[#f3e8ff] !text-[#6d28d9] !shadow-none"
+                >
+                  <X size={18} />
+                </IconButton>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                inputRef.current?.blur()
-                setChatOpen(false)
-              }}
-              className="flex cursor-pointer items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-black text-purple-700 shadow-sm active:scale-95"
-            >
-              <ChevronDown size={15} /> Đóng
-            </button>
-          </div>
 
-          {/* 2. Isolated Scrollable Message History (overscroll-contain so it NEVER scrolls the background page) */}
-          <div
-            ref={listRef}
-            className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-3.5 py-3"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
-            {messages.length === 0 ? (
-              <div className="my-auto flex flex-col items-center justify-center py-6 text-center">
-                <MessageCircleHeart size={40} className="text-pink-400" />
-                <p className="mt-2 text-xs font-black text-[#1e1b4b]">
-                  Chưa có tin nhắn nào giữa hai bạn
-                </p>
-                <p className="mt-0.5 text-[11px] font-bold text-slate-400">
-                  Chọn một câu nhắc nhanh hoặc gõ tin nhắn ngay bên dưới nhé! 💌
-                </p>
-              </div>
-            ) : (
-              messages.map((m) => {
-                const isMe = m.sender === myMemberId
-                const senderMember = j.members[m.sender]
-                const seenByPartner = (m.readBy ?? []).length >= 2
-                return (
-                  <div
-                    key={m.id}
-                    className={`flex items-end gap-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
-                  >
-                    {!isMe && <Avatar value={senderMember?.avatar || 'girl'} size={28} />}
+            {/* 2. Isolated Scrollable Message History */}
+            <div
+              ref={listRef}
+              onTouchStart={(e) => {
+                // Also allow pulling down to close when the message list is already at the very top (scrollTop <= 0)
+                if (listRef.current && listRef.current.scrollTop <= 0) {
+                  dragStartYRef.current = e.touches[0].clientY
+                } else {
+                  dragStartYRef.current = null
+                }
+              }}
+              onTouchMove={(e) => {
+                if (dragStartYRef.current === null) return
+                const dy = e.touches[0].clientY - dragStartYRef.current
+                if (dy > 6 && listRef.current && listRef.current.scrollTop <= 0) {
+                  setDragging(true)
+                  setDragY(dy)
+                } else if (dy < 0) {
+                  dragStartYRef.current = null
+                  setDragging(false)
+                  setDragY(0)
+                }
+              }}
+              onTouchEnd={onSheetDragEnd}
+              onTouchCancel={onSheetDragEnd}
+              className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain bg-slate-50/70 px-3.5 py-2.5"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {messages.length === 0 ? (
+                <div className="my-auto flex flex-col items-center justify-center py-6 text-center">
+                  <MessageCircleHeart size={38} className="text-pink-400" />
+                  <p className="mt-2 text-xs font-black text-[#1e1b4b]">
+                    Chưa có tin nhắn nào giữa hai bạn
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-bold text-slate-400">
+                    Chọn một câu nhắc nhanh hoặc gõ tin nhắn ngay bên dưới nhé! 💌
+                  </p>
+                </div>
+              ) : (
+                messages.map((m) => {
+                  const isMe = m.sender === myMemberId
+                  const senderMember = j.members[m.sender]
+                  const seenByPartner = (m.readBy ?? []).length >= 2
+                  return (
                     <div
-                      className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-left shadow-sm ${
-                        isMe
-                          ? 'rounded-br-sm bg-gradient-to-r from-indigo-600 to-pink-500 text-white'
-                          : 'rounded-bl-sm border border-white bg-white text-[#1e1b4b]'
-                      }`}
+                      key={m.id}
+                      className={`flex items-end gap-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
                     >
-                      <p className="break-words text-[13.5px] font-extrabold leading-snug">{m.text}</p>
+                      {!isMe && <Avatar value={senderMember?.avatar || 'girl'} size={26} />}
                       <div
-                        className={`mt-1 flex items-center justify-end gap-1 text-[9.5px] font-bold ${
-                          isMe ? 'text-white/80' : 'text-slate-400'
+                        className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-left shadow-sm ${
+                          isMe
+                            ? 'rounded-br-sm bg-gradient-to-r from-indigo-600 to-pink-500 text-white'
+                            : 'rounded-bl-sm border border-white bg-white text-[#1e1b4b]'
                         }`}
                       >
-                        <span>{fmtDateTime(m.at, j.timezone)}</span>
-                        {isMe &&
-                          (seenByPartner ? (
-                            <CheckCheck size={12} className="text-sky-200" aria-label="Đã xem" />
-                          ) : (
-                            <Check size={11} aria-label="Đã gửi" />
-                          ))}
+                        <p className="break-words text-[13.5px] font-extrabold leading-snug">{m.text}</p>
+                        <div
+                          className={`mt-1 flex items-center justify-end gap-1 text-[9.5px] font-bold ${
+                            isMe ? 'text-white/80' : 'text-slate-400'
+                          }`}
+                        >
+                          <span>{fmtDateTime(m.at, j.timezone)}</span>
+                          {isMe &&
+                            (seenByPartner ? (
+                              <CheckCheck size={12} className="text-sky-200" aria-label="Đã xem" />
+                            ) : (
+                              <Check size={11} aria-label="Đã gửi" />
+                            ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-
-          {/* 3. Bottom Composer Dock — Anchored 0px flush to the top of the mobile keyboard! */}
-          <div className="shrink-0 border-t border-pink-100 bg-white px-3 pb-1.5 pt-1.5 shadow-[0_-4px_16px_rgba(30,27,75,0.06)]">
-            {/* Quick 1-Tap Couple Reminder Chips */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              {QUICK_REPLIES.map((qr) => (
-                <button
-                  key={qr}
-                  type="button"
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => send(qr)}
-                  className="shrink-0 cursor-pointer rounded-full border border-indigo-100 bg-indigo-50/90 px-2.5 py-1 text-[10.5px] font-black text-indigo-700 active:scale-95"
-                >
-                  {qr}
-                </button>
-              ))}
+                  )
+                })
+              )}
             </div>
 
-            {/* Quick Emoji Strip */}
-            <div className="flex items-center justify-between px-1 py-0.5">
-              {QUICK_EMOJIS.map((em) => (
-                <button
-                  key={em}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    const base = inputRef.current ? inputRef.current.value : text
-                    const next = `${base}${em}`
-                    setText(next)
-                    if (inputRef.current) {
-                      inputRef.current.value = next
-                      inputRef.current.focus()
-                    }
-                  }}
-                  className="cursor-pointer border-0 bg-transparent p-1 text-base transition-transform active:scale-125"
-                >
-                  {em}
-                </button>
-              ))}
-            </div>
+            {/* 3. Bottom Composer Dock — Flush 0px on top of the keyboard! */}
+            <div className="shrink-0 border-t border-pink-100 bg-white px-3 pb-1.5 pt-1.5 shadow-[0_-4px_16px_rgba(30,27,75,0.05)]">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {QUICK_REPLIES.map((qr) => (
+                  <button
+                    key={qr}
+                    type="button"
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => send(qr)}
+                    className="shrink-0 cursor-pointer rounded-full border border-indigo-100 bg-indigo-50/90 px-2.5 py-1 text-[10.5px] font-black text-indigo-700 active:scale-95"
+                  >
+                    {qr}
+                  </button>
+                ))}
+              </div>
 
-            {/* Text Input + Always-Unlocked Send Button that keeps keyboard open! */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                send()
-              }}
-              className="mt-0.5 flex items-center gap-2"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={text}
-                maxLength={300}
-                enterKeyHint="send"
-                autoComplete="off"
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                onChange={(e) => setText(e.target.value)}
-                onInput={(e) => setText((e.target as HTMLInputElement).value)}
-                placeholder={`Nhắn cho ${partnerMember?.name ?? 'người ấy'}...`}
-                className="flex-1 rounded-full border-2 border-indigo-200 bg-slate-50/70 px-4 py-2 text-[15px] font-extrabold text-[#1e1b4b] outline-none focus:border-indigo-500 focus:bg-white"
-              />
-              <button
-                type="button"
-                aria-label="Gửi tin nhắn"
-                onTouchEnd={(e) => {
-                  // Prevent iOS Safari from blurring the input so the keyboard stays open continuously!
+              <div className="flex items-center justify-between px-1 py-0.5">
+                {QUICK_EMOJIS.map((em) => (
+                  <button
+                    key={em}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      const base = inputRef.current ? inputRef.current.value : text
+                      const next = `${base}${em}`
+                      setText(next)
+                      if (inputRef.current) {
+                        inputRef.current.value = next
+                        inputRef.current.focus()
+                      }
+                    }}
+                    className="cursor-pointer border-0 bg-transparent p-1 text-base transition-transform active:scale-125"
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+
+              <form
+                onSubmit={(e) => {
                   e.preventDefault()
                   send()
                 }}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                }}
-                onClick={() => {
-                  send()
-                }}
-                className="flex h-10 shrink-0 cursor-pointer select-none items-center gap-1 rounded-full border-0 bg-gradient-to-r from-indigo-600 to-pink-500 px-4 text-xs font-black text-white shadow-[0_4px_12px_rgba(236,72,153,0.35)] active:scale-95"
+                className="mt-0.5 flex items-center gap-2"
               >
-                <Send size={14} />
-                <span>Gửi</span>
-              </button>
-            </form>
-          </div>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={text}
+                  maxLength={300}
+                  enterKeyHint="send"
+                  autoComplete="off"
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  onChange={(e) => setText(e.target.value)}
+                  onInput={(e) => setText((e.target as HTMLInputElement).value)}
+                  placeholder={`Nhắn cho ${partnerMember?.name ?? 'người ấy'}...`}
+                  className="flex-1 rounded-full border-2 border-indigo-200 bg-slate-50/70 px-4 py-2 text-[15px] font-extrabold text-[#1e1b4b] outline-none focus:border-indigo-500 focus:bg-white"
+                />
+                <button
+                  type="button"
+                  aria-label="Gửi tin nhắn"
+                  onTouchEnd={(e) => {
+                    e.preventDefault()
+                    send()
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                  }}
+                  onClick={() => {
+                    send()
+                  }}
+                  className="flex h-10 shrink-0 cursor-pointer select-none items-center gap-1 rounded-full border-0 bg-gradient-to-r from-indigo-600 to-pink-500 px-4 text-xs font-black text-white shadow-[0_4px_12px_rgba(236,72,153,0.35)] active:scale-95"
+                >
+                  <Send size={14} />
+                  <span>Gửi</span>
+                </button>
+              </form>
+            </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
