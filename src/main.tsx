@@ -18,16 +18,15 @@ createRoot(document.getElementById('root')!).render(
 )
 
 /**
- * Automatic Live Update & Auto-Reload System:
+ * Automatic Live Update & 3-Second Countdown Auto-Reload System:
  * 1. Polls `./version.json?_t=...` (with `cache: 'no-store'`) on startup, whenever the user returns to the app (`visibilitychange` / `focus`), and every 45 seconds.
  * 2. When a newer `buildId` is deployed on GitHub Pages (or a new Service Worker takes control via `controllerchange`),
- *    automatically purges stale caches and reloads the app so the phone NEVER stays stuck on an old version!
+ *    shows a 3-second countdown notification banner ("✨ Có bản cập nhật mới! Tự động cập nhật sau 3s… 2s… 1s…"),
+ *    then purges stale caches and reloads the app smoothly!
  */
 let reloadingForUpdate = false
 
-async function triggerCleanReload() {
-  if (reloadingForUpdate) return
-  reloadingForUpdate = true
+async function performCleanReload() {
   try {
     if ('caches' in window) {
       const keys = await caches.keys()
@@ -41,6 +40,23 @@ async function triggerCleanReload() {
     /* ignore */
   }
   window.location.reload()
+}
+
+function triggerCleanReload() {
+  if (reloadingForUpdate) return
+  reloadingForUpdate = true
+  let sec = 3
+  window.dispatchEvent(new CustomEvent('piggy:update-countdown', { detail: { seconds: sec } }))
+  const timer = setInterval(() => {
+    sec -= 1
+    if (sec > 0) {
+      window.dispatchEvent(new CustomEvent('piggy:update-countdown', { detail: { seconds: sec } }))
+    } else {
+      clearInterval(timer)
+      window.dispatchEvent(new CustomEvent('piggy:update-countdown', { detail: { seconds: 0 } }))
+      void performCleanReload()
+    }
+  }, 1000)
 }
 
 async function checkForNewDeployment(reg?: ServiceWorkerRegistration | null) {

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { X } from 'lucide-react'
-import { useMemo } from 'react'
+import { RefreshCw, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '@/hooks/useStore'
 
 /** Global coin/confetti rain, triggered by `celebrate()` from the store. Honors reduced-motion. */
@@ -46,6 +46,19 @@ export function FxHost() {
  */
 export function ToastHost() {
   const { toasts, dismissToast, setChatOpen } = useStore()
+  const [updateCountdown, setUpdateCountdown] = useState<number | null>(null)
+
+  useEffect(() => {
+    const onCountdown = (e: Event) => {
+      const sec = (e as CustomEvent<{ seconds: number }>).detail?.seconds
+      if (typeof sec === 'number') {
+        setUpdateCountdown(sec)
+      }
+    }
+    window.addEventListener('piggy:update-countdown', onCountdown)
+    return () => window.removeEventListener('piggy:update-countdown', onCountdown)
+  }, [])
+
   const latest = toasts.length > 0 ? toasts[toasts.length - 1] : null
   const extraCount = Math.max(0, toasts.length - 1)
 
@@ -62,13 +75,34 @@ export function ToastHost() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 z-[80] flex justify-center px-3"
+      className="pointer-events-none fixed inset-x-0 z-[99] flex justify-center px-3"
       style={{ top: 'calc(8px + env(safe-area-inset-top, 0px))' }}
       role="status"
       aria-live="polite"
     >
       <AnimatePresence mode="wait">
-        {latest && (
+        {updateCountdown !== null ? (
+          <motion.div
+            key="app-update-countdown"
+            initial={{ y: -28, scale: 0.92, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: -24, scale: 0.92, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-auto flex max-w-[385px] items-center gap-2.5 rounded-2xl border-2 border-white bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 px-4 py-2.5 text-xs font-black text-white shadow-[0_12px_30px_rgba(79,70,229,0.4)]"
+          >
+            <RefreshCw size={15} className="shrink-0 animate-spin" />
+            <span className="flex-1 leading-snug">
+              {updateCountdown > 0
+                ? `✨ Có bản cập nhật mới! Tự tải lại sau ${updateCountdown}s…`
+                : '🚀 Đang cập nhật phiên bản mới…'}
+            </span>
+            {updateCountdown > 0 && (
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/25 text-xs font-black tabular-nums text-white">
+                {updateCountdown}
+              </span>
+            )}
+          </motion.div>
+        ) : latest ? (
           <motion.div
             key={latest.id}
             initial={{ y: -28, scale: 0.92, opacity: 0 }}
@@ -100,7 +134,7 @@ export function ToastHost() {
               <X size={12} />
             </button>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   )
