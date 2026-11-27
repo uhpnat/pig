@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell } from 'lucide-react'
+import { Bell, MessageCircleHeart } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GenderSelectDialog } from '@/components/GenderSelectDialog'
@@ -56,6 +56,8 @@ export default function HomePage() {
     progress,
     today,
     unread,
+    unreadChat,
+    setChatOpen,
     goalReached,
     motionOff,
     myMemberId,
@@ -219,6 +221,20 @@ export default function HomePage() {
                 >
                   ✏️ Sửa
                 </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChatOpen(true)}
+                aria-label={`Nhắn tin đôi mình${unreadChat ? `, ${unreadChat} tin nhắn mới` : ''}`}
+                className="relative grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white/90 bg-white/85 text-pink-600 shadow-sm backdrop-blur-md transition-transform active:scale-95"
+              >
+                <MessageCircleHeart size={18} />
+                {unreadChat > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-[#ff3b6b] px-1 text-[9px] font-black text-white">
+                    {unreadChat}
+                  </span>
+                )}
               </button>
 
               <Link

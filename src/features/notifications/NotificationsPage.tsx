@@ -17,11 +17,12 @@ const ICON: Record<NotificationType, string> = {
   recap: '📬',
   goal: '🎆',
   invite: '💌',
+  chat: '💬',
 }
 
 export default function NotificationsPage() {
   const j = useJourney()
-  const { state, repo, run, toast } = useStore()
+  const { state, repo, run, toast, setChatOpen } = useStore()
   const nav = useNavigate()
   const { perm, request } = usePushPermission()
   const s = state.settings
@@ -105,7 +106,10 @@ export default function NotificationsPage() {
                 <button
                   key={n.id}
                   type="button"
-                  onClick={() => nav(target.to)}
+                  onClick={() => {
+                    if (n.type === 'chat') setChatOpen(true)
+                    else nav(target.to)
+                  }}
                   className="flex w-full cursor-pointer items-center gap-3 border-0 bg-transparent px-1 py-3 text-left transition-colors hover:bg-pink-50/60 active:bg-pink-100/60 rounded-2xl"
                   style={{ fontFamily: 'inherit' }}
                 >

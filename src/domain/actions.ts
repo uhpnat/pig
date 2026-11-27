@@ -38,6 +38,7 @@ export function createInitialState(): AppState {
     completedAt: {},
     customChallenges: [],
     milestonesReached: [],
+    messages: [],
     settings: { ...DEFAULT_SETTINGS },
     invite: null,
   }
@@ -365,6 +366,7 @@ export function clearSavingsDataKeepConfig(state: AppState, now = new Date().toI
   s.challengeStatus = {}
   s.completedAt = {}
   s.milestonesReached = []
+  s.messages = []
   if (s.journey) {
     pushActivity(s, {
       at: now,
@@ -374,6 +376,54 @@ export function clearSavingsDataKeepConfig(state: AppState, now = new Date().toI
     })
   }
   return s
+}
+
+export function sendChatMessage(
+  state: AppState,
+  sender: MemberId,
+  text: string,
+  now = new Date().toISOString(),
+): AppState {
+  const j = requireJourney(state)
+  const clean = text.trim()
+  if (!clean) throw new DomainError('INVALID', 'Hãy nhập nội dung tin nhắn nhé.')
+  const s = clone(state)
+  const list = s.messages ?? []
+  list.push({
+    id: uid('msg'),
+    sender,
+    text: clean.slice(0, 300),
+    at: now,
+    readBy: [sender],
+  })
+  s.messages = list.slice(-80)
+  pushNotification(
+    s,
+    'chat',
+    `💬 ${j.members[sender].name} nhắn tin`,
+    clean.slice(0, 120),
+    now,
+  )
+  return s
+}
+
+export function markChatRead(state: AppState, by: MemberId): AppState {
+  const s = clone(state)
+  let changed = false
+  for (const m of s.messages ?? []) {
+    const rb = m.readBy ?? [m.sender]
+    if (!rb.includes(by)) {
+      m.readBy = [...rb, by]
+      changed = true
+    }
+  }
+  for (const n of s.notifications) {
+    if (n.type === 'chat' && !n.read) {
+      n.read = true
+      changed = true
+    }
+  }
+  return changed ? s : state
 }
 
 export { plannedShares, fmtDate }

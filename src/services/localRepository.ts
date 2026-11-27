@@ -123,6 +123,7 @@ export class LocalRepository implements Repository {
               activity: state.activity.slice(0, 10),
               notifications: state.notifications.slice(0, 8),
               milestonesReached: state.milestonesReached,
+              messages: (state.messages ?? []).slice(-30),
             },
       }
       await fetch(`https://ntfy.sh/${this.realtimeTopic()}`, {
@@ -361,6 +362,7 @@ export class LocalRepository implements Repository {
                 activity: pkt.partial.activity ?? cur.activity,
                 notifications: pkt.partial.notifications ?? cur.notifications,
                 milestonesReached: pkt.partial.milestonesReached ?? cur.milestonesReached,
+                messages: pkt.partial.messages ?? cur.messages,
               }
               const merged = mergeStates(cur, incoming)
               const nextJson = JSON.stringify(merged)
@@ -451,6 +453,12 @@ export class LocalRepository implements Repository {
   voidContribution(id: string) { return this.mutate((s) => A.voidContribution(s, id)) }
   startChallenge(id: string) { return this.mutate((s) => A.startChallenge(s, id)) }
   addCustomChallenge(t: string, n: number) { return this.mutate((s) => A.addCustomChallenge(s, t, n)) }
+  sendChatMessage(sender: Parameters<Repository['sendChatMessage']>[0], text: string) {
+    return this.mutate((s) => A.sendChatMessage(s, sender, text))
+  }
+  markChatRead(by: Parameters<Repository['markChatRead']>[0]) {
+    return this.mutate((s) => A.markChatRead(s, by))
+  }
   markNotificationsRead() { return this.mutate(A.markNotificationsRead) }
   updateSettings(p: Parameters<Repository['updateSettings']>[0]) { return this.mutate((s) => A.updateSettings(s, p)) }
   regenerateInvite() { return this.mutate((s) => A.regenerateInvite(s)) }

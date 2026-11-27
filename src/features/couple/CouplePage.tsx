@@ -30,7 +30,7 @@ const MODE = { proportional: 'Theo thu nhập', equal: 'Chia đều', custom: 'T
 
 export default function CouplePage() {
   const j = useJourney()
-  const { state, repo, run, confirmed, progress, today, toast, celebrate } = useStore()
+  const { state, repo, run, confirmed, progress, today, toast, celebrate, unreadChat, setChatOpen } = useStore()
   const nav = useNavigate()
   const [edit, setEdit] = useState(false)
   const [install, setInstall] = useState(false)
@@ -79,6 +79,13 @@ export default function CouplePage() {
   const set = (p: Parameters<typeof repo.updateSettings>[0]) => run(repo.updateSettings(p))
 
   const menuRows = [
+    {
+      icon: <span className="text-[20px] leading-none">💬</span>,
+      bg: 'bg-[#fce7f3]',
+      label: `Nhắn tin đôi mình${unreadChat > 0 ? ` (${unreadChat} mới)` : ''}`,
+      sub: 'Trò chuyện & nhắc nạp heo Real-Time',
+      onClick: () => setChatOpen(true),
+    },
     {
       icon: <TargetSticker size={28} />,
       bg: 'bg-[#fff1f2]',

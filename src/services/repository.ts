@@ -38,6 +38,8 @@ export interface Repository {
   voidContribution(id: string): Promise<AppState>
   startChallenge(id: string): Promise<AppState>
   addCustomChallenge(title: string, target: number): Promise<AppState>
+  sendChatMessage(sender: MemberId, text: string): Promise<AppState>
+  markChatRead(by: MemberId): Promise<AppState>
   markNotificationsRead(): Promise<AppState>
   updateSettings(patch: Partial<AppSettings>): Promise<AppState>
   regenerateInvite(): Promise<AppState>

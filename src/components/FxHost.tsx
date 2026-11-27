@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { X } from 'lucide-react'
 import { useMemo } from 'react'
 import { useStore } from '@/hooks/useStore'
 
@@ -7,31 +8,88 @@ export function FxHost() {
   const { fx, motionOff } = useStore()
   const parts = useMemo(() => {
     if (!fx) return []
-    return Array.from({ length: 26 }, (_, i) => ({ i, e: fx.emojis[i % fx.emojis.length], x: Math.random() * 100, d: Math.random() * 0.9, s: 18 + Math.random() * 16, r: (Math.random() - 0.5) * 540 }))
+    return Array.from({ length: 26 }, (_, i) => ({
+      i,
+      e: fx.emojis[i % fx.emojis.length],
+      x: Math.random() * 100,
+      d: Math.random() * 0.9,
+      s: 18 + Math.random() * 16,
+      r: (Math.random() - 0.5) * 540,
+    }))
   }, [fx])
   if (motionOff) return null
   return (
     <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden" aria-hidden>
       <AnimatePresence>
-        {fx && parts.map((p) => (
-          <motion.span key={`${fx.id}-${p.i}`} className="absolute" style={{ left: `${p.x}%`, top: -40, fontSize: p.s }}
-            initial={{ y: 0, rotate: 0, opacity: 1 }} animate={{ y: '115vh', rotate: p.r, opacity: [1, 1, 0.8] }}
-            transition={{ duration: 2.2 + p.d, delay: p.d, ease: 'easeIn' }}>{p.e}</motion.span>
-        ))}
+        {fx &&
+          parts.map((p) => (
+            <motion.span
+              key={`${fx.id}-${p.i}`}
+              className="absolute"
+              style={{ left: `${p.x}%`, top: -40, fontSize: p.s }}
+              initial={{ y: 0, rotate: 0, opacity: 1 }}
+              animate={{ y: '115vh', rotate: p.r, opacity: [1, 1, 0.8] }}
+              transition={{ duration: 2.2 + p.d, delay: p.d, ease: 'easeIn' }}
+            >
+              {p.e}
+            </motion.span>
+          ))}
       </AnimatePresence>
     </div>
   )
 }
 
+/**
+ * Compact Single-Pill "Dynamic Island" Top Notification Banner:
+ * - Shows ONLY the 1 most recent notification at a time so multiple notifications NEVER stack up or block the screen!
+ * - Tapping the banner or its close button dismisses it immediately.
+ */
 export function ToastHost() {
-  const { toasts } = useStore()
+  const { toasts, dismissToast } = useStore()
+  const latest = toasts.length > 0 ? toasts[toasts.length - 1] : null
+  const extraCount = Math.max(0, toasts.length - 1)
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[70] flex flex-col items-center gap-2 px-4" role="status" aria-live="polite">
-      <AnimatePresence>
-        {toasts.map((t) => (
-          <motion.div key={t.id} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}
-            className={`rounded-full border-2 border-white px-4 py-2.5 text-sm font-extrabold text-white shadow-xl ${t.tone === 'error' ? 'bg-[#e5484d]' : 'bg-gradient-to-r from-[#7c3aed] to-[#ec4899]'}`}>{t.text}</motion.div>
-        ))}
+    <div
+      className="pointer-events-none fixed inset-x-0 z-[80] flex justify-center px-3"
+      style={{ top: 'calc(8px + env(safe-area-inset-top, 0px))' }}
+      role="status"
+      aria-live="polite"
+    >
+      <AnimatePresence mode="wait">
+        {latest && (
+          <motion.div
+            key={latest.id}
+            initial={{ y: -28, scale: 0.92, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: -24, scale: 0.92, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            onClick={() => dismissToast()}
+            className={`pointer-events-auto flex max-w-[385px] cursor-pointer items-center gap-2 rounded-2xl border border-white/90 px-3.5 py-2 text-xs font-extrabold text-white shadow-[0_10px_26px_rgba(30,27,75,0.28)] backdrop-blur-xl ${
+              latest.tone === 'error'
+                ? 'bg-rose-600/95'
+                : 'bg-[#1e1b4b]/92'
+            }`}
+          >
+            <span className="line-clamp-2 flex-1 leading-snug">{latest.text}</span>
+            {extraCount > 0 && (
+              <span className="shrink-0 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-black text-white">
+                +{extraCount}
+              </span>
+            )}
+            <button
+              type="button"
+              aria-label="Đóng thông báo"
+              onClick={(e) => {
+                e.stopPropagation()
+                dismissToast()
+              }}
+              className="grid h-5 w-5 shrink-0 cursor-pointer place-items-center rounded-full border-0 bg-white/15 text-white/90 hover:bg-white/25"
+            >
+              <X size={12} />
+            </button>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   )

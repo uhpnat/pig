@@ -1,4 +1,4 @@
-import type { Activity, AppNotification, AppState, Contribution, Reveal } from './types'
+import type { Activity, AppNotification, AppState, ChatMessage, Contribution, Reveal } from './types'
 
 /**
  * Merges two AppState snapshots (local & remote) without losing either partner's actions:
@@ -133,6 +133,19 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   const customMap = new Map([...remote.customChallenges, ...local.customChallenges].map((c) => [c.id, c]))
   const milestonesReached = [...new Set([...remote.milestonesReached, ...local.milestonesReached])].sort((a, b) => a - b)
 
+  // 6. Merge couple chat messages (union by id, union of readBy, sorted oldest -> newest, keep last 80)
+  const msgMap = new Map<string, ChatMessage>()
+  for (const m of [...(remote.messages ?? []), ...(local.messages ?? [])]) {
+    const prev = msgMap.get(m.id)
+    if (!prev) {
+      msgMap.set(m.id, m)
+    } else {
+      const unionReadBy = Array.from(new Set([...(prev.readBy ?? [prev.sender]), ...(m.readBy ?? [m.sender])]))
+      msgMap.set(m.id, { ...prev, ...m, readBy: unionReadBy })
+    }
+  }
+  const messages = [...msgMap.values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-80)
+
   return {
     version: 1,
     journey,
@@ -145,6 +158,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     completedAt,
     customChallenges: [...customMap.values()],
     milestonesReached,
+    messages,
     settings: local.settings,
     invite: remote.invite ?? local.invite,
   }

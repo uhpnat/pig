@@ -102,7 +102,15 @@ export interface Activity {
   audit?: { old: Record<string, unknown>; next: Record<string, unknown> }
 }
 
-export type NotificationType = 'reveal' | 'partner_confirmed' | 'pending' | 'milestone' | 'challenge' | 'recap' | 'goal' | 'invite'
+export type NotificationType = 'reveal' | 'partner_confirmed' | 'pending' | 'milestone' | 'challenge' | 'recap' | 'goal' | 'invite' | 'chat'
+
+export interface ChatMessage {
+  id: string
+  sender: MemberId
+  text: string
+  at: string
+  readBy?: MemberId[]
+}
 
 export interface AppNotification {
   id: string
@@ -146,6 +154,7 @@ export interface AppState {
   completedAt: Record<string, string>
   customChallenges: CustomChallenge[]
   milestonesReached: number[]
+  messages?: ChatMessage[]
   settings: AppSettings
   invite: { code: string; expiresAt: string } | null
 }
