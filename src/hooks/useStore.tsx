@@ -13,7 +13,7 @@ import { subscribeNativeWebPush } from '@/lib/webPush'
 import { repository } from '@/services'
 import type { Repository } from '@/services/repository'
 
-interface Toast { id: number; text: string; tone: 'ok' | 'error' }
+interface Toast { id: number; text: string; tone: 'ok' | 'error'; actionRoute?: string }
 interface Fx { id: number; emojis: string[] }
 
 interface StoreValue {
@@ -38,7 +38,7 @@ interface StoreValue {
   motionOff: boolean
   toasts: Toast[]
   fx: Fx | null
-  toast: (text: string, tone?: Toast['tone']) => void
+  toast: (text: string, tone?: Toast['tone'], actionRoute?: string) => void
   dismissToast: (id?: number) => void
   celebrate: (emojis?: string[]) => void
   /** Run a repository mutation, adopt the returned state, surface errors as toasts. */
@@ -121,11 +121,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })
   }, [state?.journey, myMemberId])
 
-  const toast = useCallback((text: string, tone: Toast['tone'] = 'ok') => {
+  useEffect(() => {
+    const onOpenChat = () => setChatOpen(true)
+    const onHashCheck = () => {
+      if (window.location.hash.includes('chat=1') || window.location.search.includes('chat=1')) {
+        setChatOpen(true)
+        if (window.location.hash.includes('chat=1')) {
+          window.history.replaceState(null, '', window.location.pathname + '#/')
+        }
+      }
+    }
+    onHashCheck()
+    window.addEventListener('piggy:open-chat', onOpenChat)
+    window.addEventListener('hashchange', onHashCheck)
+    return () => {
+      window.removeEventListener('piggy:open-chat', onOpenChat)
+      window.removeEventListener('hashchange', onHashCheck)
+    }
+  }, [])
+
+  const toast = useCallback((text: string, tone: Toast['tone'] = 'ok', actionRoute?: string) => {
     const id = ++seq.current
     // Replace queue with at most 2 recent items so toasts never pile up
-    setToasts((t) => [...t.slice(-1), { id, text, tone }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2400)
+    setToasts((t) => [...t.slice(-1), { id, text, tone, actionRoute }])
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200)
   }, [])
 
   const dismissToast = useCallback((id?: number) => {
@@ -154,7 +173,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (newest.type === 'chat' && chatOpen) return
     const { to } = notificationRoute(newest)
     void fireBrowserNotification(`🐷 ${newest.title}`, newest.message, newest.id, to)
-    toast(`🔔 ${newest.title}: ${newest.message}`)
+    toast(
+      newest.type === 'chat'
+        ? `💬 ${newest.title}: ${newest.message} (Chạm để mở chat)`
+        : `🔔 ${newest.title}: ${newest.message}`,
+      'ok',
+      to,
+    )
     haptic(state.settings, 30)
     beep(state.settings, 'win')
   }, [state, toast, chatOpen])

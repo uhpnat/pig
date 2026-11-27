@@ -1,6 +1,8 @@
-/* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background Scheduled Notification. */
-const VERSION = 'piggy-duo-v7'
+/* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background Scheduled Notification + Chat Auto-Open. */
+const VERSION = 'piggy-duo-v8'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png']
+
+let pendingLaunchRoute = null
 
 self.addEventListener('install', (e) => {
   self.skipWaiting()
@@ -37,13 +39,19 @@ self.addEventListener('fetch', (e) => {
 })
 
 /**
- * Supports background scheduled notifications from the client (`SCHEDULE_NOTIFICATION`).
- * Wrapping the timeout inside `e.waitUntil(...)` keeps the Service Worker alive on iOS even after
- * the user exits to the iPhone Home Screen or locks the device!
+ * Supports background scheduled notifications from the client (`SCHEDULE_NOTIFICATION`)
+ * and cold-start route handoff (`CLIENT_READY`) when a notification launches a fresh app window.
  */
 self.addEventListener('message', (e) => {
   const msg = e.data
   if (!msg || typeof msg !== 'object') return
+
+  if (msg.type === 'CLIENT_READY' && pendingLaunchRoute && e.source) {
+    const route = pendingLaunchRoute
+    pendingLaunchRoute = null
+    e.source.postMessage({ type: 'PIGGY_NAVIGATE', route })
+    return
+  }
 
   if (msg.type === 'SCHEDULE_NOTIFICATION') {
     const delayMs = Math.max(0, Math.min(25000, Number(msg.delayMs) || 0))
@@ -117,7 +125,17 @@ self.addEventListener('notificationclick', (e) => {
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow(rootScopeUrl)
+        pendingLaunchRoute = route
+        return self.clients.openWindow(rootScopeUrl).then((newClient) => {
+          if (newClient) {
+            setTimeout(() => {
+              try {
+                newClient.postMessage({ type: 'PIGGY_NAVIGATE', route })
+              } catch {}
+            }, 600)
+          }
+          return newClient
+        })
       }
     }),
   )

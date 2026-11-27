@@ -45,9 +45,20 @@ export function FxHost() {
  * - Tapping the banner or its close button dismisses it immediately.
  */
 export function ToastHost() {
-  const { toasts, dismissToast } = useStore()
+  const { toasts, dismissToast, setChatOpen } = useStore()
   const latest = toasts.length > 0 ? toasts[toasts.length - 1] : null
   const extraCount = Math.max(0, toasts.length - 1)
+
+  const handleBannerClick = () => {
+    if (latest?.actionRoute) {
+      if (latest.actionRoute.includes('chat=1')) {
+        setChatOpen(true)
+      } else {
+        window.location.hash = `#${latest.actionRoute}`
+      }
+    }
+    dismissToast()
+  }
 
   return (
     <div
@@ -64,7 +75,7 @@ export function ToastHost() {
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: -24, scale: 0.92, opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            onClick={() => dismissToast()}
+            onClick={handleBannerClick}
             className={`pointer-events-auto flex max-w-[385px] cursor-pointer items-center gap-2 rounded-2xl border border-white/90 px-3.5 py-2 text-xs font-extrabold text-white shadow-[0_10px_26px_rgba(30,27,75,0.28)] backdrop-blur-xl ${
               latest.tone === 'error'
                 ? 'bg-rose-600/95'

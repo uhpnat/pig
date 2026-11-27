@@ -63,7 +63,7 @@ export function notificationRoute(n: Pick<AppNotification, 'type' | 'title'>): {
     case 'goal':
       return { to: '/', label: 'Xem Heo đất →' }
     case 'chat':
-      return { to: '/', label: 'Mở khung Chat →' }
+      return { to: '/?chat=1', label: 'Mở khung Chat →' }
     case 'invite':
     case 'recap':
       return { to: '/couple', label: 'Xem Của mình →' }
@@ -143,7 +143,11 @@ export async function fireBrowserNotification(title: string, body: string, tag?:
     const notif = new Notification(title, { body, icon: './icon-192.png', tag })
     notif.onclick = () => {
       window.focus()
-      window.location.hash = `#${route}`
+      if (route.includes('chat=1')) {
+        window.dispatchEvent(new CustomEvent('piggy:open-chat'))
+      } else {
+        window.location.hash = `#${route}`
+      }
       notif.close()
     }
   } catch {

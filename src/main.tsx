@@ -21,12 +21,19 @@ if ('serviceWorker' in navigator) {
       .register('./sw.js', { updateViaCache: 'none' })
       .then((reg) => {
         void reg.update()
+        const active = reg.active || navigator.serviceWorker.controller
+        active?.postMessage({ type: 'CLIENT_READY' })
       })
       .catch(() => undefined)
   })
   navigator.serviceWorker.addEventListener('message', (e) => {
     if (e.data && e.data.type === 'PIGGY_NAVIGATE' && typeof e.data.route === 'string') {
-      window.location.hash = `#${e.data.route}`
+      const route = e.data.route as string
+      if (route.includes('chat=1')) {
+        window.dispatchEvent(new CustomEvent('piggy:open-chat'))
+      } else {
+        window.location.hash = `#${route}`
+      }
     }
   })
 }
