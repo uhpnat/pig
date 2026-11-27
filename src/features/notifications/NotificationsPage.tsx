@@ -7,7 +7,7 @@ import { fmtDateTime } from '@/domain/format'
 import type { NotificationType } from '@/domain/types'
 import { usePushPermission } from '@/hooks/usePwa'
 import { useJourney, useStore } from '@/hooks/useStore'
-import { notificationRoute } from '@/lib/pushNotify'
+import { isNotificationForMember, notificationRoute } from '@/lib/pushNotify'
 
 const ICON: Record<NotificationType, string> = {
   reveal: '🐷',
@@ -25,7 +25,7 @@ const INITIAL_VISIBLE_COUNT = 5
 
 export default function NotificationsPage() {
   const j = useJourney()
-  const { state, repo, run, myMember, setChatOpen } = useStore()
+  const { state, repo, run, myMemberId, myMember, setChatOpen } = useStore()
   const nav = useNavigate()
   const { perm } = usePushPermission()
 
@@ -39,14 +39,16 @@ export default function NotificationsPage() {
     (r) => r.date === new Date().toLocaleDateString('sv-SE', { timeZone: j.timezone }),
   )
 
+  // Only show notifications targeted to THIS member (Nam or Nữ) or shared ('all') notifications!
+  const allNotifs = state.notifications.filter((n) => isNotificationForMember(n, myMemberId, j))
+
   useEffect(() => {
-    if (state.notifications.some((n) => !n.read)) {
+    if (allNotifs.some((n) => !n.read)) {
       const t = setTimeout(() => run(repo.markNotificationsRead()), 1200)
       return () => clearTimeout(t)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const allNotifs = state.notifications
   const visibleNotifs = allNotifs.slice(0, visibleCount)
   const remainingCount = Math.max(0, allNotifs.length - visibleCount)
 

@@ -117,6 +117,15 @@ function mergeAppState(existing, incoming) {
         out.journey.members[id].pushSubscription = iSub || eSub;
       }
     });
+    var subA = out.journey.members.a && out.journey.members.a.pushSubscription;
+    var subB = out.journey.members.b && out.journey.members.b.pushSubscription;
+    if (subA && subB && subA.endpoint === subB.endpoint) {
+      if (String(subA.updatedAt) >= String(subB.updatedAt)) {
+        delete out.journey.members.b.pushSubscription;
+      } else {
+        delete out.journey.members.a.pushSubscription;
+      }
+    }
   }
 
   return out;

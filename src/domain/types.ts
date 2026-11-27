@@ -129,7 +129,10 @@ export interface AppNotification {
   title: string
   message: string
   read: boolean
+  /** Who triggered this notification ('a' or 'b') — never push or toast back to the actor! */
   actor?: MemberId
+  /** Who should see & receive this notification: 'a' (only member A), 'b' (only member B), or 'all' (shared milestones/goals/challenges). */
+  target?: MemberId | 'all'
 }
 
 export interface CustomChallenge {

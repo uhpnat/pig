@@ -319,9 +319,25 @@ export class LocalRepository implements Repository {
     const activeActor: MemberId =
       actorId || (typeof window !== 'undefined' && localStorage.getItem('piggy_my_member') === 'b' ? 'b' : 'a')
     const partnerId: MemberId = activeActor === 'a' ? 'b' : 'a'
-    const sub = j.members[partnerId]?.pushSubscription
-    if (!sub) return null
-    return buildEncryptedWebPush(sub, { title: title.startsWith('🐷') ? title : `🐷 ${title}`, body, route })
+    const mySub = j.members[activeActor]?.pushSubscription
+    const partnerSub = j.members[partnerId]?.pushSubscription
+    if (!partnerSub) return null
+    // Safety guard: NEVER send a partner push notification back to the sender's own physical device endpoint!
+    if (mySub && mySub.endpoint === partnerSub.endpoint) {
+      return null
+    }
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration()
+        const localSub = await reg?.pushManager?.getSubscription()
+        if (localSub && localSub.endpoint === partnerSub.endpoint) {
+          return null
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return buildEncryptedWebPush(partnerSub, { title: title.startsWith('🐷') ? title : `🐷 ${title}`, body, route })
   }
 
   private mutate(fn: (s: AppState) => AppState, actorId?: MemberId): Promise<AppState> {

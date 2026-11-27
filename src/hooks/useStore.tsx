@@ -8,7 +8,7 @@ import { confirmedTotals, pendingTotals, progressPct } from '@/domain/stats'
 import type { AppState, Journey, Member, MemberId } from '@/domain/types'
 import { DomainError } from '@/domain/types'
 import { applyTheme, beep, haptic, prefersReducedMotion } from '@/lib/fx'
-import { notificationRoute, shouldNotifyEvent } from '@/lib/pushNotify'
+import { isNotificationForMember, notificationRoute, shouldNotifyEvent } from '@/lib/pushNotify'
 import { subscribeNativeWebPush } from '@/lib/webPush'
 import { repository } from '@/services'
 import type { Repository } from '@/services/repository'
@@ -114,24 +114,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { if (state) applyTheme(state.settings.theme) }, [state?.settings.theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Automatically sync this device's Native Web Push subscription to the active member profile when Notification permission is granted
+  // Automatically sync this device's Native Web Push subscription to the active member profile
+  // ONLY AFTER the user has explicitly confirmed which member (Nam or Nữ) is using this phone!
+  // Also automatically removes this device's endpoint from the partner's profile so 1 phone is never registered as both Nam & Nữ!
   const pushSyncedForRef = useRef<string>('')
   useEffect(() => {
     const j = state?.journey
-    if (!j || typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    if (!j || typeof window === 'undefined' || typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    const isRoleExplicitlyConfirmed =
+      localStorage.getItem('piggy_role_confirmed_v2') === 'true' &&
+      (localStorage.getItem(DEVICE_ROLE_KEY) === 'a' || localStorage.getItem(DEVICE_ROLE_KEY) === 'b')
+    if (!isRoleExplicitlyConfirmed) return
     if (pushSyncedForRef.current === myMemberId) return
     pushSyncedForRef.current = myMemberId
 
     void subscribeNativeWebPush().then((sub) => {
       if (!sub) return
+      const otherId: MemberId = myMemberId === 'a' ? 'b' : 'a'
       const curSub = j.members[myMemberId]?.pushSubscription
-      if (curSub?.endpoint === sub.endpoint && curSub?.keys?.p256dh === sub.keys.p256dh) return
+      const otherSub = j.members[otherId]?.pushSubscription
+      const otherHasSameEndpoint = otherSub?.endpoint === sub.endpoint
+
+      if (curSub?.endpoint === sub.endpoint && curSub?.keys?.p256dh === sub.keys.p256dh && !otherHasSameEndpoint) {
+        return
+      }
       void repository.updateJourney({
         members: {
           ...j.members,
           [myMemberId]: {
             ...j.members[myMemberId],
             pushSubscription: sub,
+          },
+          [otherId]: {
+            ...j.members[otherId],
+            pushSubscription: otherHasSameEndpoint ? undefined : otherSub,
           },
         },
       })
@@ -214,8 +230,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       seenNotifIds.current.add(n.id)
     }
     const newest = fresh[0]
-    // Ignore notifications that were created by THIS device's own member or before this session booted
+    // Ignore notifications that were created by THIS device's own member or targeted exclusively to the OTHER member
     if (newest.actor && newest.actor === myMemberId) return
+    if (!isNotificationForMember(newest, myMemberId, state.journey)) return
     const notifTime = Date.parse(newest.at)
     if (Number.isFinite(notifTime) && notifTime < bootAtRef.current - 5000) return
     if (!shouldNotifyEvent(newest, state.settings)) return
@@ -274,7 +291,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       progress: j ? progressPct(j, state.contributions) : 0,
       confirmed, pending: pendingTotals(state.contributions),
       goalReached: !!j && isGoalReached(state) && confirmed.total >= j.goal,
-      unread: state.notifications.filter((n) => !n.read).length,
+      unread: state.notifications.filter((n) => !n.read && isNotificationForMember(n, myMemberId, j)).length,
       unreadChat, chatOpen, setChatOpen,
       motionOff: prefersReducedMotion(state.settings),
       toasts, fx, toast, dismissToast, celebrate, run, syncState: setState,

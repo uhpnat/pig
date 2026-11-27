@@ -161,3 +161,35 @@ export function shouldNotifyEvent(n: AppNotification, s: AppSettings): boolean {
   if (n.type === 'recap') return s.notifyRecap
   return true
 }
+
+/**
+ * Checks whether a notification is relevant to `myMemberId` (Nam or Nữ):
+ * - If `n.actor === myMemberId` and it's not a shared ('all') milestone/goal/2-2 completion, hide it from the sender!
+ * - If `n.target` is explicitly set to the other member (`'a'` or `'b'`), hide it from this member!
+ * - Legacy notifications without `target`/`actor`: infer from title (e.g. if title starts with my own name + "nhắn tin" / "vừa mở số" / "vừa nạp", it was meant for the partner!).
+ */
+export function isNotificationForMember(
+  n: AppNotification,
+  myMemberId: MemberId,
+  journey: Journey | null,
+): boolean {
+  if (n.target && n.target !== 'all') {
+    return n.target === myMemberId
+  }
+  if (n.actor && n.actor === myMemberId && n.target !== 'all') {
+    return false
+  }
+  // Legacy heuristic for older notifications stored in Google Sheet before `target` field existed:
+  const myName = journey?.members[myMemberId]?.name
+  if (myName && !n.target) {
+    if (
+      n.title.includes(`${myName} nhắn tin`) ||
+      n.title.includes(`${myName} vừa mở số`) ||
+      n.title.includes(`${myName} vừa nạp`) ||
+      n.title.includes(`${myName} đã duyệt khoản`)
+    ) {
+      return false
+    }
+  }
+  return true
+}

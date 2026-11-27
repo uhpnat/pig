@@ -30,6 +30,18 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     return lSub || rSub
   }
 
+  let subA = pickNewestSub('a')
+  let subB = pickNewestSub('b')
+  // A single physical device endpoint can only belong to ONE member (either Male or Female), never both!
+  // If both 'a' and 'b' somehow recorded the same endpoint (e.g. testing role switch on 1 phone), keep only the newer assignment.
+  if (subA && subB && subA.endpoint === subB.endpoint) {
+    if (subA.updatedAt >= subB.updatedAt) {
+      subB = undefined
+    } else {
+      subA = undefined
+    }
+  }
+
   const journey = baseJourney
     ? {
         ...baseJourney,
@@ -41,7 +53,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
               local.journey?.members?.a?.gender ||
               remote.journey?.members?.a?.gender ||
               baseJourney.members.a.gender,
-            pushSubscription: pickNewestSub('a'),
+            pushSubscription: subA,
           },
           b: {
             ...baseJourney.members.b,
@@ -50,7 +62,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
               local.journey?.members?.b?.gender ||
               remote.journey?.members?.b?.gender ||
               baseJourney.members.b.gender,
-            pushSubscription: pickNewestSub('b'),
+            pushSubscription: subB,
           },
         },
       }

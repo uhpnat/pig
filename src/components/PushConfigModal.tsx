@@ -9,11 +9,11 @@ import {
   Send,
   Share,
   Smartphone,
-  Sparkles,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { ROLE_CONFIG_KEY } from '@/components/GenderSelectDialog'
 import { Button, Modal, Toggle } from '@/components/ui'
-import type { Gender } from '@/domain/types'
+import type { Gender, MemberId } from '@/domain/types'
 import { usePushPermission } from '@/hooks/usePwa'
 import { useJourney, useStore } from '@/hooks/useStore'
 import {
@@ -37,13 +37,13 @@ interface PushConfigModalProps {
 
 export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
   const j = useJourney()
-  const { state, repo, run, toast, myMemberId, myMember, partnerMember } = useStore()
+  const { state, repo, run, toast, myMemberId, setMyMemberId } = useStore()
   const { perm, request } = usePushPermission()
   const s = state.settings
 
   const [standalone, setStandalone] = useState(() => isStandalonePwa())
-  const [testingNativePwa, setTestingNativePwa] = useState(false)
-  const [enablingPush, setEnablingPush] = useState(false)
+  const [testingMember, setTestingMember] = useState<MemberId | null>(null)
+  const [enablingMember, setEnablingMember] = useState<MemberId | null>(null)
   const [showNtfyFallback, setShowNtfyFallback] = useState(false)
 
   const [baseTopic, setBaseTopic] = useState(() => getNtfyBaseTopic())
@@ -51,15 +51,18 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
   const [copiedTarget, setCopiedTarget] = useState<Gender | null>(null)
 
   const isBMale = j.members.b.gender === 'male' || j.members.a.gender === 'female'
-  const memberMale = isBMale ? j.members.b : j.members.a
-  const memberFemale = isBMale ? j.members.a : j.members.b
-  const myGender: Gender = myMember?.gender === 'male' ? 'male' : 'female'
+  const maleId: MemberId = isBMale ? 'b' : 'a'
+  const femaleId: MemberId = isBMale ? 'a' : 'b'
+  const memberMale = j.members[maleId]
+  const memberFemale = j.members[femaleId]
 
   const topicMale = getNtfyTopicForGender('male', baseTopic)
   const topicFemale = getNtfyTopicForGender('female', baseTopic)
 
-  const hasMyNativeSub = Boolean(myMember?.pushSubscription?.endpoint)
-  const hasPartnerNativeSub = Boolean(partnerMember?.pushSubscription?.endpoint)
+  // Detect if both members accidentally share the exact same push endpoint
+  const isDuplicateSub =
+    Boolean(j.members.a.pushSubscription?.endpoint) &&
+    j.members.a.pushSubscription?.endpoint === j.members.b.pushSubscription?.endpoint
 
   useEffect(() => {
     if (open) {
@@ -67,29 +70,51 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
     }
   }, [open])
 
-  const enableNativePiggyPush = async () => {
-    setEnablingPush(true)
+  /**
+   * Registers THIS physical iPhone/device exclusively for `targetId` (either Male or Female),
+   * and removes this device's push endpoint from the other member so notifications are 100% separate!
+   */
+  const bindThisDeviceToMember = async (targetId: MemberId) => {
+    setEnablingMember(targetId)
     try {
-      const r = await request()
+      const otherId: MemberId = targetId === 'a' ? 'b' : 'a'
+      const targetMember = j.members[targetId]
+      const otherMember = j.members[otherId]
+
+      // 1. Switch this device's active role to targetId
+      setMyMemberId(targetId)
+      try {
+        localStorage.setItem(ROLE_CONFIG_KEY, 'true')
+        localStorage.setItem('piggy_gender_configured', 'true')
+      } catch {}
+
+      // 2. Request OS notification permission & subscribe to Apple Web Push
+      const r = perm === 'granted' ? 'granted' : await request()
       if (r === 'granted') {
         const sub = await subscribeNativeWebPush()
-        if (sub && myMember) {
+        if (sub) {
+          const otherSameEndpoint = otherMember.pushSubscription?.endpoint === sub.endpoint
           await run(
             repo.updateJourney({
               members: {
                 ...j.members,
-                [myMemberId]: {
-                  ...myMember,
+                [targetId]: {
+                  ...targetMember,
                   pushSubscription: sub,
+                },
+                [otherId]: {
+                  ...otherMember,
+                  pushSubscription: otherSameEndpoint ? undefined : otherMember.pushSubscription,
                 },
               },
             }),
           )
         }
-        toast('Đã bật Thông báo Trực tiếp có Logo 🐷 Piggy Duo! 🔔')
+        const genderLabel = targetMember.gender === 'male' ? 'Nam 👦' : 'Nữ 👧'
+        toast(`Đã gắn máy này nhận thông báo riêng của ${targetMember.name} (${genderLabel})! 🔔`)
         await fireBrowserNotification(
-          `🐷 ${j.name} đã bật thông báo!`,
-          'Từ giờ thông báo sẽ hiện đúng Logo 🐷 Piggy Duo và chạm vào sẽ mở thẳng vào App!',
+          `🐷 Đã bật chuông riêng cho ${targetMember.name} (${genderLabel})`,
+          `Từ giờ khi ${otherMember.name} quay số, nạp tiền hoặc nhắn tin, máy của ${targetMember.name} sẽ nổ thông báo!`,
           undefined,
           '/',
         )
@@ -102,39 +127,78 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
         )
       }
     } finally {
-      setEnablingPush(false)
+      setEnablingMember(null)
     }
   }
 
-  const testNativePwaPush = async () => {
-    if (perm !== 'granted') {
-      await enableNativePiggyPush()
+  /**
+   * Sends a test push notification specifically to `targetId` (Male or Female):
+   * - If `targetId` is the Partner's phone (`targetId !== myMemberId`), sends an instant Apple Web Push over the server to the partner's phone!
+   * - If `targetId` is THIS phone (`targetId === myMemberId`), schedules a 4-second delayed push so the user can lock their phone and see it on the Lock Screen!
+   */
+  const testPushForMember = async (targetId: MemberId) => {
+    const targetMember = j.members[targetId]
+    const targetSub = targetMember.pushSubscription
+    const genderLabel = targetMember.gender === 'male' ? 'Nam 👦' : 'Nữ 👧'
+    const isThisPhone = targetId === myMemberId
+
+    if (isThisPhone && perm !== 'granted') {
+      await bindThisDeviceToMember(targetId)
       return
     }
-    setTestingNativePwa(true)
-    const targetName = myMember?.name || 'bạn'
-    const title = `🐷 ${j.name} · Thông báo cho ${targetName}`
-    const body = `Chạm vào thông báo này để vào thẳng App Piggy Duo (không qua Safari)! 💗`
 
-    const scheduledInSw = await scheduleServiceWorkerNotification(title, body, '/', 4000)
-    const mySub = myMember?.pushSubscription
+    if (!isThisPhone && !targetSub?.endpoint) {
+      toast(
+        `Máy của ${targetMember.name} (${genderLabel}) chưa bấm "Đăng ký máy này". Hãy mở app trên máy ${targetMember.name} và bấm đăng ký nhé!`,
+        'error',
+      )
+      return
+    }
+
+    setTestingMember(targetId)
+    const title = `🐷 Chuông riêng cho ${targetMember.name} (${genderLabel})`
+    const body = `Khi người ấy mở số, nạp tiền hoặc nhắn tin, chỉ máy của ${targetMember.name} nhận thông báo này! 💗`
     const cfg = repo.getSheetConfig()
-    if (mySub?.endpoint) {
+
+    if (!isThisPhone && targetSub?.endpoint) {
+      // Instant remote push to Partner's phone!
+      try {
+        const res = await triggerServerWebPush(
+          cfg.appsScriptUrl || '/api/gsheets',
+          targetSub,
+          { title, body, route: '/?chat=1' },
+          0,
+          cfg.passcode,
+        )
+        if (res.sent) {
+          toast(`Đã bắn thông báo riêng sang máy của ${targetMember.name} (${genderLabel})! 📲`)
+        } else {
+          toast(`Đã gửi lệnh báo tới máy ${targetMember.name}! 📲`)
+        }
+      } finally {
+        setTestingMember(null)
+      }
+      return
+    }
+
+    // Testing on THIS phone: 4-second countdown so user can exit/lock phone
+    const scheduledInSw = await scheduleServiceWorkerNotification(title, body, '/?chat=1', 4000)
+    if (targetSub?.endpoint) {
       void triggerServerWebPush(
         cfg.appsScriptUrl || '/api/gsheets',
-        mySub,
-        { title, body, route: '/' },
+        targetSub,
+        { title, body, route: '/?chat=1' },
         4000,
         cfg.passcode,
       )
     }
-    toast('⏱️ Thoát ra Màn hình chính hoặc Khóa máy ngay! Sau 4 giây thông báo Logo 🐷 Piggy Duo sẽ nổ…')
+    toast(`⏱️ Thoát ra Màn hình chính hoặc Khóa máy ngay! Sau 4s chuông của ${targetMember.name} sẽ nổ…`)
 
     setTimeout(async () => {
       if (!scheduledInSw) {
-        await fireBrowserNotification(title, body, undefined, '/')
+        await fireBrowserNotification(title, body, undefined, '/?chat=1')
       }
-      setTestingNativePwa(false)
+      setTestingMember(null)
     }, 4200)
   }
 
@@ -171,7 +235,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
       const ok = await pushNtfyNotification(
         `🐷 Chuông thử cho ${targetName} (${gender === 'male' ? 'Nam 👦' : 'Nữ 👧'})`,
         `Khi người ấy quay số, nạp tiền hoặc nhắn tin, điện thoại của ${targetName} sẽ nổ thông báo! 💗`,
-        '/',
+        '/?chat=1',
         fullTopic,
       )
       if (ok) {
@@ -185,9 +249,9 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Cài đặt thông báo đẩy 🔔">
+    <Modal open={open} onClose={onClose} title="Thông báo riêng Nam & Nữ 🔔">
       <div className="mt-2 space-y-3">
-        {/* 1. Native iOS Home Screen App Push Setup */}
+        {/* 1. Native iOS Home Screen App Push Setup (Split by Male & Female) */}
         <div className="rounded-2xl border-2 border-pink-200 bg-gradient-to-br from-white via-pink-50/60 to-violet-50/60 p-3">
           <div className="flex items-center gap-2.5">
             <img
@@ -197,10 +261,10 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
             />
             <div className="min-w-0 flex-1">
               <span className="rounded-full bg-gradient-to-r from-pink-500 to-violet-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
-                Khuyên dùng trên iPhone
+                Tách riêng 2 máy Nam & Nữ
               </span>
               <h3 className="mt-0.5 text-xs font-black leading-snug text-[#1e1b4b]">
-                Thông báo Trực Tiếp Logo 🐷 & Mở thẳng vào App
+                Nam thao tác → Báo máy Nữ · Nữ thao tác → Báo máy Nam
               </h3>
             </div>
           </div>
@@ -212,59 +276,121 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
                 <span>Đang mở bằng Safari (chưa phải App Màn hình chính)</span>
               </div>
               <p className="mt-1 leading-relaxed">
-                Tại Safari bấm <b>Chia sẻ</b> (<Share size={11} className="inline" />) → <b>Thêm vào MH chính</b>, rồi mở biểu tượng <b>🐷 Piggy Duo</b> ngoài màn hình chính để bật thông báo nhé!
+                Tại Safari bấm <b>Chia sẻ</b> (<Share size={11} className="inline" />) → <b>Thêm vào MH chính</b>, rồi mở biểu tượng <b>🐷 Piggy Duo</b> ngoài màn hình chính để đăng ký chuông riêng cho từng máy nhé!
               </p>
             </div>
           ) : (
             <div className="mt-2.5 flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/90 px-2.5 py-1.5 text-[11px] font-black text-emerald-800">
               <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
-              <span>Đang chạy trực tiếp từ App 🐷 Piggy Duo ngoài Màn hình chính</span>
+              <span>Đang mở từ App 🐷 Piggy Duo ngoài Màn hình chính</span>
             </div>
           )}
 
-          {/* Connection status for both devices */}
-          <div className="mt-2.5 grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-pink-100 bg-white/90 px-2.5 py-1.5 text-[10.5px] font-bold">
-              <p className="font-black text-[#1e1b4b]">
-                {myGender === 'male' ? '👦' : '👧'} Máy bạn ({myMember?.name})
-              </p>
-              <p className={`mt-0.5 font-extrabold ${perm === 'granted' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {perm === 'granted'
-                  ? hasMyNativeSub
-                    ? '✅ Đã kết nối Push 🐷'
-                    : '✅ Đã bật quyền'
-                  : '⏳ Chưa bật'}
-              </p>
+          {isDuplicateSub && (
+            <div className="mt-2 rounded-xl border border-rose-300 bg-rose-50 p-2 text-[11px] font-bold text-rose-800">
+              ⚠️ Phát hiện cả Nam & Nữ đang bị lưu trùng trên cùng 1 máy! Hãy bấm <b>“Đăng ký máy này là…”</b> ở đúng khung của bạn bên dưới để tách riêng nhé.
             </div>
-            <div className="rounded-xl border border-pink-100 bg-white/90 px-2.5 py-1.5 text-[10.5px] font-bold">
-              <p className="font-black text-[#1e1b4b]">
-                {myGender === 'male' ? '👧' : '👦'} Máy {partnerMember?.name}
-              </p>
-              <p className={`mt-0.5 font-extrabold ${hasPartnerNativeSub ? 'text-emerald-600' : 'text-slate-500'}`}>
-                {hasPartnerNativeSub ? '✅ Đã kết nối Push 🐷' : '⏳ Chờ máy kia bật'}
-              </p>
-            </div>
-          </div>
+          )}
 
-          <div className="mt-2.5 grid gap-2">
-            {perm !== 'granted' || !hasMyNativeSub ? (
-              <Button size="sm" variant="pink" loading={enablingPush} onClick={enableNativePiggyPush}>
-                <BellRing size={14} className="mr-1 inline" />
-                {perm === 'granted' ? '🐷 Kích hoạt kết nối Push cho máy này' : '🔔 Bật thông báo Logo 🐷 Piggy Duo'}
-              </Button>
-            ) : null}
+          {/* Separate Cards for Male (Nam) and Female (Nữ) */}
+          <div className="mt-2.5 space-y-2">
+            {(
+              [
+                {
+                  id: maleId,
+                  member: memberMale,
+                  partner: memberFemale,
+                  title: `👦 Máy Nam: ${memberMale.name}`,
+                  sub: `Chỉ nổ chuông khi ${memberFemale.name} (Nữ) mở số, nạp tiền hoặc nhắn tin`,
+                  activeClass: 'border-sky-400 bg-sky-50/90 ring-2 ring-sky-200',
+                  idleClass: 'border-sky-200 bg-white/95',
+                  badgeClass: 'bg-sky-600 text-white',
+                  btnVariant: 'violet' as const,
+                },
+                {
+                  id: femaleId,
+                  member: memberFemale,
+                  partner: memberMale,
+                  title: `👧 Máy Nữ: ${memberFemale.name}`,
+                  sub: `Chỉ nổ chuông khi ${memberMale.name} (Nam) mở số, nạp tiền hoặc nhắn tin`,
+                  activeClass: 'border-pink-400 bg-pink-50/90 ring-2 ring-pink-200',
+                  idleClass: 'border-pink-200 bg-white/95',
+                  badgeClass: 'bg-pink-600 text-white',
+                  btnVariant: 'pink' as const,
+                },
+              ]
+            ).map((card) => {
+              const isThisDevice = myMemberId === card.id
+              const hasSub = Boolean(card.member.pushSubscription?.endpoint) && !isDuplicateSub
+              return (
+                <div
+                  key={card.id}
+                  className={`rounded-2xl border-2 p-2.5 transition-all ${
+                    isThisDevice ? card.activeClass : card.idleClass
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-black text-[#1e1b4b]">{card.title}</span>
+                    {isThisDevice ? (
+                      <span className={`rounded-full px-2 py-0.5 text-[9.5px] font-black ${card.badgeClass}`}>
+                        📱 Máy bạn đang cầm
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9.5px] font-bold text-slate-600">
+                        Máy người ấy
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[10.5px] font-bold text-slate-500">{card.sub}</p>
 
-            <Button
-              size="sm"
-              variant={perm === 'granted' ? 'pink' : 'violet'}
-              loading={testingNativePwa}
-              onClick={testNativePwaPush}
-            >
-              <Sparkles size={14} className="mr-1 inline" />
-              {testingNativePwa
-                ? 'Đang đếm 4 giây… Hãy thoát / Khóa máy ngay!'
-                : '🐷 Thử thông báo Logo Piggy Duo (sau 4 giây)'}
-            </Button>
+                  <p
+                    className={`mt-1 text-[10.5px] font-extrabold ${
+                      hasSub ? 'text-emerald-600' : 'text-amber-600'
+                    }`}
+                  >
+                    {hasSub
+                      ? `✅ Đã gắn thông báo riêng cho máy ${card.member.name}`
+                      : `⏳ Chưa gắn thông báo riêng trên máy ${card.member.name}`}
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(!isThisDevice || !hasSub || perm !== 'granted') && (
+                      <Button
+                        size="sm"
+                        block={false}
+                        variant={card.btnVariant}
+                        loading={enablingMember === card.id}
+                        onClick={() => bindThisDeviceToMember(card.id)}
+                        className="flex-1 !py-1.5 !text-[11px]"
+                      >
+                        <BellRing size={13} />
+                        <span>Đăng ký máy này là {card.member.name}</span>
+                      </Button>
+                    )}
+
+                    <Button
+                      size="sm"
+                      block={false}
+                      variant="ghost"
+                      loading={testingMember === card.id}
+                      onClick={() => testPushForMember(card.id)}
+                      className="flex-1 !py-1.5 !text-[11px]"
+                    >
+                      <Send size={12} />
+                      <span>
+                        {testingMember === card.id
+                          ? isThisDevice
+                            ? 'Đợi 4s (Hãy khóa máy)…'
+                            : 'Đang bắn…'
+                          : isThisDevice
+                            ? `Thử chuông ${card.member.name} (sau 4s)`
+                            : `Bắn thử sang máy ${card.member.name}`}
+                      </span>
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -301,7 +427,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
               </span>
               <div>
                 <p className="text-[11.5px] font-black text-slate-700">Kênh dự phòng qua App ntfy (Tùy chọn)</p>
-                <p className="text-[10px] font-bold text-slate-500">Dành cho máy không cài được App ra màn hình chính</p>
+                <p className="text-[10px] font-bold text-slate-500">Cũng đã chia 2 mã kênh riêng _nam và _nu</p>
               </div>
             </div>
             <ChevronDown
@@ -311,7 +437,7 @@ export function PushConfigModal({ open, onClose }: PushConfigModalProps) {
           </button>
 
           {showNtfyFallback && (
-            <div className="mt-2.5 border-t border-dashed border-slate-200 pt-2.5 space-y-2">
+            <div className="mt-2.5 space-y-2 border-t border-dashed border-slate-200 pt-2.5">
               <p className="text-[10.5px] font-bold text-slate-500">
                 Tải{' '}
                 <a

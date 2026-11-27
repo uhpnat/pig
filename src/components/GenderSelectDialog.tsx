@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Avatar, Button, Modal } from '@/components/ui'
 import type { Gender, Member, MemberId } from '@/domain/types'
 import { useStore } from '@/hooks/useStore'
+import { subscribeNativeWebPush } from '@/lib/webPush'
 
 export const ROLE_CONFIG_KEY = 'piggy_role_confirmed_v2'
 
@@ -162,12 +163,31 @@ export function GenderSelectDialog({ open: manualOpen, onClose }: Props = {}) {
     setConfiguredInSession(true)
     setMyMemberId(selectedUser)
 
+    // If this device already has push permission, bind its pushSubscription exclusively to `selectedUser`
+    // and clear it from the other member if it was previously duplicated!
+    const deviceSub = await subscribeNativeWebPush().catch(() => null)
+    const otherUser: MemberId = selectedUser === 'a' ? 'b' : 'a'
+    const nextSubSelected = deviceSub || j.members[selectedUser].pushSubscription
+    const prevSubOther = j.members[otherUser].pushSubscription
+    const nextSubOther =
+      deviceSub && prevSubOther?.endpoint === deviceSub.endpoint ? undefined : prevSubOther
+
     const updated = await run(
       repo.updateJourney({
         name: cleanJourney,
         members: {
-          a: { ...j.members.a, name: cleanA, gender: genders.a },
-          b: { ...j.members.b, name: cleanB, gender: genders.b },
+          a: {
+            ...j.members.a,
+            name: cleanA,
+            gender: genders.a,
+            pushSubscription: selectedUser === 'a' ? nextSubSelected : nextSubOther,
+          },
+          b: {
+            ...j.members.b,
+            name: cleanB,
+            gender: genders.b,
+            pushSubscription: selectedUser === 'b' ? nextSubSelected : nextSubOther,
+          },
         },
       }),
     )

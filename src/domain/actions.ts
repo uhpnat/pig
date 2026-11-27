@@ -57,8 +57,18 @@ function pushNotification(
   message: string,
   at: string,
   actor?: MemberId,
+  target: MemberId | 'all' = actor ? (actor === 'a' ? 'b' : 'a') : 'all',
 ) {
-  const n: AppNotification = { id: uid('ntf'), at, type, title, message, read: false, ...(actor ? { actor } : {}) }
+  const n: AppNotification = {
+    id: uid('ntf'),
+    at,
+    type,
+    title,
+    message,
+    read: false,
+    ...(actor ? { actor } : {}),
+    target,
+  }
   s.notifications.unshift(n)
 }
 
@@ -263,6 +273,7 @@ export function confirmContribution(
     `Cả ${j.members.a.name} & ${j.members.b.name} đã xác nhận (2/2). Heo cảm ơn hai bạn! 🐷`,
     now,
     byMember,
+    'all',
   )
   if (c.revealId) {
     const mates = s.contributions.filter((x) => x.revealId === c.revealId)
@@ -339,9 +350,13 @@ export function addCustomChallenge(state: AppState, title: string, targetAmount:
   return s
 }
 
-export function markNotificationsRead(state: AppState): AppState {
+export function markNotificationsRead(state: AppState, forMember?: MemberId): AppState {
   const s = clone(state)
-  s.notifications.forEach((n) => (n.read = true))
+  s.notifications.forEach((n) => {
+    if (!forMember || !n.target || n.target === 'all' || n.target === forMember) {
+      n.read = true
+    }
+  })
   return s
 }
 
