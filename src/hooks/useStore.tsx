@@ -8,7 +8,7 @@ import { confirmedTotals, pendingTotals, progressPct } from '@/domain/stats'
 import type { AppState, Journey, Member, MemberId } from '@/domain/types'
 import { DomainError } from '@/domain/types'
 import { applyTheme, beep, haptic, prefersReducedMotion } from '@/lib/fx'
-import { fireBrowserNotification, notificationRoute, shouldNotifyEvent } from '@/lib/pushNotify'
+import { notificationRoute, shouldNotifyEvent } from '@/lib/pushNotify'
 import { subscribeNativeWebPush } from '@/lib/webPush'
 import { repository } from '@/services'
 import type { Repository } from '@/services/repository'
@@ -20,6 +20,7 @@ interface StoreValue {
   state: AppState
   repo: Repository
   loading: boolean
+  mutating: boolean
   today: string
   journey: Journey | null
   myMemberId: MemberId
@@ -74,19 +75,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const seq = useRef(0)
   const seenNotifIds = useRef<Set<string> | null>(null)
   const initialLoadDoneRef = useRef(false)
+  const bootAtRef = useRef(Date.now())
   const [splashDone, setSplashDone] = useState(false)
   const [splashReadyAnim, setSplashReadyAnim] = useState(false)
+  const [mutatingCount, setMutatingCount] = useState(0)
 
   useEffect(() => {
     let off = () => {}
     repository.load().then((loaded) => {
-      seenNotifIds.current = new Set(loaded.notifications.map((n) => n.id))
+      if (!seenNotifIds.current) {
+        seenNotifIds.current = new Set()
+      }
+      for (const n of loaded.notifications) {
+        seenNotifIds.current.add(n.id)
+      }
       initialLoadDoneRef.current = true
       setState(loaded)
       setSplashReadyAnim(true)
       setTimeout(() => setSplashDone(true), 420)
     })
-    off = repository.subscribe(setState)
+    off = repository.subscribe((next) => {
+      // Pre-mark any notifications arriving BEFORE initial load completes so historical notifications never fire as new!
+      if (!initialLoadDoneRef.current) {
+        if (!seenNotifIds.current) seenNotifIds.current = new Set()
+        for (const n of next.notifications) {
+          seenNotifIds.current.add(n.id)
+        }
+      }
+      setState(next)
+    })
     return off
   }, [])
 
@@ -123,6 +140,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onOpenChat = () => setChatOpen(true)
+    const consumePendingNavFromCache = async () => {
+      if (typeof caches === 'undefined') return
+      try {
+        const cache = await caches.open('piggy-nav-v1')
+        const res = await cache.match('./_pending_route')
+        if (res) {
+          const route = (await res.text()).trim()
+          await cache.delete('./_pending_route')
+          if (route.includes('chat=1')) {
+            setChatOpen(true)
+          } else if (route && route !== '/') {
+            window.location.hash = `#${route}`
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     const onHashCheck = () => {
       if (window.location.hash.includes('chat=1') || window.location.search.includes('chat=1')) {
         setChatOpen(true)
@@ -131,12 +166,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
     }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void consumePendingNavFromCache()
+      }
+    }
     onHashCheck()
+    void consumePendingNavFromCache()
     window.addEventListener('piggy:open-chat', onOpenChat)
     window.addEventListener('hashchange', onHashCheck)
+    window.addEventListener('focus', consumePendingNavFromCache)
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
       window.removeEventListener('piggy:open-chat', onOpenChat)
       window.removeEventListener('hashchange', onHashCheck)
+      window.removeEventListener('focus', consumePendingNavFromCache)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
@@ -155,7 +200,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Only toast genuinely new notifications arriving AFTER initial load, and at most 1 banner per batch!
+  // Only toast genuinely new notifications from the PARTNER arriving AFTER initial load,
+  // and NEVER fire system/OS browser notifications while the user is already inside the app!
   useEffect(() => {
     if (!state || !initialLoadDoneRef.current) return
     if (seenNotifIds.current === null) {
@@ -168,11 +214,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       seenNotifIds.current.add(n.id)
     }
     const newest = fresh[0]
+    // Ignore notifications that were created by THIS device's own member or before this session booted
+    if (newest.actor && newest.actor === myMemberId) return
+    const notifTime = Date.parse(newest.at)
+    if (Number.isFinite(notifTime) && notifTime < bootAtRef.current - 5000) return
     if (!shouldNotifyEvent(newest, state.settings)) return
     // If chat drawer is already open, don't cover it with a chat notification banner
     if (newest.type === 'chat' && chatOpen) return
     const { to } = notificationRoute(newest)
-    void fireBrowserNotification(`🐷 ${newest.title}`, newest.message, newest.id, to)
+    // Show ONLY the quiet in-app top pill toast (never call fireBrowserNotification while the app is open!)
     toast(
       newest.type === 'chat'
         ? `💬 ${newest.title}: ${newest.message} (Chạm để mở chat)`
@@ -182,11 +232,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     )
     haptic(state.settings, 30)
     beep(state.settings, 'win')
-  }, [state, toast, chatOpen])
+  }, [state, toast, chatOpen, myMemberId])
 
   const celebrate = useCallback((emojis = ['🪙', '🎉', '✨', '💗']) => setFx({ id: ++seq.current, emojis }), [])
 
   const run = useCallback(async <T extends AppState | { state: AppState }>(p: Promise<T>) => {
+    setMutatingCount((c) => c + 1)
     try {
       const out = await p
       const nextState: AppState = 'state' in out ? out.state : out
@@ -201,6 +252,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       toast(e instanceof DomainError || e instanceof Error ? e.message : 'Có lỗi xảy ra, thử lại nhé.', 'error')
       return null
+    } finally {
+      setMutatingCount((c) => Math.max(0, c - 1))
     }
   }, [toast])
 
@@ -216,7 +269,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ).length
 
     return {
-      state, repo: repository, loading: false, today, journey: j,
+      state, repo: repository, loading: false, mutating: mutatingCount > 0, today, journey: j,
       myMemberId, myMember, partnerMemberId, partnerMember, setMyMemberId,
       progress: j ? progressPct(j, state.contributions) : 0,
       confirmed, pending: pendingTotals(state.contributions),
@@ -226,7 +279,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       motionOff: prefersReducedMotion(state.settings),
       toasts, fx, toast, dismissToast, celebrate, run, syncState: setState,
     }
-  }, [state, today, toasts, fx, toast, dismissToast, celebrate, run, myMemberId, setMyMemberId, chatOpen])
+  }, [state, today, toasts, fx, toast, dismissToast, celebrate, run, myMemberId, setMyMemberId, chatOpen, mutatingCount])
 
   return (
     <Ctx.Provider value={value}>

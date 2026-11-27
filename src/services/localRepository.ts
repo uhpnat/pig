@@ -96,6 +96,7 @@ export class LocalRepository implements Repository {
   private bc: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL) : null
   private listeners = new Set<(s: AppState) => void>()
   private inFlightPull: Promise<AppState | null> | null = null
+  private mutationChain: Promise<unknown> = Promise.resolve()
   private lastPullAt = 0
   private hiddenAt = 0
   private syncStatus: Pick<SheetSyncConfig, 'lastSyncedAt' | 'lastError' | 'syncing'> = {
@@ -323,10 +324,19 @@ export class LocalRepository implements Repository {
     return buildEncryptedWebPush(sub, { title: title.startsWith('🐷') ? title : `🐷 ${title}`, body, route })
   }
 
-  private async mutate(fn: (s: AppState) => AppState, actorId?: MemberId): Promise<AppState> {
+  private mutate(fn: (s: AppState) => AppState, actorId?: MemberId): Promise<AppState> {
+    const task = this.mutationChain.then(() => this.runMutateSerial(fn, actorId))
+    this.mutationChain = task.catch(() => undefined)
+    return task
+  }
+
+  private async runMutateSerial(fn: (s: AppState) => AppState, actorId?: MemberId): Promise<AppState> {
     const prev = read()
     const prevTopNotifId = prev.notifications[0]?.id
     const next = fn(prev)
+    if (next === prev) {
+      return prev
+    }
     localStorage.setItem(KEY, JSON.stringify(next))
     this.bc?.postMessage('changed')
     this.notify(next)

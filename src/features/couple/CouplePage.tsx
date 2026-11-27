@@ -31,7 +31,7 @@ const MODE = { proportional: 'Theo thu nhập', equal: 'Chia đều', custom: 'T
 
 export default function CouplePage() {
   const j = useJourney()
-  const { state, repo, run, confirmed, progress, today, toast, celebrate, unreadChat, setChatOpen } = useStore()
+  const { state, repo, run, mutating, confirmed, progress, today, toast, celebrate, unreadChat, setChatOpen } = useStore()
   const nav = useNavigate()
   const [edit, setEdit] = useState(false)
   const [install, setInstall] = useState(false)
@@ -598,10 +598,11 @@ export default function CouplePage() {
             </Button>
             <button
               type="submit"
+              disabled={mutating}
               onPointerDown={(e) => e.stopPropagation()}
-              className="btn btn-sm !bg-none !bg-[#e11d48] !shadow-[0_4px_0_#9f1239,0_8px_16px_rgba(225,29,72,.28)]"
+              className="btn btn-sm !bg-none !bg-[#e11d48] !shadow-[0_4px_0_#9f1239,0_8px_16px_rgba(225,29,72,.28)] disabled:opacity-50"
             >
-              Xác nhận xoá
+              {mutating ? 'Đang xoá…' : 'Xác nhận xoá'}
             </button>
           </div>
         </form>

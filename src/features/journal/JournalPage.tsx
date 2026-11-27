@@ -39,7 +39,7 @@ function TimelineIcon({ a, avatar }: { a: Activity; avatar?: string }) {
 
 export default function JournalPage() {
   const j = useJourney()
-  const { state, repo, run, myMemberId } = useStore()
+  const { state, repo, run, mutating, myMemberId } = useStore()
   const nav = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
   const [showSearch, setShowSearch] = useState(false)
@@ -158,7 +158,12 @@ export default function JournalPage() {
                     </p>
                   </div>
                   {!c.revealId && (
-                    <button type="button" className="chip !py-1.5 !px-2.5 !text-xs" onClick={() => setVoidId(c.id)}>
+                    <button
+                      type="button"
+                      disabled={mutating}
+                      className="chip !py-1.5 !px-2.5 !text-xs disabled:opacity-50"
+                      onClick={() => setVoidId(c.id)}
+                    >
                       Huỷ
                     </button>
                   )}

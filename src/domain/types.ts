@@ -129,6 +129,7 @@ export interface AppNotification {
   title: string
   message: string
   read: boolean
+  actor?: MemberId
 }
 
 export interface CustomChallenge {

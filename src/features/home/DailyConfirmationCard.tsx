@@ -1,4 +1,5 @@
 import { PlusCircle, Sparkles } from 'lucide-react'
+import { useState } from 'react'
 import { Avatar, Badge, Button, Card, SectionHeader } from '@/components/ui'
 import { vnd } from '@/domain/format'
 import type { Contribution, Member, MemberId, Reveal } from '@/domain/types'
@@ -17,7 +18,7 @@ interface DailyConfirmationCardProps {
   myDailyBy: MemberId[]
   partnerDailyBy: MemberId[]
   extraPending: Contribution[]
-  onConfirm: (c: Contribution) => void
+  onConfirm: (c: Contribution) => unknown
   onOpenReveal: () => void
   onOpenTopUp: () => void
 }
@@ -40,6 +41,18 @@ export function DailyConfirmationCard({
   onOpenReveal,
   onOpenTopUp,
 }: DailyConfirmationCardProps) {
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const handleConfirmClick = async (c: Contribution | undefined) => {
+    if (!c || busyId) return
+    setBusyId(c.id)
+    try {
+      await onConfirm(c)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   if (goalReached) {
     return (
       <Card className="!mt-0 text-center">
@@ -109,14 +122,15 @@ export function DailyConfirmationCard({
           ) : (
             <button
               type="button"
-              onClick={() => myDailyC && onConfirm(myDailyC)}
-              className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-xs font-black text-white shadow-sm active:scale-95 ${
+              disabled={busyId !== null}
+              onClick={() => handleConfirmClick(myDailyC)}
+              className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 py-1.5 text-xs font-black text-white shadow-sm active:scale-95 disabled:opacity-50 ${
                 isMyMale
                   ? 'bg-gradient-to-r from-sky-500 to-blue-600'
                   : 'bg-gradient-to-r from-pink-500 to-rose-600'
               }`}
             >
-              💸 Tôi đã nạp ({myDailyBy.length}/2)
+              {busyId === myDailyC?.id ? 'Đang lưu…' : `💸 Tôi đã nạp (${myDailyBy.length}/2)`}
             </button>
           )}
         </div>
@@ -141,16 +155,19 @@ export function DailyConfirmationCard({
           ) : (
             <button
               type="button"
-              onClick={() => partnerDailyC && onConfirm(partnerDailyC)}
-              className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 px-2 py-1.5 text-xs font-black text-white shadow-md transition-transform active:scale-95 ${
+              disabled={busyId !== null}
+              onClick={() => handleConfirmClick(partnerDailyC)}
+              className={`mt-1.5 w-full cursor-pointer rounded-xl border-0 px-2 py-1.5 text-xs font-black text-white shadow-md transition-transform active:scale-95 disabled:opacity-50 ${
                 partnerReported
                   ? 'animate-pulse bg-gradient-to-r from-emerald-500 to-teal-600'
                   : 'bg-gradient-to-r from-violet-600 to-indigo-600'
               }`}
             >
-              {partnerReported
-                ? `✅ Duyệt ${partnerMember?.name} (2/2)`
-                : `✅ Xác nhận cho ${partnerMember?.name}`}
+              {busyId === partnerDailyC?.id
+                ? 'Đang duyệt…'
+                : partnerReported
+                  ? `✅ Duyệt ${partnerMember?.name} (2/2)`
+                  : `✅ Xác nhận cho ${partnerMember?.name}`}
             </button>
           )}
         </div>
@@ -176,10 +193,11 @@ export function DailyConfirmationCard({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => onConfirm(c)}
-                    className="shrink-0 cursor-pointer rounded-lg border-0 bg-emerald-600 px-2.5 py-1 text-[10.5px] font-black text-white shadow-sm active:scale-95"
+                    disabled={busyId !== null}
+                    onClick={() => handleConfirmClick(c)}
+                    className="shrink-0 cursor-pointer rounded-lg border-0 bg-emerald-600 px-2.5 py-1 text-[10.5px] font-black text-white shadow-sm active:scale-95 disabled:opacity-50"
                   >
-                    ✅ Duyệt (2/2)
+                    {busyId === c.id ? 'Đang duyệt…' : '✅ Duyệt (2/2)'}
                   </button>
                 )}
               </div>

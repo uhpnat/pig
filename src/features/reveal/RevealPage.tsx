@@ -17,6 +17,7 @@ export default function RevealPage() {
     state,
     repo,
     run,
+    mutating,
     today,
     goalReached,
     motionOff,
@@ -283,10 +284,11 @@ export default function RevealPage() {
                           ) : (
                             <button
                               type="button"
+                              disabled={mutating}
                               onClick={() => confirmByMe(c)}
-                              className="w-full cursor-pointer rounded-xl border-0 bg-gradient-to-r from-indigo-600 to-violet-600 py-2 text-xs font-black text-white shadow-md active:scale-95"
+                              className="w-full cursor-pointer rounded-xl border-0 bg-gradient-to-r from-indigo-600 to-violet-600 py-2 text-xs font-black text-white shadow-md active:scale-95 disabled:opacity-50"
                             >
-                              💸 Tôi đã nạp ({cBy.length}/2)
+                              {mutating ? 'Đang lưu…' : `💸 Tôi đã nạp (${cBy.length}/2)`}
                             </button>
                           )
                         ) : myConfirmedThis ? (
@@ -296,16 +298,19 @@ export default function RevealPage() {
                         ) : (
                           <button
                             type="button"
+                            disabled={mutating}
                             onClick={() => confirmByMe(c)}
-                            className={`w-full cursor-pointer rounded-xl border-0 py-2 text-xs font-black text-white shadow-md active:scale-95 ${
+                            className={`w-full cursor-pointer rounded-xl border-0 py-2 text-xs font-black text-white shadow-md active:scale-95 disabled:opacity-50 ${
                               ownerConfirmed
                                 ? 'bg-gradient-to-r from-emerald-500 to-teal-600 animate-pulse'
                                 : 'bg-gradient-to-r from-pink-500 to-rose-500'
                             }`}
                           >
-                            {ownerConfirmed
-                              ? `✅ Duyệt ${m.name} đã nạp (2/2)`
-                              : `✅ Xác nhận cho ${m.name}`}
+                            {mutating
+                              ? 'Đang duyệt…'
+                              : ownerConfirmed
+                                ? `✅ Duyệt ${m.name} đã nạp (2/2)`
+                                : `✅ Xác nhận cho ${m.name}`}
                           </button>
                         )}
                       </div>

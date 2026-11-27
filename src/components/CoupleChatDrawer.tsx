@@ -30,6 +30,8 @@ export function CoupleChatDrawer() {
   } = useStore()
 
   const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const sendingRef = useRef(false)
   const [inputFocused, setInputFocused] = useState(false)
   const [vvBox, setVvBox] = useState<{ top: number; height: number; kbOpen: boolean } | null>(null)
   const [dragY, setDragY] = useState(0)
@@ -161,14 +163,17 @@ export function CoupleChatDrawer() {
     }
   }
 
-  // Sends message and keeps the virtual keyboard open continuously
+  // Sends message and keeps the virtual keyboard open continuously (with duplicate-tap lock while sending)
   const send = (rawContent?: string) => {
+    if (sendingRef.current) return
     const liveVal = rawContent !== undefined ? rawContent : (inputRef.current?.value ?? text)
     const clean = liveVal.trim()
 
     inputRef.current?.focus()
     if (!clean) return
 
+    sendingRef.current = true
+    setSending(true)
     setText('')
     if (inputRef.current) {
       inputRef.current.value = ''
@@ -176,12 +181,17 @@ export function CoupleChatDrawer() {
     haptic(state.settings, 20)
     beep(state.settings, 'tick')
 
-    void run(repo.sendChatMessage(myMemberId, clean)).then(() => {
-      if (listRef.current) {
-        listRef.current.scrollTop = listRef.current.scrollHeight
-      }
-      inputRef.current?.focus()
-    })
+    void run(repo.sendChatMessage(myMemberId, clean))
+      .then(() => {
+        if (listRef.current) {
+          listRef.current.scrollTop = listRef.current.scrollHeight
+        }
+        inputRef.current?.focus()
+      })
+      .finally(() => {
+        sendingRef.current = false
+        setSending(false)
+      })
   }
 
   return (
@@ -398,6 +408,7 @@ export function CoupleChatDrawer() {
                 />
                 <button
                   type="button"
+                  disabled={sending}
                   aria-label="Gửi tin nhắn"
                   onTouchEnd={(e) => {
                     e.preventDefault()
@@ -409,10 +420,10 @@ export function CoupleChatDrawer() {
                   onClick={() => {
                     send()
                   }}
-                  className="flex h-10 shrink-0 cursor-pointer select-none items-center gap-1 rounded-full border-0 bg-gradient-to-r from-indigo-600 to-pink-500 px-4 text-xs font-black text-white shadow-[0_4px_12px_rgba(236,72,153,0.35)] active:scale-95"
+                  className="flex h-10 shrink-0 cursor-pointer select-none items-center gap-1 rounded-full border-0 bg-gradient-to-r from-indigo-600 to-pink-500 px-4 text-xs font-black text-white shadow-[0_4px_12px_rgba(236,72,153,0.35)] active:scale-95 disabled:opacity-50"
                 >
                   <Send size={14} />
-                  <span>Gửi</span>
+                  <span>{sending ? 'Đang gửi…' : 'Gửi'}</span>
                 </button>
               </form>
             </div>

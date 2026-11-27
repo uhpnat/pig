@@ -5,8 +5,10 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
+  type MouseEvent,
   type ReactNode,
 } from 'react'
 import { formatMoneyInput, parseMoney } from '@/domain/format'
@@ -39,19 +41,39 @@ export function Button({
   loading = false,
   icon,
   disabled,
+  onClick,
   children,
   className = '',
   ...p
 }: BtnProps) {
+  const [internalBusy, setInternalBusy] = useState(false)
+  const busyRef = useRef(false)
   const v = VARIANT_CLASS[variant]
+  const isBusy = loading || internalBusy
+
+  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+    if (disabled || isBusy || busyRef.current) return
+    if (!onClick) return
+    const ret = onClick(e) as unknown
+    if (ret && typeof (ret as Promise<unknown>).then === 'function') {
+      busyRef.current = true
+      setInternalBusy(true)
+      void (ret as Promise<unknown>).finally(() => {
+        busyRef.current = false
+        setInternalBusy(false)
+      })
+    }
+  }
+
   return (
     <button
       type="button"
-      disabled={disabled || loading}
+      disabled={disabled || isBusy}
+      onClick={handleClick}
       {...p}
       className={`btn inline-flex items-center justify-center gap-1.5 ${v} ${size === 'sm' ? 'btn-sm' : ''} ${block ? '' : '!w-auto'} ${className}`}
     >
-      {loading ? <Loader2 size={16} className="animate-spin" aria-hidden /> : icon}
+      {isBusy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : icon}
       {children}
     </button>
   )
@@ -350,13 +372,22 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   )
 }
 
-export function ConfirmDialog({ open, title, message, confirmLabel = 'Đồng ý', danger, onConfirm, onClose }: { open: boolean; title: string; message: string; confirmLabel?: string; danger?: boolean; onConfirm: () => void; onClose: () => void }) {
+export function ConfirmDialog({ open, title, message, confirmLabel = 'Đồng ý', danger, onConfirm, onClose }: { open: boolean; title: string; message: string; confirmLabel?: string; danger?: boolean; onConfirm: () => unknown; onClose: () => void }) {
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <p className="muted mt-3 !text-sm leading-relaxed">{message}</p>
       <div className="mt-5 grid grid-cols-2 gap-3">
         <Button variant="ghost" size="sm" onClick={onClose}>Để sau</Button>
-        <Button variant={danger ? 'danger' : 'pink'} size="sm" onClick={() => { onConfirm(); onClose() }}>{confirmLabel}</Button>
+        <Button
+          variant={danger ? 'danger' : 'pink'}
+          size="sm"
+          onClick={async () => {
+            await onConfirm()
+            onClose()
+          }}
+        >
+          {confirmLabel}
+        </Button>
       </div>
     </Modal>
   )

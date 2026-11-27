@@ -1,5 +1,6 @@
-/* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background Scheduled Notification + Chat Auto-Open. */
-const VERSION = 'piggy-duo-v8'
+/* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background-Only Push Suppression + Reliable Chat Auto-Open. */
+const VERSION = 'piggy-duo-v9'
+const NAV_CACHE = 'piggy-nav-v1'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png']
 
 let pendingLaunchRoute = null
@@ -13,7 +14,13 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== VERSION && k !== NAV_CACHE)
+            .map((k) => caches.delete(k)),
+        ),
+      )
       .then(() => self.clients.claim()),
   )
 })
@@ -58,7 +65,7 @@ self.addEventListener('message', (e) => {
     const title = msg.title || '🐷 Piggy Duo'
     const body = msg.body || 'Chạm để mở thẳng vào App Piggy Duo!'
     const route = msg.route || '/'
-    const tag = msg.tag || `piggy-local-${Date.now()}`
+    const tag = msg.tag || 'piggy-test-notif'
 
     e.waitUntil(
       new Promise((resolve) => setTimeout(resolve, delayMs)).then(() =>
@@ -67,6 +74,7 @@ self.addEventListener('message', (e) => {
           icon: './apple-touch-icon.png',
           badge: './icon-192.png',
           tag,
+          renotify: true,
           data: { route },
         }),
       ),
@@ -75,8 +83,9 @@ self.addEventListener('message', (e) => {
 })
 
 /**
- * Native Web Push handler (wakes up on iPhone Lock Screen with the 🐷 Piggy Duo App Icon
- * and opens directly into the installed Home Screen App when tapped!).
+ * Native Web Push handler:
+ * - Suppresses the system notification banner if the user already has the Piggy Duo app open & visible on screen!
+ * - Collapses notifications by category tag (`piggy-chat` vs `piggy-update`) so notifications never spam or pile up!
  */
 self.addEventListener('push', (e) => {
   let data = { title: '🐷 Piggy Duo', body: 'Người ấy vừa cập nhật heo đất!', route: '/' }
@@ -99,44 +108,68 @@ self.addEventListener('push', (e) => {
     }
   }
 
+  const isChat =
+    (data.route && String(data.route).includes('chat=1')) ||
+    (data.title && String(data.title).includes('💬'))
+  const collapseTag = isChat ? 'piggy-chat-latest' : 'piggy-activity-latest'
+  const targetRoute = isChat ? '/?chat=1' : data.route || '/'
+
   e.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: './apple-touch-icon.png',
-      badge: './icon-192.png',
-      tag: `piggy-push-${Date.now()}`,
-      data: { route: data.route || '/' },
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // If the user is actively viewing the app right now, do NOT pop up an OS push banner on top of the app!
+      const isAppVisible = windowClients.some(
+        (c) => c.focused || c.visibilityState === 'visible',
+      )
+      if (isAppVisible) {
+        return
+      }
+      return self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: './apple-touch-icon.png',
+        badge: './icon-192.png',
+        tag: collapseTag,
+        renotify: true,
+        data: { route: targetRoute },
+      })
     }),
   )
 })
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const route = e.notification.data && e.notification.data.route ? e.notification.data.route : '/'
-  // Always use the exact root registration scope URL (no #hash) for openWindow so iOS opens the standalone Home Screen PWA instead of Safari!
+  const rawRoute = e.notification.data && e.notification.data.route ? String(e.notification.data.route) : '/'
+  const isChat =
+    rawRoute.includes('chat=1') ||
+    (e.notification.title && String(e.notification.title).includes('💬'))
+  const route = isChat ? '/?chat=1' : rawRoute
   const rootScopeUrl = self.registration.scope
 
   e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        if ('focus' in client) {
-          client.postMessage({ type: 'PIGGY_NAVIGATE', route })
-          return client.focus()
-        }
-      }
-      if (self.clients.openWindow) {
-        pendingLaunchRoute = route
-        return self.clients.openWindow(rootScopeUrl).then((newClient) => {
-          if (newClient) {
-            setTimeout(() => {
-              try {
-                newClient.postMessage({ type: 'PIGGY_NAVIGATE', route })
-              } catch {}
-            }, 600)
+    caches
+      .open(NAV_CACHE)
+      .then((c) => c.put('./_pending_route', new Response(route)))
+      .catch(() => undefined)
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then((windowClients) => {
+        for (const client of windowClients) {
+          if ('focus' in client) {
+            client.postMessage({ type: 'PIGGY_NAVIGATE', route })
+            return client.focus()
           }
-          return newClient
-        })
-      }
-    }),
+        }
+        if (self.clients.openWindow) {
+          pendingLaunchRoute = route
+          return self.clients.openWindow(rootScopeUrl).then((newClient) => {
+            if (newClient) {
+              setTimeout(() => {
+                try {
+                  newClient.postMessage({ type: 'PIGGY_NAVIGATE', route })
+                } catch {}
+              }, 600)
+            }
+            return newClient
+          })
+        }
+      }),
   )
 })

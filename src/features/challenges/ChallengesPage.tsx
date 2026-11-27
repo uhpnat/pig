@@ -9,7 +9,7 @@ import { IMG } from '@/lib/assets'
 
 export default function ChallengesPage() {
   const items = useChallenges()
-  const { repo, run, celebrate, toast } = useStore()
+  const { repo, run, mutating, celebrate, toast } = useStore()
   const nav = useNavigate()
   const [open, setOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -64,10 +64,11 @@ export default function ChallengesPage() {
             </p>
             <button
               type="button"
+              disabled={mutating}
               onClick={() => start('days30')}
-              className="btn mt-3 !w-auto !px-6 !py-2 !text-[14px]"
+              className="btn mt-3 !w-auto !px-6 !py-2 !text-[14px] disabled:opacity-50"
             >
-              Tham gia
+              {mutating ? 'Đang xử lý…' : 'Tham gia'}
             </button>
           </div>
           <img

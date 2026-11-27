@@ -50,8 +50,15 @@ function pushActivity(s: AppState, a: Omit<Activity, 'id'>) {
   s.activity.unshift({ id: uid('act'), ...a })
 }
 
-function pushNotification(s: AppState, type: NotificationType, title: string, message: string, at: string) {
-  const n: AppNotification = { id: uid('ntf'), at, type, title, message, read: false }
+function pushNotification(
+  s: AppState,
+  type: NotificationType,
+  title: string,
+  message: string,
+  at: string,
+  actor?: MemberId,
+) {
+  const n: AppNotification = { id: uid('ntf'), at, type, title, message, read: false, ...(actor ? { actor } : {}) }
   s.notifications.unshift(n)
 }
 
@@ -121,9 +128,21 @@ export function updateJourney(state: AppState, patch: Partial<Journey>, now = ne
   if (!Object.keys(next).length) return state
   s.journey = { ...j, ...patch }
   s.journey.endDate = endDateOf(s.journey.startDate, s.journey.months)
-  pushActivity(s, { at: now, type: 'settings', title: '⚙️ Đã cập nhật quy tắc chung', description: `Thay đổi: ${Object.keys(next).join(', ')}. Các giao dịch đã xác nhận được giữ nguyên.`, status: 'done', audit: { old, next } })
-  if (!('pig' in next && Object.keys(next).length === 1)) {
-    pushNotification(s, 'recap', '⚙️ Quy tắc chung vừa được cập nhật', `Mục thay đổi: ${Object.keys(next).join(', ')}`, now)
+  const changedKeys = Object.keys(next)
+  const isSilentMemberSync =
+    changedKeys.length === 1 &&
+    changedKeys[0] === 'members' &&
+    j.members.a.name === s.journey.members.a.name &&
+    j.members.b.name === s.journey.members.b.name &&
+    j.members.a.income === s.journey.members.a.income &&
+    j.members.b.income === s.journey.members.b.income &&
+    j.members.a.gender === s.journey.members.a.gender &&
+    j.members.b.gender === s.journey.members.b.gender
+  if (!isSilentMemberSync) {
+    pushActivity(s, { at: now, type: 'settings', title: '⚙️ Đã cập nhật quy tắc chung', description: `Thay đổi: ${changedKeys.join(', ')}. Các giao dịch đã xác nhận được giữ nguyên.`, status: 'done', audit: { old, next } })
+    if (!('pig' in next && changedKeys.length === 1)) {
+      pushNotification(s, 'recap', '⚙️ Quy tắc chung vừa được cập nhật', `Mục thay đổi: ${changedKeys.join(', ')}`, now)
+    }
   }
   return s
 }
@@ -164,7 +183,7 @@ export function revealToday(state: AppState, date: string, by: MemberId, rand: (
     s.contributions.push(c)
   }
   const other: MemberId = by === 'a' ? 'b' : 'a'
-  pushNotification(s, 'reveal', `${names[by].name} vừa mở số tiền hôm nay`, `${names[other].name} cần nạp +${vnd(amounts[other])} vào quỹ hôm nay nhé!`, now)
+  pushNotification(s, 'reveal', `${names[by].name} vừa mở số tiền hôm nay`, `${names[other].name} cần nạp +${vnd(amounts[other])} vào quỹ hôm nay nhé!`, now, by)
   if (!j.requireConfirmation) afterConfirmation(s, now)
   return { state: s, reveal, created: true }
 }
@@ -220,6 +239,7 @@ export function confirmContribution(
       isOwner ? `⏳ ${ownerName} vừa nạp ${vnd(c.amount)} vào quỹ` : `⏳ ${actorName} đã duyệt khoản của ${ownerName}`,
       isOwner ? `${otherName} ơi, vào kiểm tra và bấm xác nhận chéo cho ${ownerName} nhé! (1/2)` : `${ownerName} nhớ bấm xác nhận đã nạp nhé! (1/2)`,
       now,
+      byMember,
     )
     return s
   }
@@ -242,6 +262,7 @@ export function confirmContribution(
     `💰 Đã duyệt ${vnd(c.amount)} của ${ownerName} vào heo!`,
     `Cả ${j.members.a.name} & ${j.members.b.name} đã xác nhận (2/2). Heo cảm ơn hai bạn! 🐷`,
     now,
+    byMember,
   )
   if (c.revealId) {
     const mates = s.contributions.filter((x) => x.revealId === c.revealId)
@@ -282,6 +303,7 @@ export function addContribution(state: AppState, member: MemberId, amount: numbe
     `➕ ${j.members[member].name} vừa nạp thêm ${vnd(c.amount)}`,
     pending ? `Chờ ${j.members[otherId].name} xác nhận chéo (1/2) để duyệt vào heo đất.` : 'Đã cộng thẳng vào heo đất! 🐷',
     now,
+    member,
   )
   if (!pending) afterConfirmation(s, now)
   return s
@@ -403,6 +425,7 @@ export function sendChatMessage(
     `💬 ${j.members[sender].name} nhắn tin`,
     clean.slice(0, 120),
     now,
+    sender,
   )
   return s
 }
