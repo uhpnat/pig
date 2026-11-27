@@ -236,8 +236,8 @@ export function PasscodeGate({ children }: { children: ReactNode }) {
                         {copiedCode ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                         <span>
                           {copiedCode
-                            ? 'Đã chép mã Apps Script (Tách 8 bảng + Chống mất tin nhắn)!'
-                            : 'Sao chép mã Apps Script (Tách 8 bảng)'}
+                            ? 'Đã sao chép mã kết nối!'
+                            : 'Sao chép mã kết nối'}
                         </span>
                       </button>
                     </div>
@@ -254,7 +254,7 @@ export function PasscodeGate({ children }: { children: ReactNode }) {
 
               <form onSubmit={handleConnectSheet} className="mt-3 space-y-2.5 text-left">
                 <Field
-                  label="1. Dán Apps Script Web App URL (hoặc Link mời từ người thứ 1)"
+                  label="1. Dán link ứng dụng web (Apps Script URL) hoặc Link mời"
                   value={gasUrlInput}
                   onChange={(e) => {
                     setGasUrlInput(e.target.value)
@@ -265,21 +265,14 @@ export function PasscodeGate({ children }: { children: ReactNode }) {
                   autoFocus
                 />
                 <Field
-                  label="2. Link Google Sheet của 2 bạn (tuỳ chọn, để mở nhanh Sheet)"
+                  label="2. Link Google Sheet của 2 bạn (tuỳ chọn, để mở nhanh bảng tính)"
                   value={sheetUrlInput}
                   onChange={(e) => setSheetUrlInput(e.target.value)}
                   placeholder="https://docs.google.com/spreadsheets/d/..."
                 />
-                <Field
-                  label="3. Mã khoá bí mật đôi mình (tuỳ chọn)"
-                  type="password"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="Để trống hoặc đặt mã PIN riêng (VD: 150102)"
-                />
 
                 <Button type="submit" variant="pink" loading={connecting} className="mt-3 w-full !py-3.5 !text-sm">
-                  {connecting ? 'Đang kiểm tra kết nối Google Sheet…' : '🔗 Kết nối & Lưu vĩnh viễn vào máy này'}
+                  {connecting ? 'Đang kết nối Google Sheet…' : '🔗 Kết nối & Lưu vào máy'}
                 </Button>
               </form>
             </>

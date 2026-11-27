@@ -5,7 +5,6 @@ import {
   Copy,
   ExternalLink,
   FileSpreadsheet,
-  KeyRound,
   Share2,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -219,7 +218,7 @@ export function GoogleSheetsCard() {
   const cfg = repo.getSheetConfig()
   const [gasUrl, setGasUrl] = useState(cfg.appsScriptUrl)
   const [sheetInput, setSheetInput] = useState(cfg.spreadsheetId)
-  const [passcode, setPasscode] = useState(cfg.passcode)
+  const passcode = cfg.passcode
   const [showSetup, setShowSetup] = useState(cfg.needsAppsScript)
   const [showGuide, setShowGuide] = useState(false)
   const [copiedInvite, setCopiedInvite] = useState(false)
@@ -348,10 +347,7 @@ export function GoogleSheetsCard() {
           )}
         </div>
         <p className="mt-1 break-all font-mono text-[11px] font-bold text-ink">
-          {cfg.appsScriptUrl ? '✅ Đã gắn Apps Script Web App riêng' : '⏳ Chưa gắn Apps Script URL'}
-        </p>
-        <p className="mt-1 text-[10.5px] font-bold text-emerald-700">
-          📊 Tự động tách thành 8 bảng: <b>Journey, Members, DailyReveals, Contributions, Messages, Notifications, ActivityLog, AppState</b>
+          {cfg.appsScriptUrl ? '✅ Đã kết nối với Google Sheet của hai bạn' : '⏳ Chưa kết nối Google Sheet'}
         </p>
         {cfg.lastSyncedAt && (
           <p className="muted mt-1 !text-[11px]">
@@ -375,17 +371,17 @@ export function GoogleSheetsCard() {
         onClick={() => setShowSetup((x) => !x)}
         className="muted mt-3 block w-full cursor-pointer border-0 bg-transparent text-center !text-xs underline"
       >
-        {showSetup ? 'Ẩn cấu hình Google Sheet & Mã khoá ▲' : 'Đổi link Google Sheet / Apps Script URL & Mã khoá ▼'}
+        {showSetup ? 'Ẩn cài đặt kết nối Google Sheet ▲' : 'Đổi đường dẫn kết nối Google Sheet ▼'}
       </button>
 
       {showSetup && (
         <div className="mt-2 space-y-2 border-t border-dashed border-vio/25 pt-2">
           <Field
-            label="1. Apps Script Web App URL (bắt buộc)"
+            label="1. Link ứng dụng web (Apps Script URL)"
             value={gasUrl}
             onChange={(e) => setGasUrl(e.target.value)}
             placeholder="https://script.google.com/macros/s/.../exec"
-            hint="Link Web App từ Google Sheet của riêng 2 bạn."
+            hint="Link kết nối tới Google Sheet của riêng 2 bạn."
           />
           <Field
             label="2. Link Google Sheet (tuỳ chọn, để bấm mở nhanh bảng tính)"
@@ -393,35 +389,28 @@ export function GoogleSheetsCard() {
             onChange={(e) => setSheetInput(e.target.value)}
             placeholder="https://docs.google.com/spreadsheets/d/..."
           />
-          <Field
-            label="3. Mã khoá bí mật (tuỳ chọn)"
-            type="password"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder="Ví dụ: 150102"
-          />
           <div className="mt-3 grid gap-2">
             <Button size="sm" onClick={saveConfig}>
-              <KeyRound size={15} className="mr-1 inline" /> Lưu kết nối vào máy
+              Lưu kết nối vào máy
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowGuide(true)}>
-              📖 Xem mã Apps Script mới (Tách 8 bảng + Chống mất tin nhắn)
+              📖 Xem hướng dẫn & lấy mã kết nối Google Sheet
             </Button>
           </div>
         </div>
       )}
 
-      <Modal open={showGuide} onClose={() => setShowGuide(false)} title="Mã Apps Script (Tách 8 bảng)">
+      <Modal open={showGuide} onClose={() => setShowGuide(false)} title="Hướng dẫn kết nối Google Sheet">
         <div className="mt-2 space-y-3 text-xs leading-relaxed">
           <p className="font-bold text-slate-600">
-            Mã mới này tự động tách dữ liệu ra <b>8 bảng riêng biệt</b> (có bảng <b>Messages</b> riêng cho Chat và bảng <b>Members</b> riêng) và tự hợp nhất tin nhắn 2 chiều:
+            Làm theo 3 bước đơn giản dưới đây để gắn ứng dụng vào file Google Sheet của riêng hai bạn:
           </p>
           <ol className="list-decimal space-y-1.5 pl-4 font-semibold">
             <li>
-              Mở file Google Sheet riêng của 2 bạn → bấm <b>Tiện ích mở rộng (Extensions)</b> → <b>Apps Script</b>.
+              Mở file Google Sheet riêng của 2 bạn → trên menu chọn <b>Tiện ích mở rộng (Extensions)</b> → <b>Apps Script</b>.
             </li>
             <li>
-              Bấm nút <b>Sao chép mã</b> bên dưới, dán đè vào <code>Code.gs</code> rồi bấm Lưu:
+              Bấm nút <b>Sao chép mã</b> bên dưới, dán đè vào khung soạn thảo rồi bấm <b>Lưu</b>:
             </li>
           </ol>
           <div className="relative rounded-2xl border border-[#ddd6fe] bg-[#f5f3ff] p-3 text-[11px] text-[#1e1b4b]">
@@ -429,7 +418,7 @@ export function GoogleSheetsCard() {
               type="button"
               onClick={async () => {
                 await navigator.clipboard.writeText(GAS_BACKEND_CODE)
-                toast('Đã sao chép mã Apps Script mới! 📋')
+                toast('Đã sao chép mã kết nối! 📋')
               }}
               className="chip float-right flex items-center gap-1 !bg-[#7c3aed] !px-2.5 !py-1 !text-[11px] !text-white"
             >
@@ -439,7 +428,7 @@ export function GoogleSheetsCard() {
           </div>
           <ol start={3} className="list-decimal space-y-1.5 pl-4 font-semibold">
             <li>
-              Bấm <b>Triển khai (Deploy)</b> → <b>Tạo phiên bản triển khai mới</b> (hoặc <b>Quản lý bản triển khai → Sửa → Phiên bản mới</b>), chọn <b>Ai có quyền truy cập: Bất kỳ ai (Anyone)</b>, rồi dán link <code>https://script.google.com/macros/s/.../exec</code> vào app!
+              Bấm <b>Triển khai (Deploy)</b> → <b>Tạo phiên bản triển khai mới</b>, chọn loại <b>Ứng dụng web</b>, mục <b>Ai có quyền truy cập</b> chọn <b>Bất kỳ ai (Anyone)</b>, rồi dán đường link nhận được vào ứng dụng!
             </li>
           </ol>
         </div>
