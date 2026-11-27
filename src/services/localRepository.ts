@@ -85,8 +85,12 @@ function readCfg(): Pick<SheetSyncConfig, 'spreadsheetId' | 'appsScriptUrl' | 'p
 export class LocalRepository implements Repository {
   readonly kind = 'gsheets' as const
   private readonly clientId = uid('cli')
+  private readonly bootTime = Date.now()
   private bc: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL) : null
   private listeners = new Set<(s: AppState) => void>()
+  private inFlightPull: Promise<AppState | null> | null = null
+  private lastPullAt = 0
+  private hiddenAt = 0
   private syncStatus: Pick<SheetSyncConfig, 'lastSyncedAt' | 'lastError' | 'syncing'> = {
     lastSyncedAt: null,
     lastError: null,
@@ -216,6 +220,9 @@ export class LocalRepository implements Repository {
 
   private async pullFromSheet(explicit = false): Promise<AppState | null> {
     if (typeof fetch === 'undefined') return null
+    // Deduplicate concurrent pull calls (e.g. React StrictMode double-mount)
+    if (this.inFlightPull) return this.inFlightPull
+
     const url = this.endpointUrl()
     if (!url) {
       if (explicit) {
@@ -228,45 +235,51 @@ export class LocalRepository implements Repository {
       }
       return null
     }
-    this.syncStatus = { ...this.syncStatus, syncing: true, lastError: null }
-    try {
-      const bustUrl = `${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}`
-      const res = await fetch(bustUrl, { method: 'GET', cache: 'no-store' })
-      const text = await res.text()
-      if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
-        throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi" hoặc "Bất kỳ ai có tài khoản Google". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
-      }
-      const data = JSON.parse(text || '{}')
-      if (!res.ok || data?.ok === false) {
-        throw new Error(data?.error || `HTTP ${res.status}`)
-      }
-      this.syncStatus = { syncing: false, lastSyncedAt: data.updatedAt || new Date().toISOString(), lastError: null }
-      if (data?.state) {
-        const remoteState: AppState = {
-          ...A.createInitialState(),
-          ...data.state,
-          settings: { ...A.DEFAULT_SETTINGS, ...data.state.settings },
-        }
-        // When user explicitly pulls (e.g. Pull-to-Refresh or "Tải từ Sheet"), trust Google Sheet as source of truth so deleted rows stay deleted!
-        const cur = read()
-        const curJson = JSON.stringify(cur)
-        const merged = explicit || !cur.journey ? remoteState : mergeStates(cur, remoteState)
-        const nextJson = JSON.stringify(merged)
 
-        // Only update storage & trigger React re-render if data actually changed (or user explicitly requested a refresh)!
-        if (nextJson !== curJson || explicit) {
-          localStorage.setItem(KEY, nextJson)
-          this.bc?.postMessage('changed')
-          this.notify(merged)
+    this.syncStatus = { ...this.syncStatus, syncing: true, lastError: null }
+    this.inFlightPull = (async () => {
+      try {
+        const bustUrl = `${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}`
+        const res = await fetch(bustUrl, { method: 'GET', cache: 'no-store' })
+        const text = await res.text()
+        if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
+          throw new Error('Link Apps Script đang để quyền "Chỉ mình tôi" hoặc "Bất kỳ ai có tài khoản Google". Hãy vào Apps Script -> Quản lý bản triển khai -> Sửa -> đổi "Ai có quyền truy cập" thành "Bất kỳ ai (Anyone)" nhé!')
         }
-        return merged
+        const data = JSON.parse(text || '{}')
+        if (!res.ok || data?.ok === false) {
+          throw new Error(data?.error || `HTTP ${res.status}`)
+        }
+        this.lastPullAt = Date.now()
+        this.syncStatus = { syncing: false, lastSyncedAt: data.updatedAt || new Date().toISOString(), lastError: null }
+        if (data?.state) {
+          const remoteState: AppState = {
+            ...A.createInitialState(),
+            ...data.state,
+            settings: { ...A.DEFAULT_SETTINGS, ...data.state.settings },
+          }
+          const cur = read()
+          const curJson = JSON.stringify(cur)
+          const merged = explicit || !cur.journey ? remoteState : mergeStates(cur, remoteState)
+          const nextJson = JSON.stringify(merged)
+
+          if (nextJson !== curJson || explicit) {
+            localStorage.setItem(KEY, nextJson)
+            this.bc?.postMessage('changed')
+            this.notify(merged)
+          }
+          return merged
+        }
+        return null
+      } catch (e) {
+        this.syncStatus = { ...this.syncStatus, syncing: false, lastError: e instanceof Error ? e.message : String(e) }
+        if (explicit) this.notify(read())
+        return null
+      } finally {
+        this.inFlightPull = null
       }
-      return null
-    } catch (e) {
-      this.syncStatus = { ...this.syncStatus, syncing: false, lastError: e instanceof Error ? e.message : String(e) }
-      if (explicit) this.notify(read())
-      return null
-    }
+    })()
+
+    return this.inFlightPull
   }
 
   async syncWithSheet(direction: 'push' | 'pull' = 'push'): Promise<AppState> {
@@ -306,16 +319,20 @@ export class LocalRepository implements Repository {
     this.listeners.add(cb)
     const onMsg = () => cb(read())
     const onStorage = (e: StorageEvent) => { if (e.key === KEY || e.key === CFG_KEY) cb(read()) }
-    const onFocus = () => {
-      if (document.visibilityState === 'visible') void this.pullFromSheet(true)
-    }
-    const onWindowFocus = () => {
-      void this.pullFromSheet(true)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        this.hiddenAt = Date.now()
+      } else if (document.visibilityState === 'visible') {
+        // Only pull from Sheet when returning to the app after being hidden in background for >30s
+        if (this.hiddenAt > 0 && Date.now() - this.hiddenAt > 30_000 && Date.now() - this.lastPullAt > 30_000) {
+          void this.pullFromSheet(true)
+        }
+      }
     }
 
-    // 1. Instant Real-Time Server-Sent Events (SSE) stream (<200ms cross-device latency)
+    // Event-driven Real-Time Server-Sent Events (SSE) stream:
+    // ZERO polling timer — only receives events when the partner actually performs an action!
     let es: EventSource | null = null
-    let pullVerifyTimer: ReturnType<typeof setTimeout> | undefined
     if (typeof EventSource !== 'undefined') {
       try {
         es = new EventSource(`https://ntfy.sh/${this.realtimeTopic()}/sse`)
@@ -326,6 +343,7 @@ export class LocalRepository implements Repository {
             const payloadStr = typeof outer.message === 'string' ? outer.message : ev.data
             const pkt = JSON.parse(payloadStr || '{}')
             if (!pkt || pkt.clientId === this.clientId) return
+            if (typeof pkt.at === 'number' && pkt.at < this.bootTime - 2000) return
 
             if (pkt.forceReplace) {
               void this.pullFromSheet(true)
@@ -352,43 +370,24 @@ export class LocalRepository implements Repository {
                 this.notify(merged)
               }
             }
-
-            // Reconcile full state with Google Sheets shortly after real-time push
-            clearTimeout(pullVerifyTimer)
-            pullVerifyTimer = setTimeout(() => {
-              void this.pullFromSheet(false)
-            }, 1500)
           } catch {
             /* ignore malformed SSE frames */
           }
         }
       } catch {
-        /* fallback to polling if EventSource is unavailable */
+        /* ignore if EventSource is unavailable */
       }
     }
 
-    // 2. Gentle fallback polling every 12 seconds while tab is visible (0 re-renders if data is unchanged!)
-    const timer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !this.syncStatus.syncing) {
-        void this.pullFromSheet(false)
-      }
-    }, 12000)
-
     this.bc?.addEventListener('message', onMsg)
     window.addEventListener('storage', onStorage)
-    window.addEventListener('visibilitychange', onFocus)
-    window.addEventListener('focus', onWindowFocus)
-    window.addEventListener('pageshow', onWindowFocus)
+    window.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
-      clearInterval(timer)
-      clearTimeout(pullVerifyTimer)
       es?.close()
       this.listeners.delete(cb)
       this.bc?.removeEventListener('message', onMsg)
       window.removeEventListener('storage', onStorage)
-      window.removeEventListener('visibilitychange', onFocus)
-      window.removeEventListener('focus', onWindowFocus)
-      window.removeEventListener('pageshow', onWindowFocus)
+      window.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }
 
