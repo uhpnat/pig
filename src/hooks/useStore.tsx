@@ -9,6 +9,7 @@ import type { AppState, Journey, Member, MemberId } from '@/domain/types'
 import { DomainError } from '@/domain/types'
 import { applyTheme, beep, haptic, prefersReducedMotion } from '@/lib/fx'
 import { fireBrowserNotification, notificationRoute, shouldNotifyEvent } from '@/lib/pushNotify'
+import { subscribeNativeWebPush } from '@/lib/webPush'
 import { repository } from '@/services'
 import type { Repository } from '@/services/repository'
 
@@ -95,6 +96,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state?.journey?.timezone])
 
   useEffect(() => { if (state) applyTheme(state.settings.theme) }, [state?.settings.theme]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Automatically sync this device's Native Web Push subscription to the active member profile when Notification permission is granted
+  const pushSyncedForRef = useRef<string>('')
+  useEffect(() => {
+    const j = state?.journey
+    if (!j || typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    if (pushSyncedForRef.current === myMemberId) return
+    pushSyncedForRef.current = myMemberId
+
+    void subscribeNativeWebPush().then((sub) => {
+      if (!sub) return
+      const curSub = j.members[myMemberId]?.pushSubscription
+      if (curSub?.endpoint === sub.endpoint && curSub?.keys?.p256dh === sub.keys.p256dh) return
+      void repository.updateJourney({
+        members: {
+          ...j.members,
+          [myMemberId]: {
+            ...j.members[myMemberId],
+            pushSubscription: sub,
+          },
+        },
+      })
+    })
+  }, [state?.journey, myMemberId])
 
   const toast = useCallback((text: string, tone: Toast['tone'] = 'ok') => {
     const id = ++seq.current

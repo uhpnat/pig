@@ -1,6 +1,6 @@
-/* Piggy Duo service worker: network-first so new deployments always appear immediately, falling back to cache offline. */
-const VERSION = 'piggy-duo-v6'
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
+/* Piggy Duo service worker: network-first + Native iOS/Android Web Push (VAPID) + Background Scheduled Notification. */
+const VERSION = 'piggy-duo-v7'
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png']
 
 self.addEventListener('install', (e) => {
   self.skipWaiting()
@@ -36,13 +36,67 @@ self.addEventListener('fetch', (e) => {
   )
 })
 
+/**
+ * Supports background scheduled notifications from the client (`SCHEDULE_NOTIFICATION`).
+ * Wrapping the timeout inside `e.waitUntil(...)` keeps the Service Worker alive on iOS even after
+ * the user exits to the iPhone Home Screen or locks the device!
+ */
+self.addEventListener('message', (e) => {
+  const msg = e.data
+  if (!msg || typeof msg !== 'object') return
+
+  if (msg.type === 'SCHEDULE_NOTIFICATION') {
+    const delayMs = Math.max(0, Math.min(25000, Number(msg.delayMs) || 0))
+    const title = msg.title || '🐷 Piggy Duo'
+    const body = msg.body || 'Chạm để mở thẳng vào App Piggy Duo!'
+    const route = msg.route || '/'
+    const tag = msg.tag || `piggy-local-${Date.now()}`
+
+    e.waitUntil(
+      new Promise((resolve) => setTimeout(resolve, delayMs)).then(() =>
+        self.registration.showNotification(title, {
+          body,
+          icon: './apple-touch-icon.png',
+          badge: './icon-192.png',
+          tag,
+          data: { route },
+        }),
+      ),
+    )
+  }
+})
+
+/**
+ * Native Web Push handler (wakes up on iPhone Lock Screen with the 🐷 Piggy Duo App Icon
+ * and opens directly into the installed Home Screen App when tapped!).
+ */
 self.addEventListener('push', (e) => {
-  const data = e.data ? e.data.json() : { title: 'Piggy Duo', body: 'Heo đang chờ bạn!', route: '/' }
+  let data = { title: '🐷 Piggy Duo', body: 'Người ấy vừa cập nhật heo đất!', route: '/' }
+  if (e.data) {
+    try {
+      const parsed = e.data.json()
+      if (parsed && typeof parsed === 'object') {
+        data = {
+          title: parsed.title || data.title,
+          body: parsed.body || parsed.message || data.body,
+          route: parsed.route || '/',
+        }
+      }
+    } catch {
+      try {
+        data = { ...data, body: e.data.text() || data.body }
+      } catch {
+        /* use default */
+      }
+    }
+  }
+
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: './icon-192.png',
+      icon: './apple-touch-icon.png',
       badge: './icon-192.png',
+      tag: `piggy-push-${Date.now()}`,
       data: { route: data.route || '/' },
     }),
   )
@@ -50,7 +104,7 @@ self.addEventListener('push', (e) => {
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const route = (e.notification.data && e.notification.data.route) ? e.notification.data.route : '/'
+  const route = e.notification.data && e.notification.data.route ? e.notification.data.route : '/'
   // Always use the exact root registration scope URL (no #hash) for openWindow so iOS opens the standalone Home Screen PWA instead of Safari!
   const rootScopeUrl = self.registration.scope
 

@@ -37,6 +37,17 @@ function doPost(e) {
     var appSheet = ss.getSheetByName('AppState') || ss.insertSheet('AppState');
     appSheet.clearContents();
     appSheet.getRange(1, 1, 2, 3).setValues([['key', 'updated_at', 'json_state'], ['piggy_duo_state_v1', now, JSON.stringify(state)]]);
+    if (payload.webPush && payload.webPush.endpoint && payload.webPush.bodyBase64) {
+      try {
+        var rawBytes = Utilities.base64Decode(payload.webPush.bodyBase64);
+        UrlFetchApp.fetch(payload.webPush.endpoint, {
+          method: 'post',
+          headers: payload.webPush.headers || {},
+          payload: rawBytes,
+          muteHttpExceptions: true
+        });
+      } catch (err) {}
+    }
     return jsonOut({ ok: true, syncedAt: now });
   } finally { lock.releaseLock(); }
 }`

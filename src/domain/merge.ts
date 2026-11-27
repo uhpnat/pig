@@ -23,6 +23,13 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
           ? local.journey || remote.journey
           : remote.journey || local.journey
 
+  const pickNewestSub = (id: 'a' | 'b') => {
+    const lSub = local.journey?.members?.[id]?.pushSubscription
+    const rSub = remote.journey?.members?.[id]?.pushSubscription
+    if (lSub && rSub) return lSub.updatedAt >= rSub.updatedAt ? lSub : rSub
+    return lSub || rSub
+  }
+
   const journey = baseJourney
     ? {
         ...baseJourney,
@@ -34,6 +41,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
               local.journey?.members?.a?.gender ||
               remote.journey?.members?.a?.gender ||
               baseJourney.members.a.gender,
+            pushSubscription: pickNewestSub('a'),
           },
           b: {
             ...baseJourney.members.b,
@@ -42,6 +50,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
               local.journey?.members?.b?.gender ||
               remote.journey?.members?.b?.gender ||
               baseJourney.members.b.gender,
+            pushSubscription: pickNewestSub('b'),
           },
         },
       }

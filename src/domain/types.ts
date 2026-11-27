@@ -5,6 +5,15 @@ export type FairnessMode = 'proportional' | 'equal' | 'custom'
 
 export type Gender = 'male' | 'female'
 
+export interface WebPushSubscription {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+  updatedAt: string
+}
+
 export interface Member {
   id: MemberId
   name: string
@@ -13,6 +22,7 @@ export interface Member {
   income: number
   role: 'owner' | 'member'
   gender?: Gender
+  pushSubscription?: WebPushSubscription
   joinedAt: string
 }
 

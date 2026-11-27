@@ -10,6 +10,7 @@ import {
   notificationRoute,
   pushNtfyNotification,
 } from '@/lib/pushNotify'
+import { buildEncryptedWebPush, type EncryptedWebPushRequest } from '@/lib/webPush'
 import type { Repository, SheetSyncConfig, Unsubscribe } from './repository'
 
 const KEY = 'piggy-duo:v1'
@@ -178,7 +179,12 @@ export class LocalRepository implements Repository {
     return null
   }
 
-  private async pushToSheet(state: AppState, explicit = false, forceReplace = false): Promise<void> {
+  private async pushToSheet(
+    state: AppState,
+    explicit = false,
+    forceReplace = false,
+    webPush?: EncryptedWebPushRequest | null,
+  ): Promise<void> {
     if (typeof fetch === 'undefined') return
     const url = this.endpointUrl()
     if (!url) {
@@ -199,7 +205,7 @@ export class LocalRepository implements Repository {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': appsScriptUrl ? 'text/plain;charset=utf-8' : 'application/json' },
-        body: JSON.stringify({ spreadsheetId, passcode, forceReplace, state }),
+        body: JSON.stringify({ spreadsheetId, passcode, forceReplace, state, webPush: webPush || undefined }),
       })
       const text = await res.text()
       if (text.includes('accounts.google.com') || text.trim().startsWith('<!doctype html>')) {
@@ -300,6 +306,23 @@ export class LocalRepository implements Repository {
     return cur
   }
 
+  private async buildPartnerWebPush(
+    state: AppState,
+    actorId: MemberId | undefined,
+    title: string,
+    body: string,
+    route: string,
+  ): Promise<EncryptedWebPushRequest | null> {
+    const j = state.journey
+    if (!j) return null
+    const activeActor: MemberId =
+      actorId || (typeof window !== 'undefined' && localStorage.getItem('piggy_my_member') === 'b' ? 'b' : 'a')
+    const partnerId: MemberId = activeActor === 'a' ? 'b' : 'a'
+    const sub = j.members[partnerId]?.pushSubscription
+    if (!sub) return null
+    return buildEncryptedWebPush(sub, { title: title.startsWith('🐷') ? title : `🐷 ${title}`, body, route })
+  }
+
   private async mutate(fn: (s: AppState) => AppState, actorId?: MemberId): Promise<AppState> {
     const prev = read()
     const prevTopNotifId = prev.notifications[0]?.id
@@ -308,18 +331,20 @@ export class LocalRepository implements Repository {
     this.bc?.postMessage('changed')
     this.notify(next)
 
-    // Push notification exclusively to the PARTNER's gender topic (_nam or _nu) so the sender's own phone doesn't ring!
+    // Push notification exclusively to the PARTNER's device (both Native Web Push with 🐷 Logo & optional ntfy fallback)
     const newestNotif = next.notifications[0]
+    let webPushReq: EncryptedWebPushRequest | null = null
     if (newestNotif && newestNotif.id !== prevTopNotifId) {
       const { to } = notificationRoute(newestNotif)
       const targetGender = getPartnerGender(next.journey, actorId)
       const targetTopic = getNtfyTopicForGender(targetGender)
       void pushNtfyNotification(newestNotif.title, newestNotif.message, to, targetTopic)
+      webPushReq = await this.buildPartnerWebPush(next, actorId, newestNotif.title, newestNotif.message, to)
     }
 
     // Broadcast instant real-time SSE event (<200ms) AND save to Google Sheets in parallel
     void this.broadcastRealtime(next, false)
-    await this.pushToSheet(next, true)
+    await this.pushToSheet(next, true, false, webPushReq)
     return read()
   }
 
@@ -431,13 +456,21 @@ export class LocalRepository implements Repository {
       this.bc?.postMessage('changed')
       this.notify(out.state)
       const newestNotif = out.state.notifications[0]
+      let webPushReq: EncryptedWebPushRequest | null = null
       if (newestNotif) {
         const targetGender = getPartnerGender(out.state.journey, by)
         const targetTopic = getNtfyTopicForGender(targetGender)
         void pushNtfyNotification(`🐷 ${newestNotif.title}`, newestNotif.message, '/reveal', targetTopic)
+        webPushReq = await this.buildPartnerWebPush(
+          out.state,
+          by,
+          `🐷 ${newestNotif.title}`,
+          newestNotif.message,
+          '/reveal',
+        )
       }
       void this.broadcastRealtime(out.state, forceReroll)
-      await this.pushToSheet(out.state, true, forceReroll)
+      await this.pushToSheet(out.state, true, forceReroll, webPushReq)
     }
     return { ...out, state: read() }
   }

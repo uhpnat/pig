@@ -156,12 +156,23 @@ export function gsheetsBridgePlugin(): Plugin {
           if (req.method === 'POST') {
             let body = ''
             for await (const chunk of req) body += chunk
-            const parsed = JSON.parse(body || '{}') as { state?: AppState; spreadsheetId?: string }
+            const parsed = JSON.parse(body || '{}') as {
+              state?: AppState
+              spreadsheetId?: string
+              webPush?: { endpoint: string; headers: Record<string, string>; bodyBase64: string }
+            }
             const targetId = parsed.spreadsheetId || spreadsheetId
             if (!parsed.state) {
               res.statusCode = 400
               res.end(JSON.stringify({ ok: false, error: 'Missing state payload' }))
               return
+            }
+            if (parsed.webPush?.endpoint && parsed.webPush?.bodyBase64) {
+              void fetch(parsed.webPush.endpoint, {
+                method: 'POST',
+                headers: parsed.webPush.headers,
+                body: Buffer.from(parsed.webPush.bodyBase64, 'base64'),
+              }).catch(() => undefined)
             }
             const fs = await import('node:fs/promises')
             const os = await import('node:os')
