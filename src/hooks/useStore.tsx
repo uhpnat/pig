@@ -1,4 +1,6 @@
-﻿import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+﻿import { AnimatePresence, motion } from 'framer-motion'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { SplashLoader } from '@/components/SplashLoader'
 import { allChallenges } from '@/domain/challenges'
 import { isGoalReached } from '@/domain/actions'
 import { todayIn } from '@/domain/format'
@@ -64,10 +66,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
   const seq = useRef(0)
   const seenNotifIds = useRef<Set<string> | null>(null)
+  const [splashDone, setSplashDone] = useState(false)
+  const [splashReadyAnim, setSplashReadyAnim] = useState(false)
 
   useEffect(() => {
     let off = () => {}
-    repository.load().then(setState)
+    repository.load().then((loaded) => {
+      setState(loaded)
+      setSplashReadyAnim(true)
+      setTimeout(() => setSplashDone(true), 420)
+    })
     off = repository.subscribe(setState)
     return off
   }, [])
@@ -140,8 +148,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state, today, toasts, fx, toast, celebrate, run, myMemberId, setMyMemberId])
 
-  if (!value) return <div className="grid h-screen place-items-center text-xl font-black text-vio">🐷 Đang tải…</div>
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return (
+    <Ctx.Provider value={value}>
+      {value && (
+        <motion.div
+          initial={{ opacity: 0, y: 10, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {children}
+        </motion.div>
+      )}
+      <AnimatePresence>
+        {(!value || !splashDone) && <SplashLoader ready={splashReadyAnim} />}
+      </AnimatePresence>
+    </Ctx.Provider>
+  )
 }
 
 export function useStore() {
